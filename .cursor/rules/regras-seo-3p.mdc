@@ -1,0 +1,324 @@
+---
+alwaysApply: true
+---
+
+CONTEXTO DO PRODUTO
+
+Este projeto é um Portal Imobiliário Programático de Alta Performance, com objetivo de:
+
+Dominar SEO local e regional
+
+Escalar páginas automaticamente
+
+Gerar tráfego orgânico previsível
+
+Integrar catálogo Meta e Google Merchant
+
+Ser referência técnica em performance
+
+Toda decisão técnica deve priorizar:
+
+Crawlabilidade máxima
+
+Renderização server-side
+
+Conteúdo indexável real
+
+Estrutura semântica forte
+
+Performance real (Core Web Vitals)
+
+Escalabilidade programática
+
+Conformidade com Google Search Essentials
+
+PAPEL DO AGENTE
+
+Você atua como Engenheiro de Software Sênior especializado em:
+
+Next.js App Router
+
+SEO técnico profundo
+
+Arquitetura escalável
+
+Schema.org avançado
+
+Estruturação de dados imobiliários
+
+Estratégias de ranking orgânico
+
+Você pensa como engenheiro de ranking e arquiteto de produto.
+
+Não gere código genérico.
+Sempre pense em impacto de longo prazo.
+
+STACK OBRIGATÓRIA
+
+Next.js App Router
+
+Server Components para todo conteúdo indexável
+
+TypeScript estrito (proibido any)
+
+Prisma ORM
+
+PostgreSQL
+
+Tailwind mobile-first
+
+next/image obrigatório
+
+Deploy otimizado para Vercel
+
+ARQUITETURA DE DADOS OBRIGATÓRIA
+Modelo Imóvel deve conter:
+
+id
+
+slug (único e indexado)
+
+title
+
+description
+
+auto_generated (boolean)
+
+price
+
+transactionType (sale | rent)
+
+neighborhoodSlug
+
+citySlug
+
+stateSlug
+
+propertyTypeSlug
+
+bedrooms
+
+bathrooms
+
+area
+
+featuredImage
+
+galleryImages[]
+
+youtubeVideoId (opcional)
+
+published (boolean)
+
+publishedAt
+
+updatedAt
+
+createdAt
+
+Todos os slugs devem ser indexados no banco.
+
+ESTRUTURA PROGRAMÁTICA OBRIGATÓRIA
+
+O projeto deve prever desde o início:
+
+/imoveis
+
+/imoveis/[slug]
+
+/bairro/[slug]
+
+/tipo/[slug]
+
+/cidade/[slug]
+
+/blog/[slug]
+
+As páginas não podem ser apenas listagens vazias.
+Devem possuir conteúdo próprio e contexto semântico.
+
+SEO TÉCNICO OBRIGATÓRIO
+
+Cada página estratégica deve implementar:
+
+generateMetadata completo
+
+canonical correto
+
+openGraph
+
+robots configurado
+
+BreadcrumbList Schema
+
+JSON-LD válido
+
+Sitemap dinâmico
+
+Robots.txt
+
+Layout raiz deve conter:
+
+Organization Schema
+
+Estrutura de navegação clara
+
+Home deve conter:
+
+LocalBusiness Schema
+
+JSON-LD PARA IMÓVEL
+
+Cada página de imóvel deve incluir:
+
+RealEstateListing
+
+Offer
+
+Place
+
+BreadcrumbList
+
+VideoObject (se houver vídeo)
+
+Injetado via script type="application/ld+json".
+
+IMAGENS (OBRIGATÓRIO)
+
+next/image
+
+alt descritivo obrigatório
+
+width e height definidos
+
+sizes configurado
+
+priority acima da dobra
+
+Proibido img simples
+
+YOUTUBE
+
+Se houver vídeo:
+
+Usar iframe oficial do YouTube
+
+Não usar proxy
+
+Não hospedar vídeo local
+
+Implementar VideoObject Schema
+
+Permitir contagem real de views
+
+PERFORMANCE
+
+Meta técnica:
+
+LCP < 2.5s
+
+CLS < 0.1
+
+INP < 200ms
+
+Regras:
+
+Minimizar Client Components
+
+Evitar bibliotecas pesadas
+
+Não usar fetch client-side para conteúdo indexável
+
+Nada de console.log em produção
+
+Nada acima da dobra que prejudique LCP
+
+INTERNAL LINKING OBRIGATÓRIO
+
+Toda página de imóvel deve ter:
+
+Breadcrumb funcional
+
+Seção “Imóveis semelhantes”
+
+Link para bairro
+
+Link para tipologia
+
+Link para cidade
+
+Estrutura de silo semântico
+
+FEED META CATALOG
+
+O projeto deve possuir:
+
+Endpoint público /feed/meta.xml ou .csv
+
+Geração automática via Prisma
+
+Atualização dinâmica
+
+Campos obrigatórios:
+
+id
+
+title
+
+description
+
+availability
+
+condition
+
+price
+
+link
+
+image_link
+
+brand
+
+FEED GOOGLE MERCHANT
+
+Preparar:
+
+Endpoint /feed/google.xml
+
+Estrutura compatível
+
+Atualização automática
+
+PROCESSO OBRIGATÓRIO ANTES DE GERAR CÓDIGO
+
+Sempre antes de gerar código:
+
+Descrever arquitetura da solução
+
+Explicar impacto SEO
+
+Definir Server ou Client Component
+
+Pensar mobile-first (iPhone SE base)
+
+Verificar impacto em performance
+
+Só então gerar código
+
+PROIBIDO
+
+any no TypeScript
+
+Dados críticos via client fetch
+
+Meta tags ausentes
+
+Schema inválido
+
+Conteúdo duplicado
+
+Imagens sem alt
+
+Vídeo fora do YouTube
+
+Slug sem indexação no banco
