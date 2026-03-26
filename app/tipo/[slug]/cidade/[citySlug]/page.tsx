@@ -7,11 +7,15 @@ import { PropertyList } from "@/app/components/PropertyList";
 import {
   getPublishedPropertiesByTypeAndCity,
   countPublishedPropertiesByTypeAndCity,
+  countPublishedPropertiesByBuyTypeAndCity,
   getTypeCityContext,
   getRelatedNeighborhoodsByCitySlug,
   getAvailablePropertyTypesByCitySlug,
   getAvailableTypeCityPairs,
+  getPriceRangeByTypeAndCity,
 } from "@/lib/queries/properties";
+import { getPostsByTag } from "@/lib/queries/blog";
+import { BlogSection } from "@/app/components/BlogSection";
 import {
   buildPropertyTypePageTitle,
   buildPropertyTypePageDescription,
@@ -19,16 +23,29 @@ import {
   buildOpenGraph,
   buildTwitterCard,
   getPropertyTypeLabel,
+  formatPriceShort,
 } from "@/lib/seo";
 import {
   evaluateIndexation,
   buildRobotsDirective,
 } from "@/lib/indexation";
+import { Pagination } from "@/app/components/Pagination";
+import {
+  parsePage,
+  calculateTotalPages,
+  getSkip,
+  buildPageTitle,
+  buildPaginatedCanonical,
+  ITEMS_PER_PAGE,
+} from "@/lib/pagination";
 
-const PROPERTIES_LIMIT = 24;
+const PROPERTIES_LIMIT = ITEMS_PER_PAGE;
 
 // params.slug é o typeSlug — nome herdado do segmento pai [slug]
-type PageProps = { params: Promise<{ slug: string; citySlug: string }> };
+type PageProps = {
+  params: Promise<{ slug: string; citySlug: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+};
 
 // ---------------------------------------------------------------------------
 // SSG: pré-gera todas as combinações tipo+cidade com imóveis publicados
@@ -46,12 +63,15 @@ export async function generateStaticParams() {
 // Metadata programática por tipo+cidade
 // ---------------------------------------------------------------------------
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { slug: typeSlug, citySlug } = await params;
+  const sp = await searchParams;
+  const page = parsePage(sp);
 
-  const [context, count] = await Promise.all([
+  const [context, count, buyCount] = await Promise.all([
     getTypeCityContext(typeSlug, citySlug),
     countPublishedPropertiesByTypeAndCity(typeSlug, citySlug),
+    countPublishedPropertiesByBuyTypeAndCity(typeSlug, citySlug),
   ]);
 
   const evaluation = evaluateIndexation({ pageType: "propertyTypeCity", publishedCount: count });
@@ -62,17 +82,35 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const typeName = getPropertyTypeLabel(typeSlug);
   const { city } = context;
-  const title = buildPropertyTypePageTitle(typeName, city);
+  const baseTitle = buildPropertyTypePageTitle(typeName, city);
+  const title = buildPageTitle(baseTitle, page);
   const description = buildPropertyTypePageDescription(typeName, city, count);
-  const canonical = buildCanonicalUrl(`/tipo/${typeSlug}/cidade/${citySlug}`);
+
+  // Quando só há imóveis à venda, tipo/cidade e comprar mostram o mesmo conteúdo.
+  // Canonical para /comprar evita duplicate content e reforça intenção comercial.
+  const isSaleOnly = count > 0 && count === buyCount;
+  const canonical = buildPaginatedCanonical(
+    buildCanonicalUrl(`/comprar/${typeSlug}/${citySlug}`),
+    page
+  );
+  const tipoCidadeCanonical = buildPaginatedCanonical(
+    buildCanonicalUrl(`/tipo/${typeSlug}/cidade/${citySlug}`),
+    page
+  );
 
   return {
     title,
     description,
-    alternates: { canonical },
-    openGraph: buildOpenGraph({ title, description, url: canonical }),
+    alternates: { canonical: isSaleOnly ? canonical : tipoCidadeCanonical },
+    openGraph: buildOpenGraph({
+      title,
+      description,
+      url: isSaleOnly ? canonical : tipoCidadeCanonical,
+    }),
     twitter: buildTwitterCard({ title, description }),
-    robots: buildRobotsDirective(evaluation),
+    robots: isSaleOnly
+      ? { index: false, follow: true }
+      : buildRobotsDirective(evaluation),
   };
 }
 
@@ -80,12 +118,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 // Página
 // ---------------------------------------------------------------------------
 
-export default async function TipoCidadePage({ params }: PageProps) {
+export default async function TipoCidadePage({ params, searchParams }: PageProps) {
   const { slug: typeSlug, citySlug } = await params;
+  const sp = await searchParams;
+  const page = parsePage(sp);
+  const skip = getSkip(page);
 
-  const [context, count] = await Promise.all([
+  const [context, count, buyCount] = await Promise.all([
     getTypeCityContext(typeSlug, citySlug),
     countPublishedPropertiesByTypeAndCity(typeSlug, citySlug),
+    countPublishedPropertiesByBuyTypeAndCity(typeSlug, citySlug),
   ]);
 
   const evaluation = evaluateIndexation({ pageType: "propertyTypeCity", publishedCount: count });
@@ -93,17 +135,35 @@ export default async function TipoCidadePage({ params }: PageProps) {
 
   const typeName = getPropertyTypeLabel(typeSlug);
   const { city } = context;
+  const totalPages = calculateTotalPages(count);
+  const isSaleOnly = count > 0 && count === buyCount;
 
-  const [properties, neighborhoods, otherTypes] = await Promise.all([
-    getPublishedPropertiesByTypeAndCity(typeSlug, citySlug, PROPERTIES_LIMIT),
+  const [properties, neighborhoods, otherTypes, priceRange, blogPosts] = await Promise.all([
+    getPublishedPropertiesByTypeAndCity(typeSlug, citySlug, PROPERTIES_LIMIT, skip),
     getRelatedNeighborhoodsByCitySlug(citySlug),
     getAvailablePropertyTypesByCitySlug(citySlug),
+    getPriceRangeByTypeAndCity(typeSlug, citySlug),
+    // Tipo tem prioridade; fallback para cidade se não houver posts de tipo
+    getPostsByTag(`tipo:${typeSlug}`).then((posts) =>
+      posts.length > 0 ? posts : getPostsByTag(`cidade:${citySlug}`)
+    ),
   ]);
 
-  const canonical = buildCanonicalUrl(`/tipo/${typeSlug}/cidade/${citySlug}`);
+  // Quando sale-only, canonical aponta para /comprar (evita duplicate content)
+  const canonical = isSaleOnly
+    ? buildPaginatedCanonical(buildCanonicalUrl(`/comprar/${typeSlug}/${citySlug}`), page)
+    : buildPaginatedCanonical(
+        buildCanonicalUrl(`/tipo/${typeSlug}/cidade/${citySlug}`),
+        page
+      );
   const cityCanonical = buildCanonicalUrl(`/cidade/${citySlug}`);
   const typeCanonical = buildCanonicalUrl(`/tipo/${typeSlug}`);
   const description = buildPropertyTypePageDescription(typeName, city, count);
+
+  // Bairros onde esse tipo está disponível nessa cidade (reutiliza neighborhoods)
+  const neighborhoodCount = neighborhoods.filter(
+    (n) => n.neighborhoodSlug && n.neighborhood
+  ).length;
 
   // -------------------------------------------------------------------------
   // JSON-LD
@@ -190,7 +250,7 @@ export default async function TipoCidadePage({ params }: PageProps) {
 
       <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
 
-        {/* Breadcrumb: Início > Tipo > Cidade */}
+        {/* Breadcrumb: Início > Imóveis > Tipo > Cidade */}
         <nav aria-label="Breadcrumb" className="mb-6 flex flex-wrap items-center gap-2 text-sm text-zinc-500">
           <Link href="/" className="transition-colors hover:text-green-700">
             Início
@@ -212,7 +272,11 @@ export default async function TipoCidadePage({ params }: PageProps) {
 
         {/* H1 semântico com contagem */}
         <h1 className="text-3xl font-bold tracking-tight text-zinc-900">
-          {count} {count !== 1 ? typeName.toLowerCase() : typeName.toLowerCase().replace(/s$/, "")} à venda em {city}
+          {count}{" "}
+          {count !== 1
+            ? typeName.toLowerCase()
+            : typeName.toLowerCase().replace(/s$/, "")}{" "}
+          à venda em {city}
         </h1>
 
         {/* Links de retorno para os dois nós do silo */}
@@ -237,10 +301,53 @@ export default async function TipoCidadePage({ params }: PageProps) {
           </span>
         </div>
 
-        {/* Texto introdutório contextual */}
-        <p className="mt-4 max-w-2xl text-base leading-relaxed text-zinc-600">
-          Veja as melhores opções de {typeName.toLowerCase()} à venda em {city}.
-          Imóveis com fotos, preços atualizados e informações completas.
+        {/* Bloco de dados reais — diferencia semanticamente cada combinação tipo+cidade */}
+        <dl className="mt-5 flex flex-wrap gap-6 sm:gap-10">
+          <div>
+            <dt className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+              Imóveis publicados
+            </dt>
+            <dd className="mt-1 text-2xl font-bold text-zinc-900">{count}</dd>
+          </div>
+          {priceRange && (
+            <>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                  A partir de
+                </dt>
+                <dd className="mt-1 text-2xl font-bold text-green-700">
+                  {formatPriceShort(priceRange.minPrice)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                  Até
+                </dt>
+                <dd className="mt-1 text-2xl font-bold text-zinc-900">
+                  {formatPriceShort(priceRange.maxPrice)}
+                </dd>
+              </div>
+            </>
+          )}
+          {neighborhoodCount > 0 && (
+            <div>
+              <dt className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                Bairros
+              </dt>
+              <dd className="mt-1 text-2xl font-bold text-zinc-900">{neighborhoodCount}</dd>
+            </div>
+          )}
+        </dl>
+
+        {/* Texto introdutório contextual com dados reais */}
+        <p className="mt-5 max-w-2xl text-base leading-relaxed text-zinc-600">
+          {priceRange
+            ? `${count} ${count !== 1 ? typeName.toLowerCase() : typeName.toLowerCase().replace(/s$/, "")} disponíveis em ${city}, com preços de ${formatPriceShort(priceRange.minPrice)} a ${formatPriceShort(priceRange.maxPrice)}.`
+            : `${count} ${count !== 1 ? typeName.toLowerCase() : typeName.toLowerCase().replace(/s$/, "")} disponíveis em ${city}.`}
+          {neighborhoodCount > 0
+            ? ` Distribuídos em ${neighborhoodCount} ${neighborhoodCount !== 1 ? "bairros" : "bairro"} da cidade.`
+            : ""}
+          {" "}Veja fotos, preços atualizados e informações completas.
           A 3Pinheiros oferece consultoria especializada para compra, venda e
           investimento na região. CRECI 1317J.
         </p>
@@ -248,14 +355,11 @@ export default async function TipoCidadePage({ params }: PageProps) {
         {/* Grid de imóveis */}
         <section className="mt-10" aria-label={`${typeName} em ${city}`}>
           <PropertyList properties={properties} />
-
-          {count > PROPERTIES_LIMIT && (
-            <p className="mt-6 text-center text-sm text-zinc-500">
-              Exibindo {PROPERTIES_LIMIT} de {count}{" "}
-              {count !== 1 ? typeName.toLowerCase() : typeName.toLowerCase().replace(/s$/, "")}{" "}
-              em {city}.
-            </p>
-          )}
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            basePath={`/tipo/${typeSlug}/cidade/${citySlug}`}
+          />
         </section>
 
         {/* Links para bairros da cidade — silo: tipo+cidade → bairro */}
@@ -307,6 +411,13 @@ export default async function TipoCidadePage({ params }: PageProps) {
           </section>
         )}
 
+        {/* Cluster editorial: posts do blog relacionados a tipo ou cidade */}
+        <BlogSection
+          posts={blogPosts}
+          heading={`Blog: ${typeName.toLowerCase()} em ${city}`}
+          description={`Artigos e guias sobre ${typeName.toLowerCase()} na região.`}
+        />
+
         {/* Bloco de contexto semântico */}
         <section
           className="mt-14 rounded-xl bg-green-50 p-6 sm:p-8"
@@ -316,10 +427,11 @@ export default async function TipoCidadePage({ params }: PageProps) {
             Mercado de {typeName.toLowerCase()} em {city}
           </h2>
           <p className="mt-3 text-sm leading-relaxed text-zinc-600">
-            {city} oferece uma variedade de {typeName.toLowerCase()} para
-            diferentes perfis de compradores: desde imóveis compactos para
-            jovens profissionais até opções maiores para famílias em busca de
-            conforto e localização privilegiada.
+            {city} oferece {typeName.toLowerCase()} para diferentes perfis de
+            compradores.
+            {priceRange
+              ? ` Os preços praticados na cidade vão de ${formatPriceShort(priceRange.minPrice)} a ${formatPriceShort(priceRange.maxPrice)}, com opções compactas para jovens profissionais e imóveis maiores para famílias em busca de conforto.`
+              : " Desde imóveis compactos para jovens profissionais até opções maiores para famílias em busca de conforto e localização privilegiada."}
           </p>
           <p className="mt-3 text-sm leading-relaxed text-zinc-600">
             A 3Pinheiros é especialista em {typeName.toLowerCase()} na região

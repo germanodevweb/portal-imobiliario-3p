@@ -10,7 +10,10 @@ import {
   getCitiesByPropertyTypeSlug,
   getNeighborhoodsByPropertyTypeSlug,
   getAvailablePropertyTypes,
+  getPriceRangeByPropertyTypeSlug,
 } from "@/lib/queries/properties";
+import { getPostsByTag } from "@/lib/queries/blog";
+import { BlogSection } from "@/app/components/BlogSection";
 import {
   buildPropertyTypeListTitle,
   buildPropertyTypeListDescription,
@@ -18,15 +21,28 @@ import {
   buildOpenGraph,
   buildTwitterCard,
   getPropertyTypeLabel,
+  formatPriceShort,
 } from "@/lib/seo";
 import {
   evaluateIndexation,
   buildRobotsDirective,
 } from "@/lib/indexation";
+import { Pagination } from "@/app/components/Pagination";
+import {
+  parsePage,
+  calculateTotalPages,
+  getSkip,
+  buildPageTitle,
+  buildPaginatedCanonical,
+  ITEMS_PER_PAGE,
+} from "@/lib/pagination";
 
-const PROPERTIES_LIMIT = 24;
+const PROPERTIES_LIMIT = ITEMS_PER_PAGE;
 
-type PageProps = { params: Promise<{ slug: string }> };
+type PageProps = {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+};
 
 // ---------------------------------------------------------------------------
 // SSG: pré-gera rotas para tipos com imóveis publicados
@@ -41,8 +57,10 @@ export async function generateStaticParams() {
 // Metadata programática por tipo
 // ---------------------------------------------------------------------------
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { slug } = await params;
+  const sp = await searchParams;
+  const page = parsePage(sp);
 
   const count = await countPublishedPropertiesByPropertyTypeSlug(slug);
   const evaluation = evaluateIndexation({ pageType: "propertyType", publishedCount: count });
@@ -52,9 +70,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const typeName = getPropertyTypeLabel(slug);
-  const title = buildPropertyTypeListTitle(typeName);
+  const baseTitle = buildPropertyTypeListTitle(typeName);
+  const title = buildPageTitle(baseTitle, page);
   const description = buildPropertyTypeListDescription(typeName, count);
-  const canonical = buildCanonicalUrl(`/tipo/${slug}`);
+  const canonical = buildPaginatedCanonical(buildCanonicalUrl(`/tipo/${slug}`), page);
 
   return {
     title,
@@ -70,23 +89,30 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 // Página
 // ---------------------------------------------------------------------------
 
-export default async function TipoPage({ params }: PageProps) {
+export default async function TipoPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
+  const sp = await searchParams;
+  const page = parsePage(sp);
+  const skip = getSkip(page);
 
   const count = await countPublishedPropertiesByPropertyTypeSlug(slug);
   const evaluation = evaluateIndexation({ pageType: "propertyType", publishedCount: count });
   if (!evaluation.shouldExist) notFound();
 
   const typeName = getPropertyTypeLabel(slug);
+  const totalPages = calculateTotalPages(count);
 
-  const [properties, cities, neighborhoods] = await Promise.all([
-    getPublishedPropertiesByPropertyTypeSlug(slug, PROPERTIES_LIMIT),
+  const [properties, cities, neighborhoods, priceRange, blogPosts] = await Promise.all([
+    getPublishedPropertiesByPropertyTypeSlug(slug, PROPERTIES_LIMIT, skip),
     getCitiesByPropertyTypeSlug(slug),
     getNeighborhoodsByPropertyTypeSlug(slug),
+    getPriceRangeByPropertyTypeSlug(slug),
+    getPostsByTag(`tipo:${slug}`),
   ]);
 
-  const canonical = buildCanonicalUrl(`/tipo/${slug}`);
+  const canonical = buildPaginatedCanonical(buildCanonicalUrl(`/tipo/${slug}`), page);
   const description = buildPropertyTypeListDescription(typeName, count);
+  const cityCount = cities.length;
 
   // -------------------------------------------------------------------------
   // JSON-LD
@@ -178,29 +204,74 @@ export default async function TipoPage({ params }: PageProps) {
 
         {/* H1 semântico com contagem */}
         <h1 className="text-3xl font-bold tracking-tight text-zinc-900">
-          {count} {count !== 1 ? `${typeName.toLowerCase()} disponíveis` : `${typeName.toLowerCase().replace(/s$/, "")} disponível`}
+          {count}{" "}
+          {count !== 1
+            ? `${typeName.toLowerCase()} disponíveis`
+            : `${typeName.toLowerCase().replace(/s$/, "")} disponível`}
         </h1>
 
-        {/* Texto introdutório contextual */}
-        <p className="mt-3 max-w-2xl text-base leading-relaxed text-zinc-600">
-          Explore nossa seleção de {typeName.toLowerCase()} à venda com fotos,
-          preços atualizados e informações completas. Consultoria especializada
-          pela 3Pinheiros para compra, venda e investimento. CRECI 1317J.
+        {/* Bloco de dados reais — diferencia semanticamente cada tipo */}
+        <dl className="mt-5 flex flex-wrap gap-6 sm:gap-10">
+          <div>
+            <dt className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+              Imóveis publicados
+            </dt>
+            <dd className="mt-1 text-2xl font-bold text-zinc-900">{count}</dd>
+          </div>
+          {priceRange && (
+            <>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                  A partir de
+                </dt>
+                <dd className="mt-1 text-2xl font-bold text-green-700">
+                  {formatPriceShort(priceRange.minPrice)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                  Até
+                </dt>
+                <dd className="mt-1 text-2xl font-bold text-zinc-900">
+                  {formatPriceShort(priceRange.maxPrice)}
+                </dd>
+              </div>
+            </>
+          )}
+          {cityCount > 0 && (
+            <div>
+              <dt className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                Cidades
+              </dt>
+              <dd className="mt-1 text-2xl font-bold text-zinc-900">{cityCount}</dd>
+            </div>
+          )}
+        </dl>
+
+        {/* Texto introdutório contextual com dados reais */}
+        <p className="mt-5 max-w-2xl text-base leading-relaxed text-zinc-600">
+          {cityCount > 0
+            ? `${count} ${count !== 1 ? typeName.toLowerCase() : typeName.toLowerCase().replace(/s$/, "")} disponíveis em ${cityCount} ${cityCount !== 1 ? "cidades" : "cidade"}`
+            : `${count} ${count !== 1 ? typeName.toLowerCase() : typeName.toLowerCase().replace(/s$/, "")} disponíveis`}
+          {priceRange
+            ? `, com preços de ${formatPriceShort(priceRange.minPrice)} a ${formatPriceShort(priceRange.maxPrice)}.`
+            : "."}
+          {" "}Veja fotos, detalhes e informações completas. Consultoria
+          especializada pela 3Pinheiros para compra, venda e investimento.
+          CRECI 1317J.
         </p>
 
         {/* Grid de imóveis */}
         <section className="mt-10" aria-label={`Listagem de ${typeName.toLowerCase()}`}>
           <PropertyList properties={properties} />
-
-          {count > PROPERTIES_LIMIT && (
-            <p className="mt-6 text-center text-sm text-zinc-500">
-              Exibindo {PROPERTIES_LIMIT} de {count}{" "}
-              {count !== 1 ? typeName.toLowerCase() : typeName.toLowerCase().replace(/s$/, "")}.
-            </p>
-          )}
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            basePath={`/tipo/${slug}`}
+          />
         </section>
 
-        {/* Links para cidades — silo: tipo → cidade */}
+        {/* Links para cidades — silo: tipo → tipo+cidade */}
         {cities.length > 0 && (
           <section className="mt-14" aria-label={`Cidades com ${typeName.toLowerCase()}`}>
             <h2 className="text-lg font-semibold text-zinc-900">
@@ -213,7 +284,7 @@ export default async function TipoPage({ params }: PageProps) {
               {cities.map((c) => (
                 <li key={c.citySlug}>
                   <Link
-                    href={`/cidade/${c.citySlug}`}
+                    href={`/tipo/${slug}/cidade/${c.citySlug}`}
                     className="rounded-full border border-zinc-200 px-4 py-1.5 text-sm text-zinc-700 transition-colors hover:border-green-700 hover:text-green-700"
                   >
                     {c.city}
@@ -250,7 +321,14 @@ export default async function TipoPage({ params }: PageProps) {
           </section>
         )}
 
-        {/* Bloco de contexto semântico — reforça relevância topical do tipo */}
+        {/* Cluster editorial: posts do blog relacionados a este tipo */}
+        <BlogSection
+          posts={blogPosts}
+          heading={`Blog: guias sobre ${typeName.toLowerCase()}`}
+          description={`Artigos e dicas para quem busca ${typeName.toLowerCase()}.`}
+        />
+
+        {/* Bloco de contexto semântico */}
         <section
           className="mt-14 rounded-xl bg-green-50 p-6 sm:p-8"
           aria-label={`Consultoria para ${typeName.toLowerCase()}`}
@@ -260,10 +338,10 @@ export default async function TipoPage({ params }: PageProps) {
           </h2>
           <p className="mt-3 text-sm leading-relaxed text-zinc-600">
             A 3Pinheiros tem ampla experiência na negociação de{" "}
-            {typeName.toLowerCase()} em São Paulo e região. Nossa equipe
-            analisa o perfil do comprador, identifica as melhores opções do
-            mercado e acompanha todo o processo: da visita ao imóvel até a
-            assinatura do contrato e entrega das chaves.
+            {typeName.toLowerCase()} em São Paulo e região.
+            {priceRange
+              ? ` Com opções de ${formatPriceShort(priceRange.minPrice)} a ${formatPriceShort(priceRange.maxPrice)}, atendemos compradores de diferentes perfis — do primeiro imóvel ao investimento de alto padrão.`
+              : " Nossa equipe analisa o perfil do comprador, identifica as melhores opções do mercado e acompanha todo o processo: da visita ao imóvel até a assinatura do contrato e entrega das chaves."}
           </p>
           <p className="mt-3 text-sm leading-relaxed text-zinc-600">
             Atendemos compradores, vendedores e investidores com foco em

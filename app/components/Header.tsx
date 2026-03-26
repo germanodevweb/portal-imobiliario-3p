@@ -4,13 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
-const navLinks = [
-  { label: "Comprar", href: "/imoveis" },
-  { label: "Alto Padrão", href: "/imoveis?categoria=alto-padrao" },
-  { label: "Investimento", href: "/imoveis?categoria=investimento" },
-  { label: "Quem Somos", href: "/quem-somos" },
-  { label: "Contato", href: "/contato" },
-];
+const navLinks = [{ label: "Quem Somos", href: "/quem-somos" }];
 
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -19,49 +13,55 @@ export function Header() {
     <header className="sticky top-0 z-50 border-b border-zinc-100 bg-white shadow-sm">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo */}
-        <Link href="/" className="flex shrink-0 items-center gap-2">
+        <Link
+          href="/"
+          className="flex shrink-0 items-center gap-2 py-2"
+          aria-label="3Pinheiros Consultoria Imobiliária - Página inicial"
+        >
           <Image
             src="/logo.png"
-            alt="3Pinheiros Consultoria Imobiliária"
-            width={44}
-            height={44}
-            className="object-contain"
+            alt=""
+            width={36}
+            height={36}
+            className="object-contain sm:w-11 sm:h-11"
             priority
           />
           <span className="hidden text-sm font-semibold leading-tight text-zinc-800 sm:block">
             3Pinheiros
-            <br />
-            <span className="text-xs font-normal text-green-700">
+            <span className="block text-xs font-normal text-green-700">
               Consultoria Imobiliária
             </span>
           </span>
+          <span className="text-sm font-semibold text-zinc-800 sm:hidden">
+            3Pinheiros
+          </span>
         </Link>
 
-        {/* Desktop nav */}
-        <nav className="hidden items-center gap-1 md:flex">
+        {/* Desktop nav — min-h para touch em tablets */}
+        <nav className="hidden items-center gap-1 md:flex" aria-label="Navegação principal">
           {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="rounded-md px-3 py-2 text-sm font-medium text-zinc-600 transition-colors hover:bg-green-50 hover:text-green-700"
+              className="flex min-h-[44px] items-center rounded-md px-3 py-2 text-sm font-medium text-zinc-600 transition-colors hover:bg-green-50 hover:text-green-700"
             >
               {link.label}
             </Link>
           ))}
           <Link
             href="/contato"
-            className="ml-2 rounded-full bg-green-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-800"
+            className="ml-2 flex min-h-[44px] items-center rounded-full bg-green-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-800"
           >
             Fale conosco
           </Link>
         </nav>
 
-        {/* Mobile hamburger */}
+        {/* Mobile hamburger — min 44px touch target (Apple HIG) */}
         <button
           type="button"
           onClick={() => setMenuOpen((v) => !v)}
-          className="rounded-md p-2 text-zinc-600 transition-colors hover:bg-zinc-100 md:hidden"
-          aria-label="Abrir menu"
+          className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md text-zinc-600 transition-colors hover:bg-zinc-100 md:hidden"
+          aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
           aria-expanded={menuOpen}
         >
           {menuOpen ? (
@@ -79,13 +79,13 @@ export function Header() {
       {/* Mobile menu */}
       {menuOpen && (
         <div className="border-t border-zinc-100 bg-white md:hidden">
-          <nav className="flex flex-col px-4 py-2">
+          <nav className="flex flex-col gap-1 px-4 py-3" aria-label="Menu principal">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
                 onClick={() => setMenuOpen(false)}
-                className="rounded-md px-3 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-green-50 hover:text-green-700"
+                className="min-h-[44px] rounded-md px-3 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-green-50 hover:text-green-700 flex items-center"
               >
                 {link.label}
               </Link>
@@ -93,7 +93,7 @@ export function Header() {
             <Link
               href="/contato"
               onClick={() => setMenuOpen(false)}
-              className="mb-2 mt-2 rounded-full bg-green-700 px-4 py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-green-800"
+              className="mt-2 flex min-h-[44px] items-center justify-center rounded-full bg-green-700 px-4 py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-green-800"
             >
               Fale conosco
             </Link>

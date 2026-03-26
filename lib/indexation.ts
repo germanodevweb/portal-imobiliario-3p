@@ -28,10 +28,16 @@
  * Cada tipo pode ter seu próprio threshold independente.
  */
 export type PageType =
-  | "city"              // /cidade/[slug]
-  | "neighborhood"      // /bairro/[slug]
-  | "propertyType"      // /tipo/[slug]
-  | "propertyTypeCity"; // /tipo/[typeSlug]/cidade/[citySlug]
+  | "state"              // /estado/[stateSlug]
+  | "stateCity"          // /estado/[stateSlug]/cidade/[citySlug]
+  | "city"               // /cidade/[slug]
+  | "neighborhood"       // /bairro/[slug]
+  | "propertyType"       // /tipo/[slug]
+  | "propertyTypeCity"   // /tipo/[typeSlug]/cidade/[citySlug]
+  | "neighborhoodType"   // /bairro/[slug]/tipo/[typeSlug]
+  | "cityNeighborhood"   // /cidade/[citySlug]/bairro/[slug]
+  | "buyTypeCity"        // /comprar/[typeSlug]/[citySlug]
+  | "buyTypeCityNeighborhood";  // /comprar/[typeSlug]/[citySlug]/[neighborhoodSlug]
 
 // ---------------------------------------------------------------------------
 // Thresholds mínimos por tipo de entidade
@@ -45,15 +51,23 @@ export type PageType =
 //   1–(N-1)      → shouldExist: true, shouldIndex: false (noindex)
 //   N ou mais    → shouldExist: true, shouldIndex: true  (index)
 //
-// Valor inicial: 1 para todos — qualquer página com ao menos 1 imóvel
-// publicado é indexada. Aumentar conforme o catálogo crescer.
+// Valores ajustados por sensibilidade a thin content:
+//   - neighborhood, neighborhoodType, cityNeighborhood, buyTypeCityNeighborhood: 2
+//     (páginas de bairro têm maior risco de sobreposição e conteúdo fino)
+//   - demais: 1 (mantido para não gerar 404 em catálogos pequenos)
 // ---------------------------------------------------------------------------
 
 export const INDEXATION_THRESHOLDS: Record<PageType, number> = {
+  state: 1,
+  stateCity: 1,
   city: 1,
-  neighborhood: 1,
+  neighborhood: 2,
   propertyType: 1,
   propertyTypeCity: 1,
+  neighborhoodType: 2,
+  cityNeighborhood: 2,
+  buyTypeCity: 1,
+  buyTypeCityNeighborhood: 2,
 };
 
 // ---------------------------------------------------------------------------

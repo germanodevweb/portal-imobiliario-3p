@@ -1,5 +1,10 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Variáveis de ambiente
+
+- Copie `.env.example` para `.env.local` e ajuste os valores.
+- **`NEXT_PUBLIC_BASE_URL`**: em **produção**, defina a URL pública final (`https://...`) no painel do host (ex.: Vercel). Ela alimenta canonical, sitemap, robots, feeds e metadata social. Em desenvolvimento você pode omitir (usa o domínio canônico padrão do projeto) ou usar `http://localhost:3000` para testes locais de URLs absolutas.
+
 ## Getting Started
 
 First, run the development server:

@@ -10,7 +10,11 @@ import {
   getNeighborhoodContext,
   getAvailablePropertyTypesByNeighborhoodSlug,
   getAvailableNeighborhoods,
+  getPriceRangeByNeighborhoodSlug,
+  getMostCommonTypeByNeighborhoodSlug,
 } from "@/lib/queries/properties";
+import { getPostsByTag } from "@/lib/queries/blog";
+import { BlogSection } from "@/app/components/BlogSection";
 import {
   buildNeighborhoodPageTitle,
   buildNeighborhoodPageDescription,
@@ -18,15 +22,28 @@ import {
   buildOpenGraph,
   buildTwitterCard,
   getPropertyTypeLabel,
+  formatPriceShort,
 } from "@/lib/seo";
 import {
   evaluateIndexation,
   buildRobotsDirective,
 } from "@/lib/indexation";
+import { Pagination } from "@/app/components/Pagination";
+import {
+  parsePage,
+  calculateTotalPages,
+  getSkip,
+  buildPageTitle,
+  buildPaginatedCanonical,
+  ITEMS_PER_PAGE,
+} from "@/lib/pagination";
 
-const PROPERTIES_LIMIT = 24;
+const PROPERTIES_LIMIT = ITEMS_PER_PAGE;
 
-type PageProps = { params: Promise<{ slug: string }> };
+type PageProps = {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+};
 
 // ---------------------------------------------------------------------------
 // SSG: pré-gera rotas para bairros com imóveis publicados
@@ -41,8 +58,10 @@ export async function generateStaticParams() {
 // Metadata programática por bairro
 // ---------------------------------------------------------------------------
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { slug } = await params;
+  const sp = await searchParams;
+  const page = parsePage(sp);
 
   const [context, count] = await Promise.all([
     getNeighborhoodContext(slug),
@@ -56,9 +75,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const { neighborhood, city } = context;
-  const title = buildNeighborhoodPageTitle(neighborhood, city);
+  const baseTitle = buildNeighborhoodPageTitle(neighborhood, city);
+  const title = buildPageTitle(baseTitle, page);
   const description = buildNeighborhoodPageDescription(neighborhood, city, count);
-  const canonical = buildCanonicalUrl(`/bairro/${slug}`);
+  const canonical = buildPaginatedCanonical(buildCanonicalUrl(`/bairro/${slug}`), page);
 
   return {
     title,
@@ -74,8 +94,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 // Página
 // ---------------------------------------------------------------------------
 
-export default async function BairroPage({ params }: PageProps) {
+export default async function BairroPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
+  const sp = await searchParams;
+  const page = parsePage(sp);
+  const skip = getSkip(page);
 
   const [context, count] = await Promise.all([
     getNeighborhoodContext(slug),
@@ -86,15 +109,25 @@ export default async function BairroPage({ params }: PageProps) {
   if (!evaluation.shouldExist || !context) notFound();
 
   const { neighborhood, city, citySlug } = context;
+  const totalPages = calculateTotalPages(count);
 
-  const [properties, propertyTypes] = await Promise.all([
-    getPublishedPropertiesByNeighborhoodSlug(slug, PROPERTIES_LIMIT),
+  const [properties, propertyTypes, priceRange, mostCommonType, blogPosts] = await Promise.all([
+    getPublishedPropertiesByNeighborhoodSlug(slug, PROPERTIES_LIMIT, skip),
     getAvailablePropertyTypesByNeighborhoodSlug(slug),
+    getPriceRangeByNeighborhoodSlug(slug),
+    getMostCommonTypeByNeighborhoodSlug(slug),
+    // Posts do bairro específico; fallback para cidade pai se não houver
+    getPostsByTag(`bairro:${slug}`).then((posts) =>
+      posts.length > 0 ? posts : getPostsByTag(`cidade:${citySlug}`)
+    ),
   ]);
 
-  const canonical = buildCanonicalUrl(`/bairro/${slug}`);
+  const canonical = buildPaginatedCanonical(buildCanonicalUrl(`/bairro/${slug}`), page);
   const cityCanonical = buildCanonicalUrl(`/cidade/${citySlug}`);
   const description = buildNeighborhoodPageDescription(neighborhood, city, count);
+
+  const typeLabels = propertyTypes.map((t) => getPropertyTypeLabel(t.propertyTypeSlug));
+  const mostCommonTypeLabel = mostCommonType ? getPropertyTypeLabel(mostCommonType) : null;
 
   // -------------------------------------------------------------------------
   // JSON-LD
@@ -214,26 +247,66 @@ export default async function BairroPage({ params }: PageProps) {
           </Link>
         </p>
 
-        {/* Texto introdutório contextual */}
-        <p className="mt-4 max-w-2xl text-base leading-relaxed text-zinc-600">
-          Explore os imóveis disponíveis no {neighborhood}, bairro localizado em {city}.
-          Veja opções de casas, apartamentos e imóveis comerciais com fotos,
-          preços atualizados e informações completas.
+        {/* Bloco de dados reais — diferencia semanticamente cada bairro */}
+        <dl className="mt-5 flex flex-wrap gap-6 sm:gap-10">
+          <div>
+            <dt className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+              Imóveis publicados
+            </dt>
+            <dd className="mt-1 text-2xl font-bold text-zinc-900">{count}</dd>
+          </div>
+          {priceRange && (
+            <>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                  A partir de
+                </dt>
+                <dd className="mt-1 text-2xl font-bold text-green-700">
+                  {formatPriceShort(priceRange.minPrice)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                  Até
+                </dt>
+                <dd className="mt-1 text-2xl font-bold text-zinc-900">
+                  {formatPriceShort(priceRange.maxPrice)}
+                </dd>
+              </div>
+            </>
+          )}
+          {mostCommonTypeLabel && (
+            <div>
+              <dt className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                Tipo predominante
+              </dt>
+              <dd className="mt-1 text-2xl font-bold text-zinc-900">{mostCommonTypeLabel}</dd>
+            </div>
+          )}
+        </dl>
+
+        {/* Texto introdutório contextual com dados reais do bairro */}
+        <p className="mt-5 max-w-2xl text-base leading-relaxed text-zinc-600">
+          {priceRange
+            ? `O ${neighborhood} conta com ${count} ${count !== 1 ? "imóveis" : "imóvel"} publicados, com preços entre ${formatPriceShort(priceRange.minPrice)} e ${formatPriceShort(priceRange.maxPrice)}.`
+            : `O ${neighborhood} tem ${count} ${count !== 1 ? "imóveis" : "imóvel"} publicados.`}
+          {typeLabels.length > 0
+            ? ` As categorias disponíveis no bairro incluem ${typeLabels.join(", ").toLowerCase()}.`
+            : ""}
+          {" "}Veja fotos, preços e informações completas de cada opção.
         </p>
 
         {/* Grid de imóveis */}
         <section className="mt-10" aria-label={`Listagem de imóveis no ${neighborhood}`}>
           <PropertyList properties={properties} />
-
-          {count > PROPERTIES_LIMIT && (
-            <p className="mt-6 text-center text-sm text-zinc-500">
-              Exibindo {PROPERTIES_LIMIT} de {count}{" "}
-              {count !== 1 ? "imóveis" : "imóvel"} no {neighborhood}.
-            </p>
-          )}
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            basePath={`/bairro/${slug}`}
+          />
         </section>
 
-        {/* Links para tipos disponíveis no bairro — silo: bairro → tipo */}
+        {/* Links para tipos no bairro — silo: bairro → bairro+tipo (mais específico) */}
         {propertyTypes.length > 0 && (
           <section className="mt-14" aria-label={`Tipos de imóvel no ${neighborhood}`}>
             <h2 className="text-lg font-semibold text-zinc-900">
@@ -245,8 +318,9 @@ export default async function BairroPage({ params }: PageProps) {
             <ul className="mt-4 flex flex-wrap gap-2">
               {propertyTypes.map((t) => (
                 <li key={t.propertyTypeSlug}>
+                  {/* Link para bairro+tipo: mais específico e relevante para quem já está no bairro */}
                   <Link
-                    href={`/tipo/${t.propertyTypeSlug}`}
+                    href={`/bairro/${slug}/tipo/${t.propertyTypeSlug}`}
                     className="rounded-full border border-zinc-200 px-4 py-1.5 text-sm text-zinc-700 transition-colors hover:border-green-700 hover:text-green-700"
                   >
                     {getPropertyTypeLabel(t.propertyTypeSlug)}
@@ -257,7 +331,14 @@ export default async function BairroPage({ params }: PageProps) {
           </section>
         )}
 
-        {/* Bloco de contexto semântico — reforça relevância topical do bairro */}
+        {/* Cluster editorial: posts do blog relacionados a este bairro ou cidade */}
+        <BlogSection
+          posts={blogPosts}
+          heading={`Blog: mercado imobiliário no ${neighborhood}`}
+          description={`Artigos e guias sobre imóveis em ${city}.`}
+        />
+
+        {/* Bloco de contexto semântico */}
         <section
           className="mt-14 rounded-xl bg-green-50 p-6 sm:p-8"
           aria-label={`Sobre o mercado imobiliário no ${neighborhood}`}
@@ -266,10 +347,11 @@ export default async function BairroPage({ params }: PageProps) {
             Mercado imobiliário no {neighborhood}
           </h2>
           <p className="mt-3 text-sm leading-relaxed text-zinc-600">
-            O {neighborhood} é um bairro de {city} com perfil residencial e
-            diversidade de opções imobiliárias. Imóveis na região atendem desde
-            compradores em busca do primeiro imóvel até investidores interessados
-            em rentabilidade e valorização patrimonial de longo prazo.
+            O {neighborhood} é um bairro de {city} com diversidade de opções
+            imobiliárias.
+            {priceRange
+              ? ` Os imóveis disponíveis na região têm preços entre ${formatPriceShort(priceRange.minPrice)} e ${formatPriceShort(priceRange.maxPrice)}, atendendo desde compradores do primeiro imóvel até investidores focados em rentabilidade.`
+              : " Imóveis na região atendem desde compradores em busca do primeiro imóvel até investidores interessados em rentabilidade e valorização patrimonial de longo prazo."}
           </p>
           <p className="mt-3 text-sm leading-relaxed text-zinc-600">
             A 3Pinheiros oferece consultoria especializada para quem busca imóveis

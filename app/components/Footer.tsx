@@ -1,19 +1,19 @@
 import Image from "next/image";
 import Link from "next/link";
 
-const quickLinks = [
+const navLinks = [
   { label: "Comprar imóvel", href: "/imoveis" },
-  { label: "Alto Padrão", href: "/imoveis?categoria=alto-padrao" },
-  { label: "Investimento", href: "/imoveis?categoria=investimento" },
+  { label: "Alto Padrão", href: "/imoveis/alto-padrao" },
+  { label: "Investimento", href: "/investir-no-brasil" },
   { label: "Quem Somos", href: "/quem-somos" },
   { label: "Contato", href: "/contato" },
 ];
 
 export function Footer() {
   return (
-    <footer className="border-t border-zinc-200 bg-zinc-900 text-zinc-400">
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3">
+    <footer className="border-t border-zinc-800 bg-zinc-900 text-zinc-400 pb-24 md:pb-0">
+      <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-16 lg:px-8">
+        <div className="grid grid-cols-1 gap-12 sm:grid-cols-2 lg:grid-cols-3 lg:gap-16">
           {/* Marca */}
           <div className="flex flex-col gap-4">
             <Link href="/" className="flex items-center gap-3">
@@ -22,6 +22,7 @@ export function Footer() {
                 alt="3Pinheiros"
                 width={40}
                 height={40}
+                loading="lazy"
                 className="object-contain brightness-90"
               />
               <div>
@@ -29,42 +30,23 @@ export function Footer() {
                 <p className="text-xs text-green-500">Consultoria Imobiliária</p>
               </div>
             </Link>
-            <p className="text-xs leading-relaxed text-zinc-500">
-              CRECI 1317J — Especialistas em imóveis residenciais e comerciais.
-              Atendemos compradores, investidores e corretores parceiros.
+            <p className="max-w-xs text-sm leading-relaxed text-zinc-500">
+              Consultoria imobiliária com foco em segurança e transparência.
             </p>
-            <div className="flex gap-3 text-xs font-medium">
-              <a
-                href="https://youtube.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="transition-colors hover:text-green-500"
-              >
-                YouTube
-              </a>
-              <span className="text-zinc-700">·</span>
-              <a
-                href="https://instagram.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="transition-colors hover:text-green-500"
-              >
-                Instagram
-              </a>
-            </div>
+            <p className="text-xs font-medium text-zinc-600">CRECI 1317J</p>
           </div>
 
           {/* Navegação */}
           <div>
-            <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-zinc-300">
+            <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-zinc-400">
               Navegação
             </h3>
-            <ul className="flex flex-col gap-2">
-              {quickLinks.map((link) => (
+            <ul className="flex flex-col gap-3">
+              {navLinks.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm transition-colors hover:text-green-500"
+                    className="text-sm text-zinc-400 transition-colors hover:text-white"
                   >
                     {link.label}
                   </Link>
@@ -75,16 +57,16 @@ export function Footer() {
 
           {/* Contato */}
           <div>
-            <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-zinc-300">
+            <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-zinc-400">
               Contato
             </h3>
-            <ul className="flex flex-col gap-2 text-sm">
+            <ul className="flex flex-col gap-3 text-sm">
               <li>
                 <a
                   href="https://wa.me/5511999999999"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="transition-colors hover:text-green-500"
+                  className="text-zinc-400 transition-colors hover:text-white"
                 >
                   WhatsApp
                 </a>
@@ -92,7 +74,7 @@ export function Footer() {
               <li>
                 <a
                   href="mailto:contato@3pinheiros.com.br"
-                  className="transition-colors hover:text-green-500"
+                  className="text-zinc-400 transition-colors hover:text-white"
                 >
                   contato@3pinheiros.com.br
                 </a>
@@ -101,9 +83,9 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-10 border-t border-zinc-800 pt-6 text-center text-xs text-zinc-600">
-          © {new Date().getFullYear()} 3Pinheiros Consultoria Imobiliária. Todos os direitos
-          reservados.
+        <div className="mt-14 border-t border-zinc-800 pt-6 text-center text-xs text-zinc-600">
+          © {new Date().getFullYear()} 3Pinheiros Consultoria Imobiliária. Todos os
+          direitos reservados.
         </div>
       </div>
     </footer>

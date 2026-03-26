@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { getWatermarkedImageUrl } from "@/lib/cloudinary/watermark";
 
 export type Property = {
   id: string;
@@ -12,6 +13,9 @@ export type Property = {
   bathrooms: number;
   area: number | null;
   featuredImage: string | null;
+  isFeatured?: boolean;
+  isLaunch?: boolean;
+  isOpportunity?: boolean;
 };
 
 export function PropertyCard({ property }: { property: Property }) {
@@ -34,7 +38,7 @@ export function PropertyCard({ property }: { property: Property }) {
       <div className="relative aspect-video w-full overflow-hidden bg-zinc-100">
         {property.featuredImage ? (
           <Image
-            src={property.featuredImage}
+            src={getWatermarkedImageUrl(property.featuredImage)}
             alt={property.title}
             fill
             className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -45,19 +49,37 @@ export function PropertyCard({ property }: { property: Property }) {
             Sem imagem
           </div>
         )}
+        {/* Badges comerciais */}
+        <div className="absolute left-2 top-2 flex flex-wrap gap-1.5">
+          {property.isFeatured && (
+            <span className="rounded bg-amber-500/90 px-2 py-1 text-xs font-semibold uppercase tracking-wide text-white shadow-sm">
+              Destaque
+            </span>
+          )}
+          {property.isLaunch && (
+            <span className="rounded bg-green-600/90 px-2 py-1 text-xs font-semibold uppercase tracking-wide text-white shadow-sm">
+              Lançamento
+            </span>
+          )}
+          {property.isOpportunity && (
+            <span className="rounded bg-red-600/90 px-2 py-1 text-xs font-semibold uppercase tracking-wide text-white shadow-sm">
+              Oportunidade
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Informações */}
       <div className="flex flex-col gap-1.5 p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-green-700">
+        <p className="text-sm font-semibold uppercase tracking-wide text-green-700 sm:text-xs">
           {location}
         </p>
 
-        <h2 className="line-clamp-2 text-sm font-semibold leading-snug text-zinc-900">
+        <h2 className="line-clamp-2 text-[15px] font-semibold leading-snug text-zinc-900 sm:text-base">
           {property.title}
         </h2>
 
-        <div className="mt-1 flex items-center gap-3 text-xs text-zinc-500">
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-zinc-500">
           {property.bedrooms > 0 && (
             <span>{property.bedrooms} dorm{property.bedrooms !== 1 ? "s." : "."}</span>
           )}
@@ -75,7 +97,7 @@ export function PropertyCard({ property }: { property: Property }) {
           )}
         </div>
 
-        <p className="mt-1 text-base font-bold text-green-700">
+        <p className="mt-1 whitespace-nowrap text-[15px] font-bold text-green-700 sm:text-base">
           {formattedPrice}
         </p>
       </div>
