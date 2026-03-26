@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getAdminLeads } from "@/lib/admin/queries";
+import { getAdminLeads, type AdminLeadListItem } from "@/lib/admin/queries";
 import { AdminLeadsSearch } from "@/app/components/admin/AdminLeadsSearch";
 
 /**
