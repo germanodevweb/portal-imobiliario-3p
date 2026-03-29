@@ -83,6 +83,11 @@ const nextConfig = {
         pathname: "/**",
       },
       {
+        protocol: "http",
+        hostname: "res.cloudinary.com",
+        pathname: "/**",
+      },
+      {
         protocol: "https",
         hostname: "www.3pinheirosconsultoria.com.br",
         pathname: "/**",

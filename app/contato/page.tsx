@@ -46,24 +46,24 @@ export default function ContatoPage() {
     <>
       <Header />
 
-      <main className="min-h-screen bg-white">
+      <main className="min-h-screen bg-zinc-50">
         <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
           <h1 className="mb-10 text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">
             Fale conosco
           </h1>
 
           <div className="grid grid-cols-1 gap-10 lg:grid-cols-[280px_1fr]">
-            {/* Sidebar — contato rápido */}
+            {/* Sidebar — contato rápido (mesmo tom neutro da home) */}
             <aside className="flex flex-col gap-6">
               <a
                 href={WHATSAPP_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-start gap-4 rounded-lg border border-zinc-200 p-4 transition-colors hover:border-green-600 hover:bg-green-50/50"
+                className="flex items-start gap-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm transition-colors hover:border-zinc-300 hover:bg-zinc-50/80"
               >
-                <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-zinc-800">
+                <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-zinc-50 ring-1 ring-zinc-200/80">
                   <svg
-                    className="size-6 text-white"
+                    className="size-6 text-green-700"
                     fill="currentColor"
                     viewBox="0 0 24 24"
                     aria-hidden
@@ -81,11 +81,11 @@ export default function ContatoPage() {
                 href={WHATSAPP_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-start gap-4 rounded-lg border border-zinc-200 p-4 transition-colors hover:border-green-600 hover:bg-green-50/50"
+                className="flex items-start gap-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm transition-colors hover:border-zinc-300 hover:bg-zinc-50/80"
               >
-                <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-zinc-800">
+                <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-zinc-50 ring-1 ring-zinc-200/80">
                   <svg
-                    className="size-6 text-white"
+                    className="size-6 text-green-700"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -106,27 +106,28 @@ export default function ContatoPage() {
               </a>
             </aside>
 
-            {/* Formulário */}
+            {/* Formulário — mesmos campos que LeadForm (home) */}
             <div className="relative">
               <form
                 action={submitContatoAction}
-                className="space-y-8"
+                className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8 space-y-4"
               >
                 <div>
                   <label htmlFor="nome" className="block text-sm font-medium text-zinc-700">
-                    Nome completo
+                    Nome completo <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     id="nome"
                     name="nome"
                     required
-                    className="mt-1 block w-full border-0 border-b border-zinc-300 bg-transparent py-2 text-zinc-900 placeholder-zinc-400 focus:border-green-600 focus:outline-none focus:ring-0"
+                    autoComplete="name"
+                    className="mt-1 block min-h-[44px] w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none focus:ring-2 focus:ring-green-600/20"
                     placeholder=""
                   />
                 </div>
 
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
                   <div>
                     <label htmlFor="telefone" className="block text-sm font-medium text-zinc-700">
                       DDD + Celular
@@ -135,20 +136,22 @@ export default function ContatoPage() {
                       type="tel"
                       id="telefone"
                       name="telefone"
-                      className="mt-1 block w-full border-0 border-b border-zinc-300 bg-transparent py-2 text-zinc-900 placeholder-zinc-400 focus:border-green-600 focus:outline-none focus:ring-0"
+                      autoComplete="tel"
+                      className="mt-1 block min-h-[44px] w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none focus:ring-2 focus:ring-green-600/20"
                       placeholder=""
                     />
                   </div>
                   <div>
                     <label htmlFor="email" className="block text-sm font-medium text-zinc-700">
-                      E-mail
+                      E-mail <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="email"
                       id="email"
                       name="email"
                       required
-                      className="mt-1 block w-full border-0 border-b border-zinc-300 bg-transparent py-2 text-zinc-900 placeholder-zinc-400 focus:border-green-600 focus:outline-none focus:ring-0"
+                      autoComplete="email"
+                      className="mt-1 block min-h-[44px] w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none focus:ring-2 focus:ring-green-600/20"
                       placeholder=""
                     />
                   </div>
@@ -156,13 +159,13 @@ export default function ContatoPage() {
 
                 <div>
                   <label htmlFor="assunto" className="block text-sm font-medium text-zinc-700">
-                    Assunto
+                    Assunto <span className="text-red-500">*</span>
                   </label>
                   <select
                     id="assunto"
                     name="assunto"
                     required
-                    className="mt-1 block w-full border-0 border-b border-zinc-300 bg-transparent py-2 text-zinc-900 focus:border-green-600 focus:outline-none focus:ring-0 [&>option]:bg-white [&>option]:text-zinc-900"
+                    className="mt-1 block min-h-[44px] w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-green-600 focus:outline-none focus:ring-2 focus:ring-green-600/20 [&>option]:bg-white [&>option]:text-zinc-900"
                   >
                     {ASSUNTO_OPCOES.map((opt) => (
                       <option key={opt.value} value={opt.value}>
@@ -174,21 +177,21 @@ export default function ContatoPage() {
 
                 <div>
                   <label htmlFor="mensagem" className="block text-sm font-medium text-zinc-700">
-                    Deixe sua mensagem
+                    Deixe sua mensagem <span className="text-red-500">*</span>
                   </label>
                   <textarea
                     id="mensagem"
                     name="mensagem"
                     rows={4}
                     required
-                    className="mt-1 block w-full border-0 border-b border-zinc-300 bg-transparent py-2 text-zinc-900 placeholder-zinc-400 focus:border-green-600 focus:outline-none focus:ring-0"
+                    className="mt-1 block w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none focus:ring-2 focus:ring-green-600/20"
                     placeholder=""
                   />
                 </div>
 
                 <button
                   type="submit"
-                  className="rounded-full bg-green-700 px-8 py-3 text-sm font-semibold text-white transition-colors hover:bg-green-800"
+                  className="flex min-h-[44px] w-full items-center justify-center rounded-lg bg-green-700 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-green-800"
                 >
                   Enviar mensagem
                 </button>
@@ -199,7 +202,7 @@ export default function ContatoPage() {
                 href={WHATSAPP_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="fixed bottom-6 right-6 flex size-14 items-center justify-center rounded-full bg-green-600 shadow-lg transition-colors hover:bg-green-700 lg:bottom-8 lg:right-8"
+                className="fixed bottom-6 right-6 flex size-14 items-center justify-center rounded-full bg-green-700 shadow-lg transition-all duration-300 hover:bg-linear-to-b hover:from-emerald-900 hover:via-green-800 hover:to-emerald-950 lg:bottom-8 lg:right-8"
                 aria-label="Contato via WhatsApp"
               >
                 <svg

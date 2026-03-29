@@ -1,6 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import { useRef, useState } from "react";
+import { adminImageSrc } from "@/lib/admin/admin-image-src";
 import { uploadPropertyImageAction } from "@/lib/admin/actions";
 import { validatePropertyImage } from "@/lib/upload/validation";
 import { generateFeaturedImageAlt } from "@/lib/utils/featuredImageAlt";
@@ -241,11 +243,22 @@ export function PropertyImageGallery({
                 </span>
               )}
               <div className="relative aspect-video overflow-hidden rounded-lg bg-zinc-100">
-                <img
-                  src={img.url}
-                  alt={img.alt || "Preview"}
-                  className="h-full w-full object-cover"
-                />
+                {img.url.startsWith("blob:") ? (
+                  <img
+                    src={img.url}
+                    alt={img.alt || "Preview"}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <Image
+                    src={adminImageSrc(img.url)}
+                    alt={img.alt || "Preview"}
+                    fill
+                    unoptimized
+                    className="object-cover"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  />
+                )}
                 <div className="absolute right-2 top-2 flex gap-1">
                   <button
                     type="button"

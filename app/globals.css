@@ -125,37 +125,48 @@
   }
 }
 
-/* IncomeFilter — scrollbar horizontal (WebKit + Firefox) */
-.income-filter-scroll {
+/* IncomeFilter — scrollbar sobre fundo verde (WebKit + Firefox) */
+.income-filter-scroll--on-green {
   scrollbar-width: thin;
-  scrollbar-color: #16a34a #e5e7eb;
+  scrollbar-color: #f8fafc #0f3d2e;
 }
 
-.income-filter-scroll::-webkit-scrollbar {
+.income-filter-scroll--on-green::-webkit-scrollbar {
   height: 6px;
 }
 
-.income-filter-scroll::-webkit-scrollbar-track {
+.income-filter-scroll--on-green::-webkit-scrollbar-track {
   margin: 0 12px;
   border-radius: 9999px;
-  background-color: #e5e7eb;
+  background-color: rgba(15, 61, 46, 0.85);
 }
 
-.income-filter-scroll::-webkit-scrollbar-thumb {
+.income-filter-scroll--on-green::-webkit-scrollbar-thumb {
   border-radius: 9999px;
-  background-color: #16a34a;
+  background-color: rgba(248, 250, 252, 0.85);
   transition: background-color 0.2s ease;
 }
 
-.income-filter-scroll::-webkit-scrollbar-thumb:hover {
-  background-color: #15803d;
+.income-filter-scroll--on-green::-webkit-scrollbar-thumb:hover {
+  background-color: #fb923c;
 }
 
-.income-filter-scroll::-webkit-scrollbar-thumb:active {
-  background-color: #166534;
+.income-filter-scroll--on-green::-webkit-scrollbar-thumb:active {
+  background-color: #ea580c;
 }
 
-/* Leve aumento de altura ao interagir com a própria barra (WebKit) */
-.income-filter-scroll::-webkit-scrollbar:hover {
+.income-filter-scroll--on-green::-webkit-scrollbar:hover {
   height: 8px;
+}
+
+/* Desktop: sem barra de rolagem customizada (chips em wrap, tudo visível) */
+@media (min-width: 768px) {
+  .income-filter-scroll--on-green {
+    scrollbar-width: none;
+  }
+  .income-filter-scroll--on-green::-webkit-scrollbar {
+    display: none;
+    height: 0;
+    width: 0;
+  }
 }

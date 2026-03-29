@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { getWatermarkedImageUrl } from "@/lib/cloudinary/watermark";
+import { formatPriceBrl } from "@/lib/currency";
+import { banhLabel, dormLabel, formatPropertyAreaM2Line } from "@/lib/utils/property-display";
 
 export type Property = {
   id: string;
@@ -19,11 +21,7 @@ export type Property = {
 };
 
 export function PropertyCard({ property }: { property: Property }) {
-  const formattedPrice = new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    maximumFractionDigits: 0,
-  }).format(Number(property.price));
+  const formattedPrice = formatPriceBrl(Number(property.price));
 
   const location = property.neighborhood
     ? `${property.neighborhood}, ${property.city}`
@@ -32,7 +30,7 @@ export function PropertyCard({ property }: { property: Property }) {
   return (
     <Link
       href={`/imoveis/${property.slug}`}
-      className="group flex flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700"
+      className="group flex flex-col overflow-hidden rounded-xl border border-green-700/30 bg-white shadow-sm shadow-green-950/6 transition-all hover:-translate-y-0.5 hover:border-green-700/55 hover:shadow-md hover:shadow-green-950/12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700"
     >
       {/* Imagem */}
       <div className="relative aspect-video w-full overflow-hidden bg-zinc-100">
@@ -80,21 +78,11 @@ export function PropertyCard({ property }: { property: Property }) {
         </h2>
 
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-zinc-500">
-          {property.bedrooms > 0 && (
-            <span>{property.bedrooms} dorm{property.bedrooms !== 1 ? "s." : "."}</span>
-          )}
-          {property.bathrooms > 0 && (
-            <>
-              <span className="text-zinc-300">|</span>
-              <span>{property.bathrooms} banh.</span>
-            </>
-          )}
-          {property.area && (
-            <>
-              <span className="text-zinc-300">|</span>
-              <span>{property.area} m²</span>
-            </>
-          )}
+          <span>{dormLabel(property.bedrooms)}</span>
+          <span className="text-zinc-300">|</span>
+          <span>{banhLabel(property.bathrooms)}</span>
+          <span className="text-zinc-300">|</span>
+          <span>{formatPropertyAreaM2Line(property.area)}</span>
         </div>
 
         <p className="mt-1 whitespace-nowrap text-[15px] font-bold text-green-700 sm:text-base">

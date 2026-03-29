@@ -15,6 +15,8 @@ export type AdminPropertyListItem = {
   neighborhood: string | null;
   neighborhoodSlug: string | null;
   featuredImage: string | null;
+  /** URL para miniatura na lista: `featuredImage` ou primeira linha de `PropertyImage`. */
+  listThumbnailUrl: string | null;
   isFeatured: boolean;
   isLaunch: boolean;
   isOpportunity: boolean;
@@ -45,11 +47,26 @@ const adminListSelect = {
  */
 export async function getAdminProperties(): Promise<AdminPropertyListItem[]> {
   const results = await prisma.property.findMany({
-    select: adminListSelect,
+    select: {
+      ...adminListSelect,
+      images: {
+        take: 1,
+        orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
+        select: { url: true },
+      },
+    },
     orderBy: { updatedAt: "desc" },
   });
 
-  return results.map((p) => ({ ...p, price: String(p.price) }));
+  return results.map((p) => {
+    const { images, ...rest } = p;
+    const listThumbnailUrl = rest.featuredImage ?? images[0]?.url ?? null;
+    return {
+      ...rest,
+      price: String(rest.price),
+      listThumbnailUrl,
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------

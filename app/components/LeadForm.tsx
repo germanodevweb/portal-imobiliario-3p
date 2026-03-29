@@ -51,12 +51,12 @@ export function LeadForm({ title, subtitle, className = "" }: LeadFormProps) {
         <header className="mb-6">
           <h2
             id="lead-form-heading"
-            className="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl"
+            className="w-fit text-xl font-semibold tracking-tight text-zinc-900 transition-colors duration-200 ease-out hover:text-green-700 sm:text-2xl"
           >
             {title}
           </h2>
           {subtitle && (
-            <p className="mt-2 text-sm text-zinc-500">{subtitle}</p>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-700">{subtitle}</p>
           )}
         </header>
       )}

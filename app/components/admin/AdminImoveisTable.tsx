@@ -1,7 +1,18 @@
 import Link from "next/link";
-import Image from "next/image";
 import type { AdminPropertyListItem } from "@/lib/admin/queries";
 import { PropertyRowActions } from "@/app/components/admin/PropertyRowActions";
+import { AdminPropertyThumbnail } from "@/app/components/admin/AdminPropertyThumbnail";
+
+/** URL absoluta para miniatura no admin (sem marca d’água — evita URL inválida se overlay não existir). */
+function thumbnailSrc(url: string | null): string | null {
+  if (!url?.trim()) return null;
+  const u = url.trim();
+  if (u.startsWith("//")) return `https:${u}`;
+  if (u.startsWith("http://") || u.startsWith("https://")) return u;
+  if (u.startsWith("/")) return u;
+  if (/^www\./i.test(u)) return `https://${u}`;
+  return u;
+}
 
 type Props = {
   properties: AdminPropertyListItem[];
@@ -15,7 +26,8 @@ function formatPrice(price: string): string {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(n);
 }
 
@@ -96,7 +108,9 @@ export function AdminImoveisTable({ properties, isFiltered }: Props) {
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-200 bg-white">
-            {properties.map((property) => (
+            {properties.map((property) => {
+              const thumb = thumbnailSrc(property.listThumbnailUrl);
+              return (
               <tr
                 key={property.id}
                 className={`transition-colors ${
@@ -108,14 +122,8 @@ export function AdminImoveisTable({ properties, isFiltered }: Props) {
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     <div className="relative h-12 w-16 shrink-0 overflow-hidden rounded-lg bg-zinc-100">
-                      {property.featuredImage ? (
-                        <Image
-                          src={property.featuredImage}
-                          alt=""
-                          fill
-                          sizes="64px"
-                          className="object-cover"
-                        />
+                      {thumb ? (
+                        <AdminPropertyThumbnail src={thumb} />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center text-xs text-zinc-400">
                           Sem img
@@ -185,7 +193,8 @@ export function AdminImoveisTable({ properties, isFiltered }: Props) {
                   />
                 </td>
               </tr>
-            ))}
+            );
+            })}
           </tbody>
         </table>
       </div>

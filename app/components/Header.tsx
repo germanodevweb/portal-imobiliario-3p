@@ -50,7 +50,7 @@ export function Header() {
           ))}
           <Link
             href="/contato"
-            className="ml-2 flex min-h-[44px] items-center rounded-full bg-green-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-800"
+            className="ml-2 flex min-h-[44px] items-center rounded-full bg-green-700 px-4 py-2 text-sm font-semibold text-white transition-all duration-300 hover:bg-linear-to-b hover:from-emerald-900 hover:via-green-800 hover:to-emerald-950 hover:shadow-md"
           >
             Fale conosco
           </Link>
@@ -93,7 +93,7 @@ export function Header() {
             <Link
               href="/contato"
               onClick={() => setMenuOpen(false)}
-              className="mt-2 flex min-h-[44px] items-center justify-center rounded-full bg-green-700 px-4 py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-green-800"
+              className="mt-2 flex min-h-[44px] items-center justify-center rounded-full bg-green-700 px-4 py-3 text-center text-sm font-semibold text-white transition-all duration-300 hover:bg-linear-to-b hover:from-emerald-900 hover:via-green-800 hover:to-emerald-950 hover:shadow-md"
             >
               Fale conosco
             </Link>
