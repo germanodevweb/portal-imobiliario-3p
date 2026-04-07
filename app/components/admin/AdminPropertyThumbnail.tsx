@@ -7,6 +7,8 @@ import { adminImageSrc } from "@/lib/admin/admin-image-src";
 type Props = {
   src: string;
   className?: string;
+  /** Para `fill` + responsividade (lista vs card). */
+  sizes?: string;
 };
 
 /**
@@ -14,7 +16,11 @@ type Props = {
  * `unoptimized`: evita `/_next/image` — o otimizador faz fetch no servidor e muitas URLs
  * (legado, IP local em dev) retornam 404; sem otimização o browser carrega a URL direto.
  */
-export function AdminPropertyThumbnail({ src, className }: Props) {
+export function AdminPropertyThumbnail({
+  src,
+  className,
+  sizes = "64px",
+}: Props) {
   const [failed, setFailed] = useState(false);
   const resolved = adminImageSrc(src);
 
@@ -33,7 +39,7 @@ export function AdminPropertyThumbnail({ src, className }: Props) {
       fill
       unoptimized
       className={className ?? "object-cover"}
-      sizes="64px"
+      sizes={sizes}
       loading="lazy"
       onError={() => setFailed(true)}
     />

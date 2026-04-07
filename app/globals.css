@@ -125,10 +125,10 @@
   }
 }
 
-/* IncomeFilter — scrollbar sobre fundo verde (WebKit + Firefox) */
+/* IncomeFilter — scrollbar alinhada ao fundo bg-green-700 (WebKit + Firefox) */
 .income-filter-scroll--on-green {
   scrollbar-width: thin;
-  scrollbar-color: #f8fafc #0f3d2e;
+  scrollbar-color: #f8fafc #15803d;
 }
 
 .income-filter-scroll--on-green::-webkit-scrollbar {
@@ -138,7 +138,7 @@
 .income-filter-scroll--on-green::-webkit-scrollbar-track {
   margin: 0 12px;
   border-radius: 9999px;
-  background-color: rgba(15, 61, 46, 0.85);
+  background-color: rgba(21, 128, 61, 0.85);
 }
 
 .income-filter-scroll--on-green::-webkit-scrollbar-thumb {
@@ -169,4 +169,48 @@
     height: 0;
     width: 0;
   }
+}
+
+/* TipTap — placeholder no admin (descrição do imóvel) */
+.property-description-editor .tiptap p.is-editor-empty:first-child::before,
+.property-description-editor .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: rgb(161 161 170);
+}
+
+/* Breadcrumbs — maior contraste e retorno mais evidente para a Home */
+nav[aria-label="Breadcrumb"] a {
+  color: #166534;
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+nav[aria-label="Breadcrumb"] a:hover {
+  color: #14532d;
+  border-bottom-color: #14532d;
+}
+
+nav[aria-label="Breadcrumb"] a:focus-visible {
+  outline: 2px solid #15803d;
+  outline-offset: 2px;
+  border-radius: 0.35rem;
+}
+
+nav[aria-label="Breadcrumb"] a:first-of-type {
+  background-color: #ecfdf5;
+  border: 1px solid #bbf7d0;
+  border-radius: 9999px;
+  padding: 0.28rem 0.65rem;
+}
+
+nav[aria-label="Breadcrumb"] span[aria-hidden="true"] {
+  color: #a1a1aa;
 }

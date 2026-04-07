@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Header } from "@/app/components/Header";
 import { Footer } from "@/app/components/Footer";
+import { WhatsAppButton } from "@/app/components/WhatsAppButton";
 import { PropertyList } from "@/app/components/PropertyList";
-import { VideoHeroBackground } from "@/app/components/VideoHeroBackground";
 import {
   getAltoPadraoApartments,
   countAltoPadraoApartments,
@@ -15,13 +15,27 @@ import {
   buildOpenGraph,
   buildTwitterCard,
 } from "@/lib/seo";
+import {
+  buildPageTitle,
+  buildPaginatedCanonical,
+  calculateTotalPages,
+  getSkip,
+  ITEMS_PER_PAGE,
+  parsePage,
+} from "@/lib/pagination";
+import { Pagination } from "@/app/components/Pagination";
 
-const canonical = buildCanonicalUrl("/imoveis/alto-padrao");
+type PageProps = {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+};
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
+  const sp = await searchParams;
+  const page = parsePage(sp);
   const count = await countAltoPadraoApartments();
-  const title = buildAltoPadraoPageTitle();
+  const title = buildPageTitle(buildAltoPadraoPageTitle(), page);
   const description = buildAltoPadraoPageDescription(count);
+  const canonical = buildCanonicalUrl(buildPaginatedCanonical("/imoveis/alto-padrao", page));
 
   return {
     title,
@@ -33,32 +47,32 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function AltoPadraoPage() {
+export default async function AltoPadraoPage({ searchParams }: PageProps) {
+  const sp = await searchParams;
+  const page = parsePage(sp);
+  const skip = getSkip(page);
   const [properties, count] = await Promise.all([
-    getAltoPadraoApartments(),
+    getAltoPadraoApartments(ITEMS_PER_PAGE, skip),
     countAltoPadraoApartments(),
   ]);
+  const totalPages = calculateTotalPages(count);
 
   return (
     <>
       <Header />
 
       <main>
-        {/* Hero — fundo full-bleed, sem barras laterais */}
-        <section className="relative min-h-[320px] w-full overflow-hidden bg-zinc-900 py-20 sm:py-28">
-          <VideoHeroBackground
-            videoSrc="/videos/alto-padrao.mp4"
-            overlayClassName="bg-black/60"
-          />
+        {/* Hero — fundo verde escuro (sem vídeo) */}
+        <section className="relative min-h-[200px] w-full overflow-hidden bg-linear-to-b from-emerald-900 via-green-800 to-emerald-950 py-8 sm:py-12">
           <div className="relative z-10 mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
             <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
               Imóveis de Alto Padrão
             </h1>
-            <p className="mt-4 text-lg text-zinc-300 sm:text-xl">
+            <p className="mt-3 text-lg text-zinc-300 sm:text-xl">
               Seleção exclusiva para quem busca localização nobre, sofisticação e
               imóveis de alto valor.
             </p>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
               <Link
                 href="/contato"
                 className="inline-flex items-center rounded-full bg-white px-6 py-3 text-base font-semibold text-zinc-900 transition-colors hover:bg-zinc-100"
@@ -110,7 +124,14 @@ export default async function AltoPadraoPage() {
           </div>
 
           {count > 0 ? (
-            <PropertyList properties={properties} />
+            <>
+              <PropertyList properties={properties} />
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                basePath="/imoveis/alto-padrao"
+              />
+            </>
           ) : (
             <div className="rounded-2xl border border-zinc-200 bg-zinc-50/50 py-16 text-center">
               <p className="text-zinc-600">
@@ -130,6 +151,7 @@ export default async function AltoPadraoPage() {
         </section>
       </main>
 
+      <WhatsAppButton />
       <Footer />
     </>
   );

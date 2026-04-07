@@ -30,11 +30,11 @@ export default async function AdminImoveisPage() {
   return (
     <div>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
             Imóveis
           </h1>
-          <p className="mt-1 text-sm text-zinc-500">
+          <p className="mt-1 text-sm text-zinc-300">
             {properties.length}{" "}
             {properties.length !== 1 ? "imóveis cadastrados" : "imóvel cadastrado"}
           </p>

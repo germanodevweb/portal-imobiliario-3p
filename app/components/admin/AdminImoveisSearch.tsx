@@ -54,13 +54,14 @@ export function AdminImoveisSearch({ properties }: Props) {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar por título, slug, cidade, bairro ou preço..."
-            className="w-full rounded-lg border border-zinc-200 bg-white py-2.5 pl-10 pr-4 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none focus:ring-2 focus:ring-green-600/20"
+            placeholder="Buscar imóveis…"
+            title="Buscar por título, slug, cidade, bairro ou preço"
+            className="min-h-[44px] w-full rounded-lg border border-zinc-200 bg-white py-2.5 pl-10 pr-4 text-base text-zinc-900 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none focus:ring-2 focus:ring-green-600/20 sm:text-sm"
             aria-label="Buscar imóveis"
           />
         </div>
         {query && (
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-zinc-200">
             {filtered.length} {filtered.length === 1 ? "resultado" : "resultados"}
           </p>
         )}

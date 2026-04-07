@@ -12,6 +12,7 @@ export type PropertyCardData = {
   price: string;
   city: string;
   neighborhood: string | null;
+  propertyTypeSlug: string;
   bedrooms: number;
   bathrooms: number;
   area: number | null;
@@ -47,6 +48,7 @@ const propertyCardSelect = {
   price: true,
   city: true,
   neighborhood: true,
+  propertyTypeSlug: true,
   bedrooms: true,
   bathrooms: true,
   area: true,
@@ -411,6 +413,8 @@ export type PropertyDetail = {
   city: string;
   neighborhood: string | null;
   state: string;
+  country: string | null;
+  postalCode: string | null;
   citySlug: string;
   neighborhoodSlug: string | null;
   stateSlug: string;
@@ -455,6 +459,8 @@ export const getPropertyBySlug = cache(async function (
       city: true,
       neighborhood: true,
       state: true,
+      country: true,
+      postalCode: true,
       citySlug: true,
       neighborhoodSlug: true,
       stateSlug: true,
@@ -467,6 +473,7 @@ export const getPropertyBySlug = cache(async function (
       featuredImageAlt: true,
       galleryImages: true,
       images: {
+        where: { isHidden: false },
         select: { url: true, alt: true },
         orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
       },
@@ -1351,13 +1358,15 @@ export async function getPublishedPropertySlugsForSitemap(): Promise<
  * Usado em: home, listagem geral, sitemap de imóveis.
  */
 export const getAllPublishedProperties = cache(async function (
-  limit?: number
+  limit?: number,
+  skip = 0
 ): Promise<PropertyCardData[]> {
   const results = await prisma.property.findMany({
     where: { published: true },
     select: propertyCardSelect,
     orderBy: [{ publishedAt: { sort: "desc", nulls: "first" } }, { createdAt: "desc" }],
     ...(limit !== undefined ? { take: limit } : {}),
+    ...(skip > 0 ? { skip } : {}),
   });
 
   return results.map((p) => ({ ...p, price: String(p.price) }));

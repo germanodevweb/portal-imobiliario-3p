@@ -1,27 +1,37 @@
 import Link from "next/link";
 import { Header } from "@/app/components/Header";
 import { Footer } from "@/app/components/Footer";
+import { WhatsAppButton } from "@/app/components/WhatsAppButton";
 import { InvestmentLanguageSelector } from "@/app/components/InvestmentLanguageSelector";
 import { InvestmentPropertyCard } from "@/app/components/InvestmentPropertyCard";
 import { NARAuthoritySection } from "@/app/components/NARAuthoritySection";
-import { LeadForm } from "@/app/components/LeadForm";
+import { Pagination } from "@/app/components/Pagination";
 import {
   getInternationalInvestmentProperties,
   countInternationalInvestmentProperties,
 } from "@/lib/queries/properties";
 import { getEurToBrlRate } from "@/lib/services/exchange-rate";
 import type { InvestContent } from "@/lib/i18n/invest";
+import { calculateTotalPages, getSkip, ITEMS_PER_PAGE } from "@/lib/pagination";
 
 type InvestPageContentProps = {
   content: InvestContent;
+  page: number;
+  basePath: string;
 };
 
-export async function InvestPageContent({ content }: InvestPageContentProps) {
+export async function InvestPageContent({
+  content,
+  page,
+  basePath,
+}: InvestPageContentProps) {
+  const skip = getSkip(page);
   const [properties, count, eurToBrlRate] = await Promise.all([
-    getInternationalInvestmentProperties(),
+    getInternationalInvestmentProperties(ITEMS_PER_PAGE, skip),
     countInternationalInvestmentProperties(),
     getEurToBrlRate(),
   ]);
+  const totalPages = calculateTotalPages(count);
 
   return (
     <>
@@ -31,18 +41,21 @@ export async function InvestPageContent({ content }: InvestPageContentProps) {
         {/* Barra de idioma */}
         <div className="border-b border-zinc-100 bg-white py-3 shadow-sm">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-            <Link
-              href="/"
-              className="text-sm font-medium text-zinc-600 transition-colors hover:text-green-700"
-            >
-              ← 3Pinheiros
-            </Link>
+            <nav aria-label="Atalho para página inicial">
+              <Link
+                href="/"
+                className="inline-flex items-center whitespace-nowrap text-sm font-semibold text-green-700 transition-colors hover:text-green-800"
+              >
+                <span className="sm:hidden">Início</span>
+                <span className="hidden sm:inline">← Página Inicial</span>
+              </Link>
+            </nav>
             <InvestmentLanguageSelector />
           </div>
         </div>
 
-        {/* Hero — compacto, sofisticado, fundo escuro unificado */}
-        <section className="relative overflow-hidden bg-zinc-900 px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+        {/* Hero — compacto, sofisticado, fundo verde escuro (igual destaque dos cards) */}
+        <section className="relative overflow-hidden bg-linear-to-b from-emerald-900 via-green-800 to-emerald-950 px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
           <div className="relative z-10 mx-auto flex max-w-5xl flex-col items-center gap-8 lg:flex-row lg:items-center lg:justify-between lg:gap-12">
             {/* Conteúdo — esquerda */}
             <div className="flex flex-1 flex-col items-center text-center lg:items-start lg:text-left">
@@ -114,29 +127,23 @@ export async function InvestPageContent({ content }: InvestPageContentProps) {
               </a>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {properties.map((property) => (
-                <InvestmentPropertyCard
-                  key={property.id}
-                  property={property}
-                  eurToBrlRate={eurToBrlRate}
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {properties.map((property) => (
+                  <InvestmentPropertyCard
+                    key={property.id}
+                    property={property}
+                    eurToBrlRate={eurToBrlRate}
+                  />
+                ))}
+              </div>
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                basePath={basePath}
+              />
+            </>
           )}
-        </section>
-
-        {/* Formulário de lead — captação em contexto de investimento */}
-        <section
-          className="border-t border-zinc-200 bg-zinc-50 px-4 py-16 sm:px-6 sm:py-20 lg:px-8"
-          aria-label="Solicitar contato"
-        >
-          <div className="mx-auto max-w-xl rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
-            <LeadForm
-              title="Fale com um especialista em investimento"
-              subtitle="Preencha seus dados e entraremos em contato para entender seu perfil de investidor e as oportunidades que melhor se encaixam."
-            />
-          </div>
         </section>
 
         {/* Credibilidade */}
@@ -152,6 +159,7 @@ export async function InvestPageContent({ content }: InvestPageContentProps) {
         </section>
       </main>
 
+      <WhatsAppButton />
       <Footer />
     </>
   );

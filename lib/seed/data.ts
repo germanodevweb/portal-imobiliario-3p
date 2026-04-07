@@ -109,6 +109,8 @@ export const SEED_PROPERTY_TYPES = [
   { slug: "apartamento", type: "APARTAMENTO" as const },
   { slug: "cobertura", type: "COBERTURA" as const },
   { slug: "terreno", type: "TERRENO" as const },
+  { slug: "lote", type: "LOTE" as const },
+  { slug: "fazenda", type: "FAZENDA" as const },
   { slug: "comercial", type: "COMERCIAL" as const },
   { slug: "studio", type: "STUDIO" as const },
 ] as const;

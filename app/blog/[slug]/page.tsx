@@ -4,7 +4,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { Header } from "@/app/components/Header";
 import { Footer } from "@/app/components/Footer";
-import { getPostBySlug, getRecentPosts, getPublishedPostSlugsForSitemap } from "@/lib/queries/blog";
+import {
+  getPostBySlug,
+  getRecentPosts,
+  getPublishedPostSlugsForSitemap,
+  getRelatedPropertiesForPost,
+} from "@/lib/queries/blog";
+import { PropertyCard } from "@/app/components/PropertyCard";
+import { WhatsAppButton } from "@/app/components/WhatsAppButton";
 import {
   buildBlogPostTitle,
   buildBlogPostDescription,
@@ -15,6 +22,7 @@ import {
   SITE_NAME,
   BASE_URL,
 } from "@/lib/seo";
+import { getBlogCoverImageProps } from "@/lib/utils/blog-image";
 
 type PageProps = { params: Promise<{ slug: string }> };
 
@@ -106,7 +114,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title,
     description,
     alternates: { canonical },
-    openGraph: buildOpenGraph({ title, description, url: canonical, image }),
+    openGraph: {
+      ...buildOpenGraph({ title, description, url: canonical, image }),
+      type: "article",
+      publishedTime: post.publishedAt?.toISOString(),
+      modifiedTime: post.updatedAt.toISOString(),
+    },
     twitter: buildTwitterCard({ title, description, image }),
     robots: { index: true, follow: true },
   };
@@ -118,16 +131,27 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function BlogPostPage({ params }: PageProps) {
   const { slug } = await params;
-  const [post, recentPosts] = await Promise.all([
-    getPostBySlug(slug),
+  const post = await getPostBySlug(slug);
+  if (!post) notFound();
+
+  const [recentPosts, relatedRaw] = await Promise.all([
     getRecentPosts(3, slug),
+    getRelatedPropertiesForPost(post.relatedPropertyIds),
   ]);
 
-  if (!post) notFound();
+  const relatedProperties = relatedRaw
+    .filter((p) => post.relatedPropertyIds.includes(p.id))
+    .sort(
+      (a, b) =>
+        post.relatedPropertyIds.indexOf(a.id) - post.relatedPropertyIds.indexOf(b.id)
+    );
 
   const canonical = buildCanonicalUrl(`/blog/${slug}`);
   const dateLabel = formatDate(post.publishedAt);
   const dateIso = post.publishedAt?.toISOString() ?? post.updatedAt.toISOString();
+  const heroImage = post.featuredImage
+    ? getBlogCoverImageProps(post.featuredImage)
+    : null;
 
   // Links contextuais derivados das tags do post
   const tagLinks = buildTagLinks(post.tags);
@@ -148,7 +172,7 @@ export default async function BlogPostPage({ params }: PageProps) {
 
   const articleJsonLd = {
     "@context": "https://schema.org",
-    "@type": "BlogPosting",
+    "@type": "Article",
     headline: post.title,
     description: post.excerpt ?? buildBlogPostDescription(post.title, post.excerpt),
     url: canonical,
@@ -226,13 +250,14 @@ export default async function BlogPostPage({ params }: PageProps) {
         </header>
 
         {/* Imagem de destaque */}
-        {post.featuredImage && (
+        {heroImage?.src && (
           <div className="relative mb-10 aspect-video w-full overflow-hidden rounded-xl bg-zinc-100">
             <Image
-              src={post.featuredImage}
+              src={heroImage.src}
               alt={post.title}
               fill
               priority
+              unoptimized={heroImage.unoptimized}
               sizes="(max-width: 768px) 100vw, 900px"
               className="object-cover"
             />
@@ -276,6 +301,41 @@ export default async function BlogPostPage({ params }: PageProps) {
                 </Link>
               </div>
             </section>
+
+            {relatedProperties.length > 0 && (
+              <section
+                className="mt-12 border-t border-zinc-200 pt-10"
+                aria-label="Imóveis relacionados a este artigo"
+              >
+                <h2 className="text-xl font-bold text-zinc-900">
+                  Imóveis relacionados
+                </h2>
+                <p className="mt-2 text-sm text-zinc-600">
+                  Selecionados pela equipe para complementar este conteúdo.
+                </p>
+                <ul className="mt-6 grid list-none gap-6 sm:grid-cols-2">
+                  {relatedProperties.map((p) => (
+                    <li key={p.id}>
+                      <PropertyCard
+                        property={{
+                          id: p.id,
+                          slug: p.slug,
+                          title: p.title,
+                          price: String(p.price),
+                          city: p.city,
+                          neighborhood: p.neighborhood,
+                          propertyTypeSlug: p.propertyTypeSlug,
+                          bedrooms: p.bedrooms,
+                          bathrooms: p.bathrooms,
+                          area: p.area,
+                          featuredImage: p.featuredImage,
+                        }}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
           </article>
 
           {/* Sidebar */}
@@ -328,18 +388,23 @@ export default async function BlogPostPage({ params }: PageProps) {
                   Leia também
                 </p>
                 <ul className="flex flex-col gap-4">
-                  {recentPosts.map((p) => (
+                  {recentPosts.map((p) => {
+                    const thumb = p.featuredImage
+                      ? getBlogCoverImageProps(p.featuredImage)
+                      : null;
+                    return (
                     <li key={p.slug}>
                       <Link
                         href={`/blog/${p.slug}`}
                         className="group flex flex-col gap-1"
                       >
-                        {p.featuredImage && (
+                        {thumb?.src && (
                           <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-zinc-100">
                             <Image
-                              src={p.featuredImage}
+                              src={thumb.src}
                               alt={p.title}
                               fill
+                              unoptimized={thumb.unoptimized}
                               sizes="200px"
                               className="object-cover transition-transform group-hover:scale-105"
                             />
@@ -355,7 +420,8 @@ export default async function BlogPostPage({ params }: PageProps) {
                         )}
                       </Link>
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
                 <div className="mt-4 border-t border-zinc-100 pt-4">
                   <Link
@@ -371,6 +437,7 @@ export default async function BlogPostPage({ params }: PageProps) {
         </div>
       </main>
 
+      <WhatsAppButton />
       <Footer />
     </>
   );

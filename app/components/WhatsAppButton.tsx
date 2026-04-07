@@ -1,11 +1,11 @@
 export function WhatsAppButton() {
   return (
     <a
-      href="https://wa.me/5511999999999"
+      href="https://wa.me/message/5YEBRRXV7OACK1"
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Fale conosco pelo WhatsApp"
-      className="fixed bottom-6 right-6 z-50 flex min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded-full bg-green-700 px-4 py-3 text-sm font-semibold text-white shadow-lg transition-all duration-300 hover:bg-linear-to-b hover:from-emerald-900 hover:via-green-800 hover:to-emerald-950 hover:shadow-xl active:scale-95"
+      className="fixed z-50 flex min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded-full bg-green-700 px-4 py-3 text-sm font-semibold text-white shadow-lg transition-all duration-300 hover:bg-linear-to-b hover:from-emerald-900 hover:via-green-800 hover:to-emerald-950 hover:shadow-xl active:scale-95 max-sm:bottom-[max(1rem,env(safe-area-inset-bottom))] max-sm:right-[max(1rem,env(safe-area-inset-right))] sm:bottom-6 sm:right-6"
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"

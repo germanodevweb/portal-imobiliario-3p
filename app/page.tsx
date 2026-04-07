@@ -3,10 +3,12 @@ import { Header } from "./components/Header";
 import { IncomeFilter } from "./components/IncomeFilter";
 import { PropertyList } from "./components/PropertyList";
 import { ServicesSection } from "./components/ServicesSection";
-import { LeadForm } from "./components/LeadForm";
 import { WhatsAppButton } from "./components/WhatsAppButton";
 import { Footer } from "./components/Footer";
-import { getAllPublishedProperties } from "@/lib/queries/properties";
+import {
+  countFilteredProperties,
+  getAllPublishedProperties,
+} from "@/lib/queries/properties";
 import {
   buildHomePageTitle,
   buildHomePageDescription,
@@ -14,13 +16,30 @@ import {
   buildOpenGraph,
   buildTwitterCard,
 } from "@/lib/seo";
+import {
+  buildHomeRealEstateAgentJsonLd,
+  serializeJsonLd,
+} from "@/lib/seo/site-entity-jsonld";
+import {
+  buildPageTitle,
+  buildPaginatedCanonical,
+  calculateTotalPages,
+  getSkip,
+  ITEMS_PER_PAGE,
+  parsePage,
+} from "@/lib/pagination";
+import { Pagination } from "./components/Pagination";
 
-const HOME_PROPERTIES_LIMIT = 12;
+type PageProps = {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+};
 
-export async function generateMetadata(): Promise<Metadata> {
-  const title = buildHomePageTitle();
+export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
+  const sp = await searchParams;
+  const page = parsePage(sp);
+  const title = buildPageTitle(buildHomePageTitle(), page);
   const description = buildHomePageDescription();
-  const canonical = buildCanonicalUrl("/");
+  const canonical = buildCanonicalUrl(buildPaginatedCanonical("/", page));
 
   return {
     title,
@@ -32,41 +51,42 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function Home() {
-  const properties = await getAllPublishedProperties(HOME_PROPERTIES_LIMIT);
+export default async function Home({ searchParams }: PageProps) {
+  const sp = await searchParams;
+  const page = parsePage(sp);
+  const skip = getSkip(page);
+  const [properties, count] = await Promise.all([
+    getAllPublishedProperties(ITEMS_PER_PAGE, skip),
+    countFilteredProperties({}),
+  ]);
+  const totalPages = calculateTotalPages(count);
+
+  const homeLocalJsonLd = serializeJsonLd(buildHomeRealEstateAgentJsonLd());
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: homeLocalJsonLd }}
+      />
       <Header />
       <IncomeFilter />
 
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+      <main className="mx-auto max-w-7xl px-4 py-8 pb-24 sm:px-6 sm:py-12 sm:pb-12 lg:px-8">
         <div className="mb-6 sm:mb-8">
           <h1 className="text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl">
             Imóveis em destaque
           </h1>
           <p className="mt-1 text-sm text-zinc-500">
-            {properties.length}{" "}
-            {properties.length !== 1 ? "imóveis disponíveis" : "imóvel disponível"}
+            {count} {count !== 1 ? "imóveis disponíveis" : "imóvel disponível"}
           </p>
         </div>
 
         <PropertyList properties={properties} />
+        <Pagination currentPage={page} totalPages={totalPages} basePath="/" />
       </main>
 
       <ServicesSection />
-
-      <section
-        className="border-t border-zinc-200 bg-zinc-50 px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20"
-        aria-label="Solicitar contato"
-      >
-        <div className="mx-auto max-w-xl rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
-          <LeadForm
-            title="Fale com um especialista"
-            subtitle="Preencha seus dados e entraremos em contato para entender seu momento, seu perfil e o tipo de imóvel que você procura."
-          />
-        </div>
-      </section>
 
       <WhatsAppButton />
       <Footer />

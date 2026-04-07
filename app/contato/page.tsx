@@ -7,7 +7,8 @@ import {
   buildTwitterCard,
   SITE_NAME,
 } from "@/lib/seo";
-import { submitContatoAction } from "@/lib/actions/contato";
+import { ContatoForm } from "@/app/components/ContatoForm";
+import { WHATSAPP_CONTACT_URL } from "@/lib/constants/contato";
 
 const canonical = buildCanonicalUrl("/contato");
 
@@ -30,17 +31,6 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-const ASSUNTO_OPCOES = [
-  { value: "", label: "Escolha um assunto" },
-  { value: "comprar-imovel", label: "Comprar imóvel" },
-  { value: "vender-imovel", label: "Vender imóvel" },
-  { value: "parceria", label: "Parceria" },
-  { value: "reuniao-online", label: "Marcar uma reunião online" },
-  { value: "outros", label: "Outros" },
-] as const;
-
-const WHATSAPP_URL = "https://wa.me/5511999999999";
-
 export default function ContatoPage() {
   return (
     <>
@@ -56,7 +46,7 @@ export default function ContatoPage() {
             {/* Sidebar — contato rápido (mesmo tom neutro da home) */}
             <aside className="flex flex-col gap-6">
               <a
-                href={WHATSAPP_URL}
+                href={WHATSAPP_CONTACT_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-start gap-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm transition-colors hover:border-zinc-300 hover:bg-zinc-50/80"
@@ -78,7 +68,7 @@ export default function ContatoPage() {
               </a>
 
               <a
-                href={WHATSAPP_URL}
+                href={WHATSAPP_CONTACT_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-start gap-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm transition-colors hover:border-zinc-300 hover:bg-zinc-50/80"
@@ -108,98 +98,11 @@ export default function ContatoPage() {
 
             {/* Formulário — mesmos campos que LeadForm (home) */}
             <div className="relative">
-              <form
-                action={submitContatoAction}
-                className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8 space-y-4"
-              >
-                <div>
-                  <label htmlFor="nome" className="block text-sm font-medium text-zinc-700">
-                    Nome completo <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    id="nome"
-                    name="nome"
-                    required
-                    autoComplete="name"
-                    className="mt-1 block min-h-[44px] w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none focus:ring-2 focus:ring-green-600/20"
-                    placeholder=""
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
-                  <div>
-                    <label htmlFor="telefone" className="block text-sm font-medium text-zinc-700">
-                      DDD + Celular
-                    </label>
-                    <input
-                      type="tel"
-                      id="telefone"
-                      name="telefone"
-                      autoComplete="tel"
-                      className="mt-1 block min-h-[44px] w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none focus:ring-2 focus:ring-green-600/20"
-                      placeholder=""
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-zinc-700">
-                      E-mail <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="email"
-                      id="email"
-                      name="email"
-                      required
-                      autoComplete="email"
-                      className="mt-1 block min-h-[44px] w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none focus:ring-2 focus:ring-green-600/20"
-                      placeholder=""
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="assunto" className="block text-sm font-medium text-zinc-700">
-                    Assunto <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    id="assunto"
-                    name="assunto"
-                    required
-                    className="mt-1 block min-h-[44px] w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-green-600 focus:outline-none focus:ring-2 focus:ring-green-600/20 [&>option]:bg-white [&>option]:text-zinc-900"
-                  >
-                    {ASSUNTO_OPCOES.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="mensagem" className="block text-sm font-medium text-zinc-700">
-                    Deixe sua mensagem <span className="text-red-500">*</span>
-                  </label>
-                  <textarea
-                    id="mensagem"
-                    name="mensagem"
-                    rows={4}
-                    required
-                    className="mt-1 block w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none focus:ring-2 focus:ring-green-600/20"
-                    placeholder=""
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="flex min-h-[44px] w-full items-center justify-center rounded-lg bg-green-700 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-green-800"
-                >
-                  Enviar mensagem
-                </button>
-              </form>
+              <ContatoForm />
 
               {/* Botão flutuante WhatsApp */}
               <a
-                href={WHATSAPP_URL}
+                href={WHATSAPP_CONTACT_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="fixed bottom-6 right-6 flex size-14 items-center justify-center rounded-full bg-green-700 shadow-lg transition-all duration-300 hover:bg-linear-to-b hover:from-emerald-900 hover:via-green-800 hover:to-emerald-950 lg:bottom-8 lg:right-8"

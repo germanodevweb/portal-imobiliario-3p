@@ -64,17 +64,29 @@ export function Pagination({ currentPage, totalPages, basePath, queryParams }: P
   const activeStyles = `${base} border-green-700 bg-green-700 text-white`;
   const normalStyles = `${base} border-zinc-200 bg-white text-zinc-700 hover:border-green-600 hover:text-green-700`;
   const disabledStyles = `${base} border-zinc-100 bg-zinc-50 text-zinc-400 cursor-not-allowed`;
+  const navButtonStyles =
+    "inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border border-green-700/80 bg-green-700 px-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-green-800 hover:border-green-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 sm:px-3.5";
+  const navButtonDisabledStyles =
+    "inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border border-zinc-200 bg-zinc-100 px-3 text-sm font-semibold text-zinc-400 cursor-not-allowed sm:px-3.5";
 
   return (
     <nav aria-label="Paginação de imóveis" className="mt-10 flex flex-wrap items-center justify-center gap-2">
       {/* Botão Anterior */}
       {prevUrl ? (
-        <Link href={prevUrl} rel="prev" className={normalStyles}>
-          ← <span className="ml-1 hidden sm:inline">Anterior</span>
+        <Link href={prevUrl} rel="prev" className={navButtonStyles}>
+          <span className="text-lg leading-none sm:hidden" aria-hidden="true">
+            ‹
+          </span>
+          <span className="hidden sm:inline">←</span>
+          <span className="ml-1 hidden sm:inline">Anterior</span>
         </Link>
       ) : (
-        <span className={disabledStyles} aria-disabled="true">
-          ← <span className="ml-1 hidden sm:inline">Anterior</span>
+        <span className={navButtonDisabledStyles} aria-disabled="true">
+          <span className="text-lg leading-none sm:hidden" aria-hidden="true">
+            ‹
+          </span>
+          <span className="hidden sm:inline">←</span>
+          <span className="ml-1 hidden sm:inline">Anterior</span>
         </span>
       )}
 
@@ -106,12 +118,20 @@ export function Pagination({ currentPage, totalPages, basePath, queryParams }: P
 
       {/* Botão Próxima */}
       {nextUrl ? (
-        <Link href={nextUrl} rel="next" className={normalStyles}>
-          <span className="mr-1 hidden sm:inline">Próxima</span> →
+        <Link href={nextUrl} rel="next" className={navButtonStyles}>
+          <span className="mr-1 hidden sm:inline">Próxima</span>
+          <span className="hidden sm:inline">→</span>
+          <span className="text-lg leading-none sm:hidden" aria-hidden="true">
+            ›
+          </span>
         </Link>
       ) : (
-        <span className={disabledStyles} aria-disabled="true">
-          <span className="mr-1 hidden sm:inline">Próxima</span> →
+        <span className={navButtonDisabledStyles} aria-disabled="true">
+          <span className="mr-1 hidden sm:inline">Próxima</span>
+          <span className="hidden sm:inline">→</span>
+          <span className="text-lg leading-none sm:hidden" aria-hidden="true">
+            ›
+          </span>
         </span>
       )}
     </nav>

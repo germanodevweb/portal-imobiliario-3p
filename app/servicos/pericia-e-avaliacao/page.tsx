@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Header } from "@/app/components/Header";
 import { Footer } from "@/app/components/Footer";
+import { WhatsAppButton } from "@/app/components/WhatsAppButton";
 import { ServiceHero } from "@/app/components/ServiceHero";
 import {
   buildCanonicalUrl,
@@ -77,7 +78,7 @@ const DIFERENCIAIS = [
   },
 ] as const;
 
-const WHATSAPP_URL = "https://wa.me/5511999999999";
+const WHATSAPP_URL = "https://wa.me/message/5YEBRRXV7OACK1";
 
 export default function PericiaEAvaliacaoPage() {
   return (
@@ -85,29 +86,85 @@ export default function PericiaEAvaliacaoPage() {
       <Header />
 
       <main className="min-h-screen">
+        <div className="border-b border-zinc-100 bg-white py-3 shadow-sm">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <nav aria-label="Atalho para página inicial">
+              <Link
+                href="/"
+                className="inline-flex items-center whitespace-nowrap text-sm font-semibold text-green-700 transition-colors hover:text-green-800"
+              >
+                <span className="sm:hidden">Início</span>
+                <span className="hidden sm:inline">← Página Inicial</span>
+              </Link>
+            </nav>
+          </div>
+        </div>
+
         <ServiceHero
           title="Perícia e Avaliação"
           subtitle="Laudos técnicos e avaliações imobiliárias com base contábil para decisões patrimoniais seguras."
+          variant="brand"
         />
 
         {/* Seção explicativa */}
         <section className="bg-white px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
           <div className="mx-auto max-w-3xl">
             <h2 className="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">
-              O serviço
+              Perícia e Avaliação
             </h2>
             <div className="mt-6 space-y-6 text-base leading-relaxed text-zinc-600 sm:text-lg">
               <p>
-                A 3Pinheiros elabora laudos periciais judiciais e extrajudiciais
-                para avaliação de imóveis. Nossa atuação combina conhecimento
-                técnico imobiliário e base contábil, garantindo análises precisas
-                que suportam a tomada de decisão em contextos diversos.
+                <strong>Avaliação Imobiliária (Mercadológica)</strong>
+                <br />
+                Focada em determinar o valor real de mercado para transações
+                comerciais. É a ferramenta essencial para quem busca o preço
+                justo em negociações e uma gestão de ativos eficiente.
               </p>
               <p>
-                Realizamos avaliações para compra e venda, processos judiciais,
-                divisão patrimonial e planejamento de investimentos. Os laudos
-                seguem metodologia técnica e normas aplicáveis, com foco em
-                transparência e no valor real do patrimônio.
+                <strong>Foco:</strong> Precisão em valores de venda, locação ou
+                garantias bancárias.
+                <br />
+                <strong>Aplicação:</strong> Compra e venda, inventários
+                extrajudiciais e atualizações patrimoniais.
+              </p>
+              <p>
+                <strong>Perícia Imobiliária (Judicial e Extrajudicial)</strong>
+                <br />
+                Um trabalho técnico de alta complexidade para a elaboração de
+                Laudos Periciais com fundamentação científica. Atua como prova
+                técnica definitiva em disputas, analisando conformidades e
+                garantindo segurança jurídica.
+              </p>
+              <p>
+                <strong>Foco:</strong> Suporte em decisões legais, auditorias
+                técnicas e avaliações de aluguel (renovatórias).
+                <br />
+                <strong>Aplicação:</strong> Processos judiciais, partilhas de
+                bens, ações renovatórias e liquidações.
+              </p>
+              <p>
+                O corretor Germano Pinheiro é devidamente cadastrado no Tribunal
+                de Justiça do Ceará (TJCE) e atua com frequência como Perito
+                Nomeado para a resolução de casos complexos.
+              </p>
+              <p>
+                Com vasta experiência em mediação e perícia, já auxiliamos na
+                resolução de dezenas de demandas familiares e empresariais,
+                incluindo:
+              </p>
+              <p>
+                Disputas de bens e partilhas complexas.
+                <br />
+                Processos de divórcio e inventários.
+                <br />
+                Questões de tutorias e curatelas.
+                <br />
+                Avaliações para liquidação de sentenças.
+              </p>
+              <p>
+                Nossa missão é transformar conflitos em soluções técnicas,
+                entregando laudos imparciais que garantem a justiça e o valor
+                real do patrimônio envolvido.
               </p>
             </div>
           </div>
@@ -166,18 +223,18 @@ export default function PericiaEAvaliacaoPage() {
           className="bg-zinc-50 px-4 py-16 sm:px-6 sm:py-20 lg:px-8"
           aria-label="Chamada para ação"
         >
-          <div className="mx-auto max-w-2xl rounded-2xl border border-zinc-200 bg-zinc-900 px-8 py-12 text-center sm:px-12 sm:py-14">
-            <h2 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
+          <div className="mx-auto max-w-2xl rounded-2xl border border-emerald-800/70 bg-linear-to-b from-emerald-900 via-green-800 to-emerald-950 px-8 py-12 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_20px_45px_-24px_rgba(6,78,59,0.7)] sm:px-12 sm:py-14">
+            <h2 className="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
               Fale conosco
             </h2>
-            <p className="mt-3 text-sm text-zinc-400 sm:text-base">
-              Conte com nossa equipe para laudos técnicos e avaliações com
-              credibilidade.
+            <p className="mt-3 text-base font-medium text-emerald-100 sm:text-lg">
+              Fale com especialistas para laudos periciais e avaliações
+              imobiliárias com precisão técnica e segurança jurídica.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
               <Link
                 href="/contato"
-                className="inline-flex rounded-full bg-green-800 px-8 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-green-900"
+                className="inline-flex min-h-[46px] items-center rounded-full bg-white px-8 py-3.5 text-sm font-bold text-emerald-900 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-emerald-50 hover:shadow-md"
               >
                 Ir para Contato
               </Link>
@@ -185,7 +242,7 @@ export default function PericiaEAvaliacaoPage() {
                 href={WHATSAPP_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex rounded-full border border-zinc-600 px-8 py-3.5 text-sm font-semibold text-white transition-colors hover:border-zinc-500 hover:bg-zinc-800"
+                className="inline-flex min-h-[46px] items-center rounded-full border-2 border-emerald-200/80 bg-white/5 px-8 py-3.5 text-sm font-bold text-white transition-all duration-300 hover:-translate-y-0.5 hover:border-white hover:bg-white/15"
               >
                 WhatsApp
               </a>
@@ -194,6 +251,7 @@ export default function PericiaEAvaliacaoPage() {
         </section>
       </main>
 
+      <WhatsAppButton />
       <Footer />
     </>
   );

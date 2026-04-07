@@ -18,6 +18,8 @@ enum PropertyType {
   APARTAMENTO
   COBERTURA
   TERRENO
+  LOTE
+  FAZENDA
   COMERCIAL
   STUDIO
 }
@@ -25,6 +27,13 @@ enum PropertyType {
 enum TransactionType {
   SALE
   RENT
+}
+
+enum PostType {
+  ARTIGO
+  GUIA
+  NOTICIA
+  INVESTIMENTO
 }
 
 // — Leads: gestão administrativa (não exposto no portal público)
@@ -64,6 +73,9 @@ model Property {
   city         String
   neighborhood String?
   state        String
+  country      String?
+  postalCode   String? // CEP (formato livre; ex.: 60165-121)
+
 
   // — Slugs SEO programáticos (indexados individualmente)
   citySlug         String
@@ -152,6 +164,8 @@ model Post {
   title   String
   excerpt String? @db.Text
   content String  @db.Text
+  citySlug String?
+  type     PostType @default(ARTIGO)
 
   // — SEO on-page
   metaTitle       String?
@@ -168,6 +182,7 @@ model Post {
   //   "tipo:{slug}"    → /tipo/[slug]
   // Um post pode ter múltiplas tags (ex: cobre dois tipos de imóvel).
   tags String[] @default([])
+  relatedPropertyIds String[] @default([])
 
   // — Status e visibilidade
   published   Boolean   @default(false)
@@ -178,6 +193,8 @@ model Post {
   updatedAt DateTime @updatedAt
 
   // slug @unique já cria índice implícito no PostgreSQL
+  @@index([citySlug])
+  @@index([type])
   @@index([published, publishedAt])
 }
 

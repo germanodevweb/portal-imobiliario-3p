@@ -11,82 +11,100 @@ const navLinks = [
 
 export function Footer() {
   return (
-    <footer className="border-t border-zinc-800 bg-zinc-900 text-zinc-400 pb-24 md:pb-0">
-      <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-16 lg:px-8">
-        <div className="grid grid-cols-1 gap-12 sm:grid-cols-2 lg:grid-cols-3 lg:gap-16">
-          {/* Marca */}
-          <div className="flex flex-col gap-4">
-            <Link href="/" className="flex items-center gap-3">
-              <Image
-                src="/logo.png"
-                alt="3Pinheiros"
-                width={40}
-                height={40}
-                loading="lazy"
-                className="object-contain brightness-90"
-              />
-              <div>
-                <p className="text-sm font-semibold text-white">3Pinheiros</p>
-                <p className="text-xs text-green-500">Consultoria Imobiliária</p>
-              </div>
-            </Link>
-            <p className="max-w-xs text-sm leading-relaxed text-zinc-500">
-              Consultoria imobiliária com foco em segurança e transparência.
-            </p>
-            <p className="text-xs font-medium text-zinc-600">CRECI 1317J</p>
-          </div>
+    <footer className="pb-24 text-green-800 md:pb-0">
+      {/* Área principal: degradê branco → cinza (contraste com seções claras e com o hero verde dos serviços) */}
+      <div className="border-t border-zinc-400/70 bg-linear-to-b from-zinc-200 via-zinc-300/95 to-zinc-400/90">
+        <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-16 lg:px-8">
+          <div className="grid grid-cols-1 gap-12 sm:grid-cols-2 lg:grid-cols-3 lg:gap-16">
+            {/* Marca */}
+            <div className="flex flex-col gap-4">
+              <Link href="/" className="flex items-center gap-3">
+                <Image
+                  src="/logo.png"
+                  alt="3Pinheiros"
+                  width={40}
+                  height={40}
+                  loading="lazy"
+                  className="object-contain"
+                />
+                <div>
+                  <p className="text-sm font-semibold text-[#0f5132]">
+                    3Pinheiros
+                    <sup className="ml-0.5 align-super text-[0.65em] font-normal text-green-600">
+                      ®
+                    </sup>
+                  </p>
+                  <p className="text-xs font-medium text-green-600">
+                    Consultoria Imobiliária
+                  </p>
+                </div>
+              </Link>
+              <p className="max-w-xs text-sm leading-relaxed text-green-800">
+                Consultoria imobiliária com foco em segurança e transparência.
+              </p>
+              <p className="text-xs font-semibold tracking-wide text-green-700">
+                CRECI 1317J
+              </p>
+            </div>
 
-          {/* Navegação */}
-          <div>
-            <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-zinc-400">
-              Navegação
-            </h3>
-            <ul className="flex flex-col gap-3">
-              {navLinks.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="text-sm text-zinc-400 transition-colors hover:text-white"
+            {/* Navegação */}
+            <div>
+              <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-[#0f5132]">
+                Navegação
+              </h3>
+              <ul className="flex flex-col gap-3">
+                {navLinks.map((link) => (
+                  <li key={link.href}>
+                    <Link
+                      href={link.href}
+                      className="text-sm font-medium text-green-700 transition-colors hover:text-[#0f5132]"
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Contato */}
+            <div>
+              <h3 className="mb-4 text-xs font-bold uppercase tracking-widest text-[#0f5132]">
+                Contato
+              </h3>
+              <ul className="flex flex-col gap-3 text-sm">
+                <li>
+                  <a
+                    href="https://wa.me/message/5YEBRRXV7OACK1"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-medium text-green-700 transition-colors hover:text-[#0f5132]"
                   >
-                    {link.label}
-                  </Link>
+                    WhatsApp
+                  </a>
                 </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Contato */}
-          <div>
-            <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-zinc-400">
-              Contato
-            </h3>
-            <ul className="flex flex-col gap-3 text-sm">
-              <li>
-                <a
-                  href="https://wa.me/5511999999999"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-zinc-400 transition-colors hover:text-white"
-                >
-                  WhatsApp
-                </a>
-              </li>
-              <li>
-                <a
-                  href="mailto:contato@3pinheiros.com.br"
-                  className="text-zinc-400 transition-colors hover:text-white"
-                >
-                  contato@3pinheiros.com.br
-                </a>
-              </li>
-            </ul>
+                <li>
+                  <a
+                    href="mailto:3pconsultoriaimobiliaria@gmail.com"
+                    className="break-all text-sm font-medium text-green-700 transition-colors hover:text-[#0f5132]"
+                  >
+                    3pconsultoriaimobiliaria@gmail.com
+                  </a>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
+      </div>
 
-        <div className="mt-14 border-t border-zinc-800 pt-6 text-center text-xs text-zinc-600">
-          © {new Date().getFullYear()} 3Pinheiros Consultoria Imobiliária. Todos os
-          direitos reservados.
-        </div>
+      {/* Faixa de copyright — degradê verde profundo (referência visual do rodapé escuro + traço mint) */}
+      <div className="w-full border-t border-[#86efac]/55 bg-linear-to-br from-[#004d33] via-[#003428] to-[#002b1b] px-4 py-5 text-center shadow-[inset_0_1px_0_0_rgba(134,239,172,0.35)] sm:px-6">
+        <p className="text-sm font-semibold leading-relaxed text-white sm:text-base">
+          © All rights reserved
+          <span className="mx-2 text-[#bbf7d0]/90" aria-hidden>
+            ·
+          </span>
+          Desenvolvido por Germano Pinheiro
+        </p>
       </div>
     </footer>
   );

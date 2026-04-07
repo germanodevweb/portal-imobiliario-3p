@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Header } from "@/app/components/Header";
 import { Footer } from "@/app/components/Footer";
+import { WhatsAppButton } from "@/app/components/WhatsAppButton";
 import { ServiceHero } from "@/app/components/ServiceHero";
 import { LeadForm } from "@/app/components/LeadForm";
 import {
@@ -36,26 +37,26 @@ const DIFERENCIAIS = [
   {
     title: "Regularização e documentação",
     description:
-      "Suporte na obtenção de CPF, abertura de empresas e regularização fiscal para operar no Brasil.",
+      "Suporte completo na obtenção de CPF para estrangeiros, abertura de empresas e toda a regularização fiscal necessária para operar com segurança no Brasil.",
   },
   {
     title: "Operações de câmbio",
     description:
-      "Orientação em transferência de capital, câmbio e conformidade regulatória para investimentos.",
+      "Orientação técnica em transferência de capital, câmbio e conformidade regulatória. Segurança financeira para que seus recursos cheguem e retornem conforme a lei.",
   },
   {
     title: "Seleção estratégica de ativos",
     description:
-      "Análise de oportunidades imobiliárias com visão de médio e longo prazo para decisões mais seguras.",
+      "Análise minuciosa de oportunidades imobiliárias com visão pericial. Foco em ativos de alta liquidez e segurança para decisões de investimento inteligentes.",
   },
   {
-    title: "Visão de mercado",
+    title: "Visão de Mercado (Expertise Técnica)",
     description:
-      "Avaliação de localização, tendências e potencial de valorização para alinhar ativos ao seu perfil.",
+      "Avaliação de localização e tendências de valorização baseadas em dados reais. Alinhamos as oportunidades do mercado brasileiro aos seus planos globais.",
   },
 ] as const;
 
-const WHATSAPP_URL = "https://wa.me/5511999999999";
+const WHATSAPP_URL = "https://wa.me/message/5YEBRRXV7OACK1";
 
 export default function InvestimentoNoBrasilPage() {
   return (
@@ -63,9 +64,24 @@ export default function InvestimentoNoBrasilPage() {
       <Header />
 
       <main className="min-h-screen">
+        <div className="border-b border-zinc-100 bg-white py-3 shadow-sm">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <nav aria-label="Atalho para página inicial">
+              <Link
+                href="/"
+                className="inline-flex items-center whitespace-nowrap text-sm font-semibold text-green-700 transition-colors hover:text-green-800"
+              >
+                <span className="sm:hidden">Início</span>
+                <span className="hidden sm:inline">← Página Inicial</span>
+              </Link>
+            </nav>
+          </div>
+        </div>
+
         <ServiceHero
           title="Investimento no Brasil"
           subtitle="Assessoria completa para investidores que desejam acessar oportunidades imobiliárias no Brasil com segurança e estratégia."
+          variant="brand"
         />
 
         {/* Seção explicativa */}
@@ -76,18 +92,19 @@ export default function InvestimentoNoBrasilPage() {
             </h2>
             <div className="mt-6 space-y-6 text-base leading-relaxed text-zinc-600 sm:text-lg">
               <p>
-                O serviço de Investimento no Brasil da 3Pinheiros oferece suporte
-                completo para investidores que desejam acessar oportunidades
-                imobiliárias em solo brasileiro. Atuamos desde a regularização
-                fiscal e documental até a seleção estratégica de ativos, com
-                visão de médio e longo prazo.
+                O serviço de Investimento no Brasil da 3 Pinheiros oferece
+                suporte completo para quem busca oportunidades sólidas em solo
+                brasileiro. Nossa atuação vai muito além da escolha do imóvel.
               </p>
               <p>
-                Realizamos análise de ativos, avaliação de localização e
-                potencial de valorização, além de orientação em operações de
-                câmbio e transferência de capital. O objetivo é apoiar decisões
-                mais seguras, alinhadas ao seu perfil de investidor e aos seus
-                objetivos patrimoniais.
+                Contamos com empresas parceiras que são experts em regularização
+                fiscal e documental, operações de câmbio e transferência de capital,
+                assegurando que cada etapa esteja alinhada ao seu perfil de
+                investidor e aos seus objetivos patrimoniais de médio e longo
+                prazo, garantindo que o investidor opere com total segurança
+                jurídica. Realizamos a análise técnica dos imóveis ou ativos
+                imobiliários, avaliação de localização e potencial de valorização
+                real.
               </p>
             </div>
           </div>
@@ -135,14 +152,18 @@ export default function InvestimentoNoBrasilPage() {
           className="bg-white px-4 py-12 sm:px-6 sm:py-16 lg:px-8"
           aria-label="Outros canais"
         >
-          <div className="mx-auto max-w-2xl text-center">
-            <p className="text-sm text-zinc-500">
-              Ou entre em contato diretamente:
+          <div className="mx-auto max-w-2xl rounded-2xl border border-emerald-800/70 bg-linear-to-b from-emerald-900 via-green-800 to-emerald-950 px-8 py-12 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_20px_45px_-24px_rgba(6,78,59,0.7)] sm:px-12 sm:py-14">
+            <h2 className="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
+              Fale conosco
+            </h2>
+            <p className="mt-3 text-base font-medium text-emerald-100 sm:text-lg">
+              Receba orientação estratégica para investir no Brasil com
+              segurança jurídica e visão de longo prazo.
             </p>
             <div className="mt-4 flex flex-wrap items-center justify-center gap-4">
               <Link
                 href="/contato"
-                className="inline-flex rounded-full bg-green-800 px-8 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-green-900"
+                className="inline-flex min-h-[46px] items-center rounded-full bg-white px-8 py-3.5 text-sm font-bold text-emerald-900 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-emerald-50 hover:shadow-md"
               >
                 Ir para Contato
               </Link>
@@ -150,7 +171,7 @@ export default function InvestimentoNoBrasilPage() {
                 href={WHATSAPP_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex rounded-full border border-zinc-300 px-8 py-3.5 text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50"
+                className="inline-flex min-h-[46px] items-center rounded-full border-2 border-emerald-200/80 bg-white/5 px-8 py-3.5 text-sm font-bold text-white transition-all duration-300 hover:-translate-y-0.5 hover:border-white hover:bg-white/15"
               >
                 WhatsApp
               </a>
@@ -159,6 +180,7 @@ export default function InvestimentoNoBrasilPage() {
         </section>
       </main>
 
+      <WhatsAppButton />
       <Footer />
     </>
   );

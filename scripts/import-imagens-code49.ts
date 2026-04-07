@@ -5,7 +5,7 @@
  * - Lê ./data/banco_de_dados.xml
  * - Extrai CODIGO e URLs de cada <IMOVEL><FOTOS>
  * - Associa imagens aos imóveis via externalId (CODIGO)
- * - Insere em PropertyImage; atualiza featuredImage na primeira
+ * - Insere em PropertyImage; sincroniza Property.featuredImage, featuredImageAlt e galleryImages
  * - Não duplica imagens; processamento em lotes
  */
 
@@ -14,6 +14,10 @@ import path from "node:path";
 import { readFileSync } from "node:fs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../lib/generated/prisma/client";
+import {
+  normalizePropertyImagePrimaryBySortOrder,
+  syncPropertyGalleryFieldsFromImages,
+} from "../lib/property/sync-gallery-fields";
 
 const XML_PATH = path.join(process.cwd(), "data", "banco_de_dados.xml");
 const BATCH_SIZE = 100;
@@ -65,13 +69,22 @@ function parseXmlImoveis(content: string): ImovelFotos[] {
   return result;
 }
 
+/**
+ * Normaliza URL da Code49 para o formato salvo no banco.
+ * - Protocolo relativo //host → https://host
+ * - Sem esquema → https (www. quando aplicável)
+ */
 function normalizeUrl(raw: string): string | null {
   let u = raw.trim();
   if (!u) return null;
   if (!/\.(jpg|jpeg|png)(?:\?|$)/i.test(u)) return null;
-  if (!u.startsWith("http://") && !u.startsWith("https://")) {
+
+  if (u.startsWith("//")) {
+    u = `https:${u}`;
+  } else if (!u.startsWith("http://") && !u.startsWith("https://")) {
     u = u.startsWith("www.") ? `https://${u}` : `https://www.${u}`;
   }
+
   return u;
 }
 
@@ -110,7 +123,7 @@ async function main() {
 
     const properties = await prisma.property.findMany({
       where: { externalId: { in: codigos } },
-      select: { id: true, externalId: true, featuredImage: true },
+      select: { id: true, externalId: true },
     });
     const propByCodigo = new Map(properties.map((p) => [p.externalId ?? "", p]));
 
@@ -128,40 +141,40 @@ async function main() {
       });
       const existingSet = new Set(existingUrls.map((e) => e.url));
 
+      const firstUrl = item.urls[0]?.url ?? "";
+
       const toInsert = item.urls.filter((u) => !existingSet.has(u.url));
       if (toInsert.length === 0) {
         stats.imagesSkipped += item.urls.length;
-        if (!property.featuredImage && item.urls[0]) {
-          try {
-            await prisma.property.update({
-              where: { id: property.id },
-              data: { featuredImage: item.urls[0].url },
-            });
-          } catch {
-            stats.errors++;
-          }
+        try {
+          await normalizePropertyImagePrimaryBySortOrder(prisma, property.id);
+          await syncPropertyGalleryFieldsFromImages(prisma, property.id);
+        } catch {
+          stats.errors++;
         }
         continue;
       }
 
       try {
-        const payload = toInsert.map((u, idx) => ({
-          propertyId: property.id,
-          url: u.url,
-          alt: u.legenda,
-          sortOrder: existingSet.size + idx,
-          isPrimary: existingSet.size === 0 && idx === 0,
-        }));
+        const payload = toInsert.map((u) => {
+          const sortOrder = Math.max(
+            0,
+            item.urls.findIndex((x) => x.url === u.url)
+          );
+          return {
+            propertyId: property.id,
+            url: u.url,
+            alt: u.legenda,
+            sortOrder,
+            isPrimary: u.url === firstUrl,
+          };
+        });
 
         await prisma.propertyImage.createMany({ data: payload });
         stats.imagesInserted += payload.length;
 
-        if (!property.featuredImage) {
-          await prisma.property.update({
-            where: { id: property.id },
-            data: { featuredImage: item.urls[0].url },
-          });
-        }
+        await normalizePropertyImagePrimaryBySortOrder(prisma, property.id);
+        await syncPropertyGalleryFieldsFromImages(prisma, property.id);
       } catch (err) {
         stats.errors++;
         console.error(

@@ -1,73 +1,54 @@
-import { cache } from "react";
 import { prisma } from "@/lib/prisma";
+import { Post } from "@/lib/generated/prisma/client";
 
-// ---------------------------------------------------------------------------
-// Tipos
-// ---------------------------------------------------------------------------
+export type PublicPostListItem = Pick<
+  Post,
+  "id" | "title" | "slug" | "excerpt" | "featuredImage" | "type" | "publishedAt" | "citySlug"
+>;
 
-export type PostDetail = {
-  id: string;
-  slug: string;
-  title: string;
-  excerpt: string | null;
-  content: string;
-  featuredImage: string | null;
-  metaTitle: string | null;
-  metaDescription: string | null;
-  ogImage: string | null;
-  // Tags de cluster SEO — convenção: "cidade:{slug}", "tipo:{slug}", "bairro:{slug}"
-  tags: string[];
-  publishedAt: Date | null;
-  updatedAt: Date;
-};
-
+/** Dados mínimos para cards do blog em páginas transacionais (`BlogSection`). */
 export type PostCardData = {
   slug: string;
   title: string;
   excerpt: string | null;
+};
+
+export type RecentPostSidebar = {
+  slug: string;
+  title: string;
+  excerpt: string | null;
   featuredImage: string | null;
   publishedAt: Date | null;
 };
 
-// ---------------------------------------------------------------------------
-// Queries
-// ---------------------------------------------------------------------------
-
-/**
- * Busca um post publicado pelo slug com todos os campos necessários para a página.
- * Inclui tags para o cluster SEO (links dinâmicos para páginas transacionais).
- * Envolto em React.cache para deduplicação entre generateMetadata e o componente.
- */
-export const getPostBySlug = cache(async function (
-  slug: string
-): Promise<PostDetail | null> {
-  return prisma.post.findUnique({
-    where: { slug, published: true },
+export async function getPublicPosts(): Promise<PublicPostListItem[]> {
+  return prisma.post.findMany({
+    where: { published: true },
     select: {
       id: true,
-      slug: true,
       title: true,
+      slug: true,
       excerpt: true,
-      content: true,
       featuredImage: true,
-      metaTitle: true,
-      metaDescription: true,
-      ogImage: true,
-      tags: true,
+      type: true,
       publishedAt: true,
-      updatedAt: true,
+      citySlug: true,
     },
+    orderBy: { publishedAt: "desc" },
   });
-});
+}
 
-/**
- * Posts recentes publicados para exibir em sidebars ou seções relacionadas.
- * Usado em: páginas de post (seção "Leia também").
- */
-export const getRecentPosts = cache(async function (
-  limit = 4,
+/** Post publicado por slug (`findFirst`: slug é único, mas filtra `published`). */
+export async function getPostBySlug(slug: string): Promise<Post | null> {
+  return prisma.post.findFirst({
+    where: { slug, published: true },
+  });
+}
+
+export async function getRecentPosts(
+  limit: number,
   excludeSlug?: string
-): Promise<PostCardData[]> {
+): Promise<RecentPostSidebar[]> {
   return prisma.post.findMany({
     where: {
       published: true,
@@ -80,76 +61,62 @@ export const getRecentPosts = cache(async function (
       featuredImage: true,
       publishedAt: true,
     },
-    orderBy: [
-      { publishedAt: { sort: "desc", nulls: "first" } },
-      { createdAt: "desc" },
-    ],
+    orderBy: { publishedAt: "desc" },
     take: limit,
   });
-});
+}
 
-/**
- * Posts publicados que possuem uma tag específica de cluster.
- * Usado em: seção "Do nosso blog" nas páginas transacionais.
- *
- * Convenção de tag:
- *   "cidade:sao-paulo"  → posts sobre imóveis em São Paulo
- *   "tipo:apartamento"  → posts sobre apartamentos
- *   "bairro:pinheiros"  → posts sobre o bairro Pinheiros
- */
-export const getPostsByTag = cache(async function (
-  tag: string,
-  limit = 2
-): Promise<PostCardData[]> {
-  return prisma.post.findMany({
-    where: { published: true, tags: { has: tag } },
-    select: {
-      slug: true,
-      title: true,
-      excerpt: true,
-      featuredImage: true,
-      publishedAt: true,
-    },
-    orderBy: [
-      { publishedAt: { sort: "desc", nulls: "first" } },
-      { createdAt: "desc" },
-    ],
-    take: limit,
-  });
-});
-
-/**
- * Todos os posts publicados ordenados por data de publicação.
- * Usado em: app/blog/page.tsx (listagem do blog).
- */
-export const getAllPublishedPosts = cache(async function (): Promise<PostCardData[]> {
-  return prisma.post.findMany({
-    where: { published: true },
-    select: {
-      slug: true,
-      title: true,
-      excerpt: true,
-      featuredImage: true,
-      publishedAt: true,
-    },
-    orderBy: [
-      { publishedAt: { sort: "desc", nulls: "first" } },
-      { createdAt: "desc" },
-    ],
-  });
-});
-
-/**
- * Slugs e datas de atualização de posts publicados.
- * Intencionalmente leve: sem conteúdo.
- * Usado em: sitemap.ts, generateStaticParams.
- */
 export async function getPublishedPostSlugsForSitemap(): Promise<
   { slug: string; updatedAt: Date }[]
 > {
   return prisma.post.findMany({
     where: { published: true },
     select: { slug: true, updatedAt: true },
-    orderBy: { updatedAt: "desc" },
+  });
+}
+
+/**
+ * Posts com tag editorial (ex.: `cidade:balneario-camboriu`, `tipo:apartamento`).
+ */
+export async function getPostsByTag(tag: string, limit = 6): Promise<PostCardData[]> {
+  return prisma.post.findMany({
+    where: {
+      published: true,
+      tags: { has: tag },
+    },
+    select: {
+      slug: true,
+      title: true,
+      excerpt: true,
+    },
+    orderBy: { publishedAt: "desc" },
+    take: limit,
+  });
+}
+
+export async function getRelatedPropertiesForPost(propertyIds: string[]) {
+  if (!propertyIds || propertyIds.length === 0) return [];
+
+  return prisma.property.findMany({
+    where: {
+      id: { in: propertyIds },
+      published: true,
+    },
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      price: true,
+      city: true,
+      neighborhood: true,
+      bedrooms: true,
+      bathrooms: true,
+      area: true,
+      type: true,
+      propertyTypeSlug: true,
+      featuredImage: true,
+      featuredImageAlt: true,
+      transactionType: true,
+    },
   });
 }

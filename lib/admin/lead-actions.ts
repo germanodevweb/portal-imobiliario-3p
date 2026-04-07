@@ -87,6 +87,8 @@ const VALID_STATUSES = [
   "perdido",
 ] as const;
 
+const MAX_DESIRED_PRICE_RANGE_LEN = 200;
+
 export async function updateLeadStatusAction(
   leadId: string,
   status: (typeof VALID_STATUSES)[number]
@@ -111,6 +113,47 @@ export async function updateLeadStatusAction(
     return {
       ok: false,
       error: e instanceof Error ? e.message : "Erro ao atualizar status",
+    };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Server Action: atualizar faixa de valor desejada (texto livre)
+// ---------------------------------------------------------------------------
+
+export async function updateLeadDesiredPriceRangeAction(
+  leadId: string,
+  desiredPriceRange: string | null
+): Promise<{ ok: boolean; error?: string }> {
+  if (!leadId) {
+    return { ok: false, error: "Lead inválido" };
+  }
+
+  const value =
+    typeof desiredPriceRange === "string"
+      ? desiredPriceRange.trim() || null
+      : null;
+
+  if (value && value.length > MAX_DESIRED_PRICE_RANGE_LEN) {
+    return {
+      ok: false,
+      error: `Faixa de valor deve ter no máximo ${MAX_DESIRED_PRICE_RANGE_LEN} caracteres`,
+    };
+  }
+
+  try {
+    await prisma.lead.update({
+      where: { id: leadId },
+      data: { desiredPriceRange: value },
+    });
+    revalidatePath("/admin/leads");
+    revalidatePath(`/admin/leads/${leadId}`);
+    return { ok: true };
+  } catch (e) {
+    console.error("[updateLeadDesiredPriceRangeAction]", e);
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Erro ao atualizar faixa de valor",
     };
   }
 }

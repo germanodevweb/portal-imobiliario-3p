@@ -9,11 +9,18 @@ import {
   type CreatePropertyState,
   type UpdatePropertyState,
 } from "@/lib/admin/actions";
-import { CEARA_CITIES, CEARA_STATE, OTHER_CITY_VALUE } from "@/lib/constants/cities";
+import { CEARA_CITIES, CEARA_STATE } from "@/lib/constants/cities";
+import {
+  BRAZIL_STATE_OPTIONS,
+  DEFAULT_PROPERTY_COUNTRY,
+  OTHER_STATE_VALUE,
+  resolveStateFormState,
+} from "@/lib/constants/brazil-states";
 import {
   PropertyImageGallery,
   type GalleryImageItem,
 } from "@/app/components/admin/PropertyImageGallery";
+import { PropertyDescriptionEditor } from "@/app/components/admin/PropertyDescriptionEditor";
 
 export type EditFormInitialData = {
   title: string;
@@ -23,6 +30,8 @@ export type EditFormInitialData = {
   city: string;
   neighborhood: string;
   state: string;
+  country: string;
+  postalCode: string;
   type: string;
   bedrooms: number;
   bathrooms: number;
@@ -49,6 +58,8 @@ const PROPERTY_TYPES: { value: string; label: string }[] = [
   { value: "APARTAMENTO", label: "Apartamento" },
   { value: "COBERTURA", label: "Cobertura" },
   { value: "TERRENO", label: "Terreno" },
+  { value: "LOTE", label: "Lote" },
+  { value: "FAZENDA", label: "Fazenda" },
   { value: "COMERCIAL", label: "Comercial" },
   { value: "STUDIO", label: "Studio" },
 ];
@@ -88,25 +99,37 @@ export function AdminImovelForm({
 
   const formRef = useRef<HTMLFormElement>(null);
   const titleRef = useRef<HTMLInputElement>(null);
-  const descriptionRef = useRef<HTMLTextAreaElement>(null);
+
+  const d = initialData;
+  const [descriptionHtml, setDescriptionHtml] = useState(d?.description ?? "");
+  const [descriptionEditorKey, setDescriptionEditorKey] = useState(0);
 
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
 
   const cityFromData = initialData?.city ?? "";
-  const isCityInList = CEARA_CITIES.includes(cityFromData as (typeof CEARA_CITIES)[number]);
-  const [citySelect, setCitySelect] = useState<string>(
-    initialData ? (isCityInList ? cityFromData : OTHER_CITY_VALUE) : ""
+  const isCityInList = (CEARA_CITIES as readonly string[]).includes(cityFromData);
+  const [cityEntryMode, setCityEntryMode] = useState<"lista" | "manual">(
+    initialData ? (isCityInList ? "lista" : "manual") : "lista"
   );
-  const [customCity, setCustomCity] = useState(
+  const [citySelect, setCitySelect] = useState(
+    initialData && isCityInList ? cityFromData : ""
+  );
+  const [manualCity, setManualCity] = useState(
     initialData && !isCityInList ? cityFromData : ""
   );
   const [galleryImages, setGalleryImages] = useState<GalleryImageItem[]>(
     initialData?.images ?? []
   );
 
-  const isOtherCity = citySelect === OTHER_CITY_VALUE;
-  const cityValue = isOtherCity ? customCity : citySelect;
+  const resolvedStateInitial = initialData
+    ? resolveStateFormState(initialData.state)
+    : resolveStateFormState(CEARA_STATE);
+  const [stateSelect, setStateSelect] = useState(resolvedStateInitial.selectValue);
+  const [customState, setCustomState] = useState(resolvedStateInitial.customState);
+  const isOtherState = stateSelect === OTHER_STATE_VALUE;
+
+  const cityValue = cityEntryMode === "lista" ? citySelect : manualCity;
 
   async function handleGenerateAi() {
     const form = formRef.current;
@@ -120,15 +143,16 @@ export function AdminImovelForm({
         setAiError(result.error);
       } else {
         if (result.title && titleRef.current) titleRef.current.value = result.title;
-        if (result.description && descriptionRef.current)
-          descriptionRef.current.value = result.description;
+        if (result.description) {
+          setDescriptionHtml(result.description);
+          setDescriptionEditorKey((k) => k + 1);
+        }
       }
     } finally {
       setAiLoading(false);
     }
   }
 
-  const d = initialData;
   const formError = errors._form;
 
   return (
@@ -144,7 +168,7 @@ export function AdminImovelForm({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <Link
           href="/admin/imoveis"
-          className="text-sm text-zinc-500 hover:text-zinc-700"
+          className="text-sm text-zinc-200 transition-colors hover:text-white"
         >
           ← Voltar para imóveis
         </Link>
@@ -184,18 +208,22 @@ export function AdminImovelForm({
         </div>
 
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-zinc-700">
+          <span className="block text-sm font-medium text-zinc-700" id="description-label">
             Descrição
-          </label>
-          <textarea
-            ref={descriptionRef}
-            id="description"
-            name="description"
-            rows={4}
-            defaultValue={d?.description}
-            className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
-            placeholder="Descrição detalhada do imóvel"
-          />
+          </span>
+          <p className="mt-1 text-xs text-zinc-500">
+            Use a barra de ferramentas para negrito, títulos, listas e alinhamento. O texto
+            é guardado em HTML e aparece formatado no site.
+          </p>
+          <input type="hidden" name="description" value={descriptionHtml} readOnly />
+          <div className="mt-2" aria-labelledby="description-label">
+            <PropertyDescriptionEditor
+              key={descriptionEditorKey}
+              value={descriptionHtml}
+              onChange={setDescriptionHtml}
+            />
+          </div>
+          <FieldError message={errors.description} />
         </div>
 
         <div>
@@ -216,42 +244,83 @@ export function AdminImovelForm({
           <FieldError message={errors.price} />
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label htmlFor="city" className="block text-sm font-medium text-zinc-700">
-              Cidade *
-            </label>
-            <select
-              id="citySelect"
-              value={citySelect}
-              onChange={(e) => setCitySelect(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
-            >
-              <option value="">Selecione a cidade</option>
-              {CEARA_CITIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-              <option value={OTHER_CITY_VALUE}>Outra cidade</option>
-            </select>
-            {isOtherCity && (
+        <div className="rounded-lg border border-zinc-200 bg-zinc-50/80 p-4">
+          <p className="text-sm font-medium text-zinc-800">Localização</p>
+          <p className="mt-1 text-xs text-zinc-500">
+            Cidade e estado podem ser escolhidos na lista ou digitados manualmente. Bairro é
+            sempre texto livre.
+          </p>
+        </div>
+
+        <div>
+          <span className="block text-sm font-medium text-zinc-700">Cidade *</span>
+          <fieldset className="mt-2 space-y-3">
+            <legend className="sr-only">Modo de preenchimento da cidade</legend>
+            <div className="flex flex-wrap gap-4">
+              <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
+                <input
+                  type="radio"
+                  name="cityEntryModeUi"
+                  checked={cityEntryMode === "lista"}
+                  onChange={() => {
+                    setCityEntryMode("lista");
+                    if (manualCity && (CEARA_CITIES as readonly string[]).includes(manualCity)) {
+                      setCitySelect(manualCity);
+                    }
+                  }}
+                  className="h-4 w-4 border-zinc-300 text-green-700 focus:ring-green-600"
+                />
+                Lista (região Ceará)
+              </label>
+              <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
+                <input
+                  type="radio"
+                  name="cityEntryModeUi"
+                  checked={cityEntryMode === "manual"}
+                  onChange={() => {
+                    setCityEntryMode("manual");
+                    if (citySelect) setManualCity(citySelect);
+                  }}
+                  className="h-4 w-4 border-zinc-300 text-green-700 focus:ring-green-600"
+                />
+                Digitar manualmente
+              </label>
+            </div>
+            {cityEntryMode === "lista" ? (
+              <>
+                <select
+                  id="citySelect"
+                  value={citySelect}
+                  onChange={(e) => setCitySelect(e.target.value)}
+                  required
+                  className="block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+                >
+                  <option value="">Selecione a cidade</option>
+                  {CEARA_CITIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+                <input type="hidden" name="city" value={citySelect} readOnly />
+              </>
+            ) : (
               <input
                 id="city"
                 name="city"
                 type="text"
                 required
-                value={customCity}
-                onChange={(e) => setCustomCity(e.target.value)}
-                className="mt-2 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
-                placeholder="Digite o nome da cidade"
+                value={manualCity}
+                onChange={(e) => setManualCity(e.target.value)}
+                className="block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+                placeholder="Ex: Trairi — Ceará, São Paulo"
               />
             )}
-            {!isOtherCity && (
-              <input type="hidden" name="city" value={cityValue} readOnly />
-            )}
-            <FieldError message={errors.city} />
-          </div>
+          </fieldset>
+          <FieldError message={errors.city} />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="neighborhood" className="block text-sm font-medium text-zinc-700">
               Bairro
@@ -262,25 +331,83 @@ export function AdminImovelForm({
               type="text"
               defaultValue={d?.neighborhood}
               className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
-              placeholder="Ex: Praia de Iracema"
+              placeholder="Digite manualmente, ex.: Praia de Iracema"
             />
+            <p className="mt-1 text-xs text-zinc-500">Campo livre — preenchimento manual.</p>
+          </div>
+          <div>
+            <label htmlFor="country" className="block text-sm font-medium text-zinc-700">
+              País
+            </label>
+            <input
+              id="country"
+              name="country"
+              type="text"
+              defaultValue={
+                d?.country != null && d.country.trim() !== ""
+                  ? d.country
+                  : DEFAULT_PROPERTY_COUNTRY
+              }
+              className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+              placeholder="Brasil"
+            />
+            <p className="mt-1 text-xs text-zinc-500">Opcional no cadastro interno.</p>
           </div>
         </div>
 
-        <div>
-          <label htmlFor="state" className="block text-sm font-medium text-zinc-700">
-            Estado *
-          </label>
-          <input
-            id="state"
-            name="state"
-            type="text"
-            required
-            defaultValue={d?.state ?? CEARA_STATE}
-            className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
-            placeholder="CE"
-          />
-          <FieldError message={errors.state} />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="stateSelect" className="block text-sm font-medium text-zinc-700">
+              Estado *
+            </label>
+            <select
+              id="stateSelect"
+              value={stateSelect}
+              onChange={(e) => setStateSelect(e.target.value)}
+              required
+              className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+            >
+              <option value="">Selecione o estado</option>
+              {BRAZIL_STATE_OPTIONS.map((s) => (
+                <option key={s.uf} value={s.name}>
+                  {s.name} ({s.uf})
+                </option>
+              ))}
+              <option value={OTHER_STATE_VALUE}>Outro — digitar manualmente</option>
+            </select>
+            {isOtherState ? (
+              <input
+                id="state"
+                name="state"
+                type="text"
+                required
+                value={customState}
+                onChange={(e) => setCustomState(e.target.value)}
+                className="mt-2 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+                placeholder="Nome do estado ou região"
+              />
+            ) : (
+              <input type="hidden" name="state" value={stateSelect} readOnly />
+            )}
+            <FieldError message={errors.state} />
+          </div>
+          <div>
+            <label htmlFor="postalCode" className="block text-sm font-medium text-zinc-700">
+              CEP
+            </label>
+            <input
+              id="postalCode"
+              name="postalCode"
+              type="text"
+              inputMode="numeric"
+              autoComplete="postal-code"
+              defaultValue={d?.postalCode}
+              className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+              placeholder="00000-000"
+            />
+            <FieldError message={errors.postalCode} />
+            <p className="mt-1 text-xs text-zinc-500">Opcional. Use 8 dígitos (com ou sem hífen).</p>
+          </div>
         </div>
 
         <div>

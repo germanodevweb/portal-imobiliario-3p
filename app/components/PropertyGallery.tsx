@@ -3,7 +3,10 @@
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getWatermarkedImageUrl } from "@/lib/cloudinary/watermark";
+import {
+  getWatermarkedImageUrl,
+  shouldUseUnoptimizedNextImage,
+} from "@/lib/cloudinary/watermark";
 import type { PropertyGalleryBadge, PropertyGalleryItem } from "@/lib/utils/property-gallery";
 
 type PropertyGalleryProps = {
@@ -50,6 +53,7 @@ export function PropertyGallery({ images, badges = [] }: PropertyGalleryProps) {
           alt={current.alt}
           fill
           priority={safeIndex === 0}
+          unoptimized={shouldUseUnoptimizedNextImage(current.url)}
           sizes="(max-width: 768px) 100vw, (max-width: 1280px) 90vw, 1200px"
           className="object-cover"
         />
@@ -129,6 +133,7 @@ export function PropertyGallery({ images, badges = [] }: PropertyGalleryProps) {
                   height={72}
                   sizes="112px"
                   loading={i === safeIndex ? "eager" : "lazy"}
+                  unoptimized={shouldUseUnoptimizedNextImage(img.url)}
                   className="h-full w-full object-cover"
                 />
               </button>

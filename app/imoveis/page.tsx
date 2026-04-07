@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Header } from "@/app/components/Header";
 import { Footer } from "@/app/components/Footer";
+import { WhatsAppButton } from "@/app/components/WhatsAppButton";
 import { PropertyCard } from "@/app/components/PropertyCard";
 import { Pagination } from "@/app/components/Pagination";
 import {
@@ -48,6 +49,9 @@ const RESULTS_LIMIT = ITEMS_PER_PAGE;
 // Para evitar injeção de valores maliciosos na query Prisma.
 // ---------------------------------------------------------------------------
 
+/** Chave opcional `renda` na URL — só exibição; não entra no filtro Prisma. */
+const RENDA_QUERY_ALLOWED = new Set(["3200", "5000", "9600", "13000"]);
+
 function parseSearchParams(sp: { [key: string]: string | string[] | undefined }): {
   filters: PropertyFilters;
   rawCidade: string;
@@ -56,6 +60,7 @@ function parseSearchParams(sp: { [key: string]: string | string[] | undefined })
   rawQuartos: string;
   rawPrecoMin: string;
   rawPrecoMax: string;
+  rawRenda: string;
   rawDestaque: boolean;
   rawLancamento: boolean;
   rawOportunidade: boolean;
@@ -67,6 +72,8 @@ function parseSearchParams(sp: { [key: string]: string | string[] | undefined })
   const rawQuartos = typeof sp.quartos === "string" ? sp.quartos.trim() : "";
   const rawPrecoMin = typeof sp.precoMin === "string" ? sp.precoMin.trim() : "";
   const rawPrecoMax = typeof sp.precoMax === "string" ? sp.precoMax.trim() : "";
+  const rawRendaRaw = typeof sp.renda === "string" ? sp.renda.trim() : "";
+  const rawRenda = RENDA_QUERY_ALLOWED.has(rawRendaRaw) ? rawRendaRaw : "";
   const rawDestaque = sp.destaque === "1" || sp.destaque === "true";
   const rawLancamento = sp.lancamento === "1" || sp.lancamento === "true";
   const rawOportunidade = sp.oportunidade === "1" || sp.oportunidade === "true";
@@ -115,6 +122,7 @@ function parseSearchParams(sp: { [key: string]: string | string[] | undefined })
     rawQuartos,
     rawPrecoMin,
     rawPrecoMax,
+    rawRenda,
     rawDestaque,
     rawLancamento,
     rawOportunidade,
@@ -138,6 +146,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
     rawQuartos,
     rawPrecoMin,
     rawPrecoMax,
+    rawRenda,
     rawDestaque,
     rawLancamento,
     rawOportunidade,
@@ -184,6 +193,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   if (rawQuartos) filterParams.quartos = rawQuartos;
   if (rawPrecoMin) filterParams.precoMin = rawPrecoMin;
   if (rawPrecoMax) filterParams.precoMax = rawPrecoMax;
+  if (rawRenda) filterParams.renda = rawRenda;
   if (rawDestaque) filterParams.destaque = "1";
   if (rawLancamento) filterParams.lancamento = "1";
   if (rawOportunidade) filterParams.oportunidade = "1";
@@ -213,8 +223,28 @@ function formatPrice(value: string): string {
   }).format(n);
 }
 
-// Mapeamento renda → preço (botões do IncomeFilter)
-const RENDA_PRESETS: { rendaLabel: string; precoMax?: string; precoMin?: string }[] = [
+/** Labels exibidos em “Com a renda até de …” — alinhados a `INCOME_FILTER_LINKS` + `renda` na URL. */
+const RENDA_LABEL_BY_KEY: Record<string, string> = {
+  "3200": "R$ 3.200",
+  "5000": "R$ 5.000",
+  "9600": "R$ 9.600",
+  "13000": "R$ 13.000",
+};
+
+function rendaKeyMatchesPrices(
+  key: string,
+  precoMin: string,
+  precoMax: string
+): boolean {
+  if (key === "3200") return !precoMin && precoMax === "275000";
+  if (key === "5000") return !precoMin && precoMax === "275000";
+  if (key === "9600") return !precoMin && precoMax === "400000";
+  if (key === "13000") return !precoMin && precoMax === "600000";
+  return false;
+}
+
+/** URLs antigas (sem `renda`) — compatibilidade com favoritos. */
+const RENDA_LEGACY_PRESETS: { rendaLabel: string; precoMax?: string; precoMin?: string }[] = [
   { rendaLabel: "R$ 2.850", precoMax: "190000" },
   { rendaLabel: "R$ 4.700", precoMax: "264000" },
   { rendaLabel: "R$ 8.000", precoMax: "350000" },
@@ -222,13 +252,44 @@ const RENDA_PRESETS: { rendaLabel: string; precoMax?: string; precoMin?: string 
   { rendaLabel: "R$ 12.000 ou mais", precoMin: "450000" },
 ];
 
-function getRendaPreset(precoMin: string, precoMax: string): string | null {
-  const preset = RENDA_PRESETS.find((p) => {
+function getRendaPreset(precoMin: string, precoMax: string, rendaKey: string): string | null {
+  if (rendaKey && RENDA_LABEL_BY_KEY[rendaKey] && rendaKeyMatchesPrices(rendaKey, precoMin, precoMax)) {
+    return RENDA_LABEL_BY_KEY[rendaKey];
+  }
+  const legacy = RENDA_LEGACY_PRESETS.find((p) => {
     if (p.precoMax) return p.precoMax === precoMax && !precoMin;
     if (p.precoMin) return p.precoMin === precoMin && !precoMax;
     return false;
   });
-  return preset?.rendaLabel ?? null;
+  return legacy?.rendaLabel ?? null;
+}
+
+/** Valor da renda no título (pt-BR com centavos), ex.: R$ 5.000,00 ou R$ 13.000,00 ou mais. */
+function formatRendaValorParaTitulo(rendaLabel: string): string {
+  const ouMais = /^R\$\s*([\d.]+)\s+ou\s+mais$/i.exec(rendaLabel.trim());
+  if (ouMais) {
+    const n = Number(ouMais[1].replace(/\./g, ""));
+    if (!Number.isFinite(n)) return rendaLabel;
+    const fmt = new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(n);
+    return `${fmt} ou mais`;
+  }
+  const simple = /^R\$\s*([\d.]+)$/.exec(rendaLabel.trim());
+  if (simple) {
+    const n = Number(simple[1].replace(/\./g, ""));
+    if (!Number.isFinite(n)) return rendaLabel;
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(n);
+  }
+  return rendaLabel;
 }
 
 function buildFilterSummary(params: {
@@ -283,6 +344,7 @@ export default async function ImoveisPage({ searchParams }: PageProps) {
     rawQuartos,
     rawPrecoMin,
     rawPrecoMax,
+    rawRenda,
     rawDestaque,
     rawLancamento,
     rawOportunidade,
@@ -309,6 +371,7 @@ export default async function ImoveisPage({ searchParams }: PageProps) {
   if (rawQuartos) paginationParams.quartos = rawQuartos;
   if (rawPrecoMin) paginationParams.precoMin = rawPrecoMin;
   if (rawPrecoMax) paginationParams.precoMax = rawPrecoMax;
+  if (rawRenda) paginationParams.renda = rawRenda;
   if (rawDestaque) paginationParams.destaque = "1";
   if (rawLancamento) paginationParams.lancamento = "1";
   if (rawOportunidade) paginationParams.oportunidade = "1";
@@ -320,6 +383,7 @@ export default async function ImoveisPage({ searchParams }: PageProps) {
   if (rawQuartos) baseFilterParams.set("quartos", rawQuartos);
   if (rawPrecoMin) baseFilterParams.set("precoMin", rawPrecoMin);
   if (rawPrecoMax) baseFilterParams.set("precoMax", rawPrecoMax);
+  if (rawRenda) baseFilterParams.set("renda", rawRenda);
   if (rawOportunidade) baseFilterParams.set("oportunidade", "1");
   if (rawLancamento) baseFilterParams.set("lancamento", "1");
   if (rawDestaque) baseFilterParams.set("destaque", "1");
@@ -339,6 +403,7 @@ export default async function ImoveisPage({ searchParams }: PageProps) {
   if (rawQuartos) clearBadgesParams.set("quartos", rawQuartos);
   if (rawPrecoMin) clearBadgesParams.set("precoMin", rawPrecoMin);
   if (rawPrecoMax) clearBadgesParams.set("precoMax", rawPrecoMax);
+  if (rawRenda) clearBadgesParams.set("renda", rawRenda);
   const clearBadgesUrl = clearBadgesParams.toString() ? `/imoveis?${clearBadgesParams.toString()}` : "/imoveis";
 
   const filterSummary = buildFilterSummary({
@@ -354,7 +419,7 @@ export default async function ImoveisPage({ searchParams }: PageProps) {
     cities,
   });
 
-  const rendaPreset = getRendaPreset(rawPrecoMin, rawPrecoMax);
+  const rendaPreset = getRendaPreset(rawPrecoMin, rawPrecoMax, rawRenda);
 
   // JSON-LD apenas para a página limpa (sem filtros)
   const collectionPageJsonLd = !hasFilters
@@ -402,8 +467,9 @@ export default async function ImoveisPage({ searchParams }: PageProps) {
           <div>
             {rendaPreset ? (
               <>
-                <h1 className="text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl lg:text-3xl">
-                  Com a renda de {rendaPreset} você pode comprar todos esses imóveis aqui abaixo.
+                <h1 className="max-w-4xl text-lg font-bold leading-snug tracking-tight text-zinc-900 sm:text-xl lg:text-2xl">
+                  Com a renda até de {formatRendaValorParaTitulo(rendaPreset)} você pode comprar todos esses
+                  imóveis aqui abaixo, pelo PGMV da Caixa Econômica Federal.
                 </h1>
                 <p className="mt-2 text-sm text-zinc-600">
                   {count === 0
@@ -442,42 +508,44 @@ export default async function ImoveisPage({ searchParams }: PageProps) {
           )}
         </div>
 
-        {/* Filtros rápidos — sempre visíveis */}
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <Link
-            href={buildBadgeFilterUrl("oportunidade", rawOportunidade)}
-            className={`inline-flex min-h-[44px] items-center rounded-full px-4 py-2.5 text-sm font-medium transition-colors sm:py-2 ${
-              rawOportunidade
-                ? "bg-red-600 text-white shadow-sm"
-                : "bg-red-50 text-red-800 hover:bg-red-100"
-            }`}
-          >
-            Oportunidades
-          </Link>
-          <Link
-            href={buildBadgeFilterUrl("lancamento", rawLancamento)}
-            className={`inline-flex min-h-[44px] items-center rounded-full px-4 py-2.5 text-sm font-medium transition-colors sm:py-2 ${
-              rawLancamento
-                ? "bg-green-600 text-white shadow-sm"
-                : "bg-green-50 text-green-800 hover:bg-green-100"
-            }`}
-          >
-            Lançamentos
-          </Link>
-          <Link
-            href={buildBadgeFilterUrl("destaque", rawDestaque)}
-            className={`inline-flex min-h-[44px] items-center rounded-full px-4 py-2.5 text-sm font-medium transition-colors sm:py-2 ${
-              rawDestaque
-                ? "bg-amber-500 text-white shadow-sm"
-                : "bg-amber-50 text-amber-800 hover:bg-amber-100"
-            }`}
-          >
-            Destaques
-          </Link>
+        {/* Filtros rápidos — sempre visíveis (mobile: 3 colunas na mesma linha) */}
+        <div className="mt-4 flex flex-col gap-2 sm:flex sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+          <div className="grid grid-cols-3 gap-1.5 sm:contents">
+            <Link
+              href={buildBadgeFilterUrl("oportunidade", rawOportunidade)}
+              className={`flex min-h-[44px] w-full items-center justify-center rounded-full px-2 py-2 text-center text-[11px] font-medium leading-tight transition-colors sm:inline-flex sm:w-auto sm:px-4 sm:py-2 sm:text-sm sm:leading-normal ${
+                rawOportunidade
+                  ? "bg-red-600 text-white shadow-sm"
+                  : "bg-red-50 text-red-800 hover:bg-red-100"
+              }`}
+            >
+              Oportunidades
+            </Link>
+            <Link
+              href={buildBadgeFilterUrl("lancamento", rawLancamento)}
+              className={`flex min-h-[44px] w-full items-center justify-center rounded-full px-2 py-2 text-center text-[11px] font-medium leading-tight transition-colors sm:inline-flex sm:w-auto sm:px-4 sm:py-2 sm:text-sm sm:leading-normal ${
+                rawLancamento
+                  ? "bg-green-600 text-white shadow-sm"
+                  : "bg-green-50 text-green-800 hover:bg-green-100"
+              }`}
+            >
+              Lançamentos
+            </Link>
+            <Link
+              href={buildBadgeFilterUrl("destaque", rawDestaque)}
+              className={`flex min-h-[44px] w-full items-center justify-center rounded-full px-2 py-2 text-center text-[11px] font-medium leading-tight transition-colors sm:inline-flex sm:w-auto sm:px-4 sm:py-2 sm:text-sm sm:leading-normal ${
+                rawDestaque
+                  ? "bg-amber-500 text-white shadow-sm"
+                  : "bg-amber-50 text-amber-800 hover:bg-amber-100"
+              }`}
+            >
+              Destaques
+            </Link>
+          </div>
           {(rawOportunidade || rawLancamento || rawDestaque) && (
             <Link
               href={clearBadgesUrl}
-              className="inline-flex min-h-[44px] items-center rounded-full border border-zinc-300 px-4 py-2.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50 sm:py-2"
+              className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-zinc-300 px-4 py-2.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50 sm:py-2"
             >
               Limpar badges
             </Link>
@@ -512,45 +580,48 @@ export default async function ImoveisPage({ searchParams }: PageProps) {
             action="/imoveis"
             className="space-y-4 border-t border-zinc-100 px-5 pb-5 pt-4"
           >
+            {rawRenda ? <input type="hidden" name="renda" value={rawRenda} /> : null}
             {/* Botões rápidos — Oportunidades, Lançamento, Destaque */}
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="mr-1 text-xs font-semibold text-zinc-500">
+            <div className="flex flex-col gap-2 sm:flex sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+              <span className="text-xs font-semibold text-zinc-500 max-sm:-mb-1 sm:mr-1">
                 Buscar:
               </span>
-              <Link
-                href={buildBadgeFilterUrl("oportunidade", rawOportunidade)}
-                className={`inline-flex min-h-[44px] items-center rounded-full px-4 py-2.5 text-sm font-medium transition-colors sm:py-2 ${
-                  rawOportunidade
-                    ? "bg-red-600 text-white shadow-sm"
-                    : "bg-red-50 text-red-800 hover:bg-red-100"
-                }`}
-              >
-                Oportunidades
-              </Link>
-              <Link
-                href={buildBadgeFilterUrl("lancamento", rawLancamento)}
-                className={`inline-flex min-h-[44px] items-center rounded-full px-4 py-2.5 text-sm font-medium transition-colors sm:py-2 ${
-                  rawLancamento
-                    ? "bg-green-600 text-white shadow-sm"
-                    : "bg-green-50 text-green-800 hover:bg-green-100"
-                }`}
-              >
-                Lançamentos
-              </Link>
-              <Link
-                href={buildBadgeFilterUrl("destaque", rawDestaque)}
-                className={`inline-flex min-h-[44px] items-center rounded-full px-4 py-2.5 text-sm font-medium transition-colors sm:py-2 ${
-                  rawDestaque
-                    ? "bg-amber-500 text-white shadow-sm"
-                    : "bg-amber-50 text-amber-800 hover:bg-amber-100"
-                }`}
-              >
-                Destaques
-              </Link>
+              <div className="grid grid-cols-3 gap-1.5 sm:contents">
+                <Link
+                  href={buildBadgeFilterUrl("oportunidade", rawOportunidade)}
+                  className={`flex min-h-[44px] w-full items-center justify-center rounded-full px-2 py-2 text-center text-[11px] font-medium leading-tight transition-colors sm:inline-flex sm:w-auto sm:px-4 sm:py-2 sm:text-sm sm:leading-normal ${
+                    rawOportunidade
+                      ? "bg-red-600 text-white shadow-sm"
+                      : "bg-red-50 text-red-800 hover:bg-red-100"
+                  }`}
+                >
+                  Oportunidades
+                </Link>
+                <Link
+                  href={buildBadgeFilterUrl("lancamento", rawLancamento)}
+                  className={`flex min-h-[44px] w-full items-center justify-center rounded-full px-2 py-2 text-center text-[11px] font-medium leading-tight transition-colors sm:inline-flex sm:w-auto sm:px-4 sm:py-2 sm:text-sm sm:leading-normal ${
+                    rawLancamento
+                      ? "bg-green-600 text-white shadow-sm"
+                      : "bg-green-50 text-green-800 hover:bg-green-100"
+                  }`}
+                >
+                  Lançamentos
+                </Link>
+                <Link
+                  href={buildBadgeFilterUrl("destaque", rawDestaque)}
+                  className={`flex min-h-[44px] w-full items-center justify-center rounded-full px-2 py-2 text-center text-[11px] font-medium leading-tight transition-colors sm:inline-flex sm:w-auto sm:px-4 sm:py-2 sm:text-sm sm:leading-normal ${
+                    rawDestaque
+                      ? "bg-amber-500 text-white shadow-sm"
+                      : "bg-amber-50 text-amber-800 hover:bg-amber-100"
+                  }`}
+                >
+                  Destaques
+                </Link>
+              </div>
               {(rawOportunidade || rawLancamento || rawDestaque) && (
                 <Link
                   href={clearBadgesUrl}
-                  className="inline-flex min-h-[44px] items-center rounded-full border border-zinc-300 px-4 py-2.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50 sm:py-2"
+                  className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-zinc-300 px-4 py-2.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50 sm:py-2"
                 >
                   Limpar badges
                 </Link>
@@ -820,6 +891,7 @@ export default async function ImoveisPage({ searchParams }: PageProps) {
         )}
       </main>
 
+      <WhatsAppButton />
       <Footer />
     </>
   );

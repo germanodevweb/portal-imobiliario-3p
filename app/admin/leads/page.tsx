@@ -36,10 +36,10 @@ export default async function AdminLeadsPage() {
     <div className="pb-12">
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <header>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">
+          <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
             Leads
           </h1>
-          <p className="mt-2 text-sm text-zinc-500 sm:text-base">
+          <p className="mt-2 text-sm text-zinc-300 sm:text-base">
             Visualize e acompanhe os leads do portal. Origem e status para
             organizar o funil.
           </p>

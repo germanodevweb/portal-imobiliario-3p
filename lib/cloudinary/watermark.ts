@@ -42,3 +42,16 @@ export function getWatermarkedImageUrl(url: string): string {
   const baseUrl = url.replace(/\/upload\/.+$/, "/upload");
   return `${baseUrl}/${transformation}/${pathAfterUpload}`;
 }
+
+/**
+ * `next/image` otimiza no servidor; hosts legados (ex.: fotos em /admin/imovel/)
+ * costumam falhar no fetch do otimizador (404). Cloudinary responde de forma previsível.
+ * Use `unoptimized` na galeria pública quando esta função retornar true.
+ */
+export function shouldUseUnoptimizedNextImage(url: string): boolean {
+  const resolved = getWatermarkedImageUrl(url);
+  const isCloudinary =
+    resolved.startsWith("https://res.cloudinary.com/") ||
+    resolved.startsWith("http://res.cloudinary.com/");
+  return !isCloudinary;
+}

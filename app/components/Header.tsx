@@ -4,7 +4,10 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
-const navLinks = [{ label: "Quem Somos", href: "/quem-somos" }];
+const navLinks = [
+  { label: "Quem Somos", href: "/quem-somos" },
+  { label: "Blog", href: "/blog" }
+];
 
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);

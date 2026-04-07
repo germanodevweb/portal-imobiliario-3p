@@ -63,6 +63,8 @@ export default async function AdminImoveisEditarPage({ params }: PageProps) {
     city: property.city,
     neighborhood: property.neighborhood ?? "",
     state: property.state,
+    country: property.country ?? "",
+    postalCode: property.postalCode ?? "",
     type: property.type,
     bedrooms: property.bedrooms,
     bathrooms: property.bathrooms,
@@ -98,13 +100,14 @@ export default async function AdminImoveisEditarPage({ params }: PageProps) {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold tracking-tight text-zinc-900">
+      <h1 className="mb-6 text-2xl font-bold tracking-tight text-white">
         Editar imóvel
       </h1>
-      <p className="mb-6 text-sm text-zinc-500">
+      <p className="mb-6 text-sm text-zinc-300">
         {property.title} — <span className="font-mono">{property.slug}</span>
       </p>
       <AdminImovelForm
+        key={property.id}
         mode="edit"
         propertyId={property.id}
         initialData={initialData}

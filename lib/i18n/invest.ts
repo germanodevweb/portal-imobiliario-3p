@@ -51,11 +51,11 @@ export const CONTENT_PT: InvestContent = {
   route: INVEST_ROUTES.pt,
   hero: {
     title: "Investir em Imóveis no Brasil",
-    subtitle: "Propriedades para investimento a partir de R$ 350.000",
+    subtitle: "",
     ctaPrimary: "Falar com um especialista",
     ctaSecondary: "Ver oportunidades de investimento",
     ctaPrimaryHref:
-      "https://wa.me/5511999999999?text=Ol%C3%A1%2C%20tenho%20interesse%20em%20investir%20em%20im%C3%B3veis%20no%20Brasil.",
+      "https://wa.me/message/5YEBRRXV7OACK1?text=Ol%C3%A1%2C%20tenho%20interesse%20em%20investir%20em%20im%C3%B3veis%20no%20Brasil.",
   },
   listing: {
     title: "Oportunidades de investimento",
@@ -69,7 +69,8 @@ export const CONTENT_PT: InvestContent = {
     associationLine: "Membro associado da National Association of REALTORS® (NAR)",
     ethicalText:
       "Como membros da National Association of REALTORS® (NAR), seguimos os mais altos padrões éticos. Podemos conectar qualquer negócio imobiliário em qualquer parte do mundo.",
-    trustMessage: "Com a NAR, sua compra de imóvel no Brasil é mais segura.",
+    trustMessage:
+      "Com a NAR, sua compra de imóvel no Brasil ou fora do Brasil é mais segura.",
     text: "Somos membros da National Association of REALTORS® (NAR), conectando nossos clientes a oportunidades imobiliárias em qualquer lugar do mundo com profissionais de confiança.",
     cta: "Falar com um especialista global",
   },
@@ -93,7 +94,7 @@ export const CONTENT_EN: InvestContent = {
     subtitle: "",
     ctaPrimary: "Talk to a specialist",
     ctaSecondary: "View investment opportunities",
-    ctaPrimaryHref: "https://wa.me/5511999999999?text=Hi%2C%20I%27m%20interested%20in%20investing%20in%20Brazil%20real%20estate.",
+    ctaPrimaryHref: "https://wa.me/message/5YEBRRXV7OACK1?text=Hi%2C%20I%27m%20interested%20in%20investing%20in%20Brazil%20real%20estate.",
   },
   listing: {
     title: "Investment opportunities",
@@ -131,7 +132,7 @@ export const CONTENT_FR: InvestContent = {
     subtitle: "",
     ctaPrimary: "Parler à un spécialiste",
     ctaSecondary: "Voir les opportunités d'investissement",
-    ctaPrimaryHref: "https://wa.me/5511999999999?text=Bonjour%2C%20je%20suis%20int%C3%A9ress%C3%A9%20par%20l%27investissement%20immobilier%20au%20Br%C3%A9sil.",
+    ctaPrimaryHref: "https://wa.me/message/5YEBRRXV7OACK1?text=Bonjour%2C%20je%20suis%20int%C3%A9ress%C3%A9%20par%20l%27investissement%20immobilier%20au%20Br%C3%A9sil.",
   },
   listing: {
     title: "Opportunités d'investissement",
@@ -169,7 +170,7 @@ export const CONTENT_ES: InvestContent = {
     subtitle: "Propiedades para inversión desde R$ 350.000",
     ctaPrimary: "Hablar con un especialista",
     ctaSecondary: "Ver oportunidades de inversión",
-    ctaPrimaryHref: "https://wa.me/5511999999999?text=Hola%2C%20estoy%20interesado%20en%20invertir%20en%20inmuebles%20en%20Brasil.",
+    ctaPrimaryHref: "https://wa.me/message/5YEBRRXV7OACK1?text=Hola%2C%20estoy%20interesado%20en%20invertir%20en%20inmuebles%20en%20Brasil.",
   },
   listing: {
     title: "Oportunidades de inversión",

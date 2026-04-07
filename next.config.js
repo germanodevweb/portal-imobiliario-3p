@@ -1,7 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Permite acesso via IP de rede em desenvolvimento (não afeta produção)
-  allowedDevOrigins: ["192.168.0.15", "192.168.0.107"],
+  allowedDevOrigins: [
+    "http://192.168.0.15:3000",
+    "http://192.168.0.107:3000",
+    "http://192.168.0.102:3000",
+  ],
   async redirects() {
     return [
       {

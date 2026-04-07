@@ -41,8 +41,121 @@ function formatDate(date: Date): string {
   }).format(date);
 }
 
+function locationLabel(property: AdminPropertyListItem): string {
+  return property.neighborhood
+    ? `${property.neighborhood}, ${property.city}`
+    : property.city;
+}
+
+/**
+ * Células da tabela desktop: hover em <tr> não pinta fundo em WebKit/Chrome estável.
+ * O verde leve aplica-se em cada <td> com .group no <tr>.
+ */
+function adminTableTd(published: boolean, align: "top" | "middle" = "middle"): string {
+  const alignCls = align === "top" ? "align-top" : "align-middle";
+  return published
+    ? `px-4 py-3 ${alignCls} bg-white transition-colors duration-200 group-hover:bg-green-50`
+    : `px-4 py-3 ${alignCls} bg-zinc-100/60 transition-colors duration-200 group-hover:bg-green-50`;
+}
+
+function PropertyStatusBadges({ property }: { property: AdminPropertyListItem }) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span
+        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+          property.published
+            ? "bg-green-100 text-green-800"
+            : "bg-amber-100 text-amber-800"
+        }`}
+      >
+        {property.published ? "Publicado" : "Arquivado"}
+      </span>
+      {property.isFeatured && (
+        <span className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+          Destaque
+        </span>
+      )}
+      {property.isLaunch && (
+        <span className="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+          Lançamento
+        </span>
+      )}
+      {property.isOpportunity && (
+        <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
+          Oportunidade
+        </span>
+      )}
+    </div>
+  );
+}
+
+function AdminImovelCard({ property }: { property: AdminPropertyListItem }) {
+  const thumb = thumbnailSrc(property.listThumbnailUrl);
+
+  return (
+    <article
+      className={`rounded-xl border-2 border-zinc-300 bg-white shadow-sm ring-0 transition-all duration-200 hover:border-green-600 hover:bg-green-50 hover:shadow-lg hover:ring-2 hover:ring-green-200/80 ${
+        property.published
+          ? ""
+          : "border-zinc-300 bg-zinc-100/70 hover:bg-green-50"
+      }`}
+    >
+      <div className="relative aspect-16/10 w-full overflow-hidden rounded-t-xl bg-zinc-100">
+        {thumb ? (
+          <AdminPropertyThumbnail
+            src={thumb}
+            sizes="(max-width: 1024px) 100vw, 80px"
+            className="object-cover"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center px-4 text-center text-sm text-zinc-400">
+            Sem imagem
+          </div>
+        )}
+      </div>
+      <div className="space-y-3 p-4">
+        <div>
+          <p
+            className={`text-base font-semibold leading-snug wrap-break-word ${
+              property.published ? "text-zinc-900" : "text-zinc-700"
+            }`}
+          >
+            {property.title}
+          </p>
+          {property.slug && (
+            <p className="mt-1 break-all font-mono text-sm text-zinc-500">
+              {property.slug}
+            </p>
+          )}
+          <p className="mt-2 text-sm text-zinc-600">{locationLabel(property)}</p>
+          <p className="mt-2 text-lg font-semibold tabular-nums text-zinc-900">
+            {formatPrice(property.price)}
+          </p>
+        </div>
+
+        <PropertyStatusBadges property={property} />
+
+        <div className="flex flex-col gap-3 border-t border-zinc-100 pt-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <p className="shrink-0 text-sm text-zinc-500">
+            {formatDate(property.updatedAt)}
+          </p>
+          <div className="min-w-0 w-full sm:max-w-xl sm:flex-1">
+            <PropertyRowActions
+              propertyId={property.id}
+              slug={property.slug}
+              title={property.title}
+              published={property.published}
+            />
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
 /**
  * Tabela administrativa de imóveis.
+ * Em telas &lt; lg: lista em cards (melhor leitura no mobile).
  * Server Component — recebe dados via props.
  */
 export function AdminImoveisTable({ properties, isFiltered }: Props) {
@@ -67,137 +180,128 @@ export function AdminImoveisTable({ properties, isFiltered }: Props) {
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-zinc-200">
-          <thead className="bg-zinc-50">
-            <tr>
-              <th
-                scope="col"
-                className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600"
-              >
-                Imóvel
-              </th>
-              <th
-                scope="col"
-                className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600 sm:table-cell"
-              >
-                Localização
-              </th>
-              <th
-                scope="col"
-                className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600 md:table-cell"
-              >
-                Preço
-              </th>
-              <th
-                scope="col"
-                className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600"
-              >
-                Status
-              </th>
-              <th
-                scope="col"
-                className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600 lg:table-cell"
-              >
-                Atualizado
-              </th>
-              <th scope="col" className="relative px-4 py-3">
-                <span className="sr-only">Ações</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-zinc-200 bg-white">
-            {properties.map((property) => {
-              const thumb = thumbnailSrc(property.listThumbnailUrl);
-              return (
-              <tr
-                key={property.id}
-                className={`transition-colors ${
-                  property.published
-                    ? "hover:bg-zinc-50"
-                    : "bg-zinc-50/50 hover:bg-zinc-100/80"
-                }`}
-              >
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="relative h-12 w-16 shrink-0 overflow-hidden rounded-lg bg-zinc-100">
-                      {thumb ? (
-                        <AdminPropertyThumbnail src={thumb} />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-xs text-zinc-400">
-                          Sem img
-                        </div>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p
-                        className={`font-medium line-clamp-2 ${
-                          property.published ? "text-zinc-900" : "text-zinc-600"
-                        }`}
-                      >
-                        {property.title}
-                      </p>
-                      {property.slug && (
-                        <p className="mt-0.5 text-xs text-zinc-500 font-mono">
-                          {property.slug}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </td>
-                <td className="hidden px-4 py-3 text-sm text-zinc-600 sm:table-cell">
-                  {property.neighborhood
-                    ? `${property.neighborhood}, ${property.city}`
-                    : property.city}
-                </td>
-                <td className="hidden px-4 py-3 text-sm font-medium text-zinc-900 md:table-cell">
-                  {formatPrice(property.price)}
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span
-                      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        property.published
-                          ? "bg-green-100 text-green-800"
-                          : "bg-amber-100 text-amber-800"
-                      }`}
-                    >
-                      {property.published ? "Publicado" : "Arquivado"}
-                    </span>
-                    {property.isFeatured && (
-                      <span className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-                        Destaque
-                      </span>
-                    )}
-                    {property.isLaunch && (
-                      <span className="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
-                        Lançamento
-                      </span>
-                    )}
-                    {property.isOpportunity && (
-                      <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
-                        Oportunidade
-                      </span>
-                    )}
-                  </div>
-                </td>
-                <td className="hidden px-4 py-3 text-sm text-zinc-500 lg:table-cell">
-                  {formatDate(property.updatedAt)}
-                </td>
-                <td className="px-4 py-3">
-                  <PropertyRowActions
-                    propertyId={property.id}
-                    title={property.title}
-                    published={property.published}
-                  />
-                </td>
-              </tr>
-            );
-            })}
-          </tbody>
-        </table>
+    <>
+      {/* Mobile / tablet: cards */}
+      <div className="space-y-5 lg:hidden">
+        {properties.map((property) => (
+          <AdminImovelCard key={property.id} property={property} />
+        ))}
       </div>
-    </div>
+
+      {/* Desktop: tabela */}
+      <div className="hidden overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm lg:block">
+        <div className="overflow-x-auto">
+          <table className="min-w-full border-collapse">
+            <thead className="border-b-2 border-zinc-200 bg-zinc-50">
+              <tr>
+                <th
+                  scope="col"
+                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600"
+                >
+                  Imóvel
+                </th>
+                <th
+                  scope="col"
+                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600"
+                >
+                  Localização
+                </th>
+                <th
+                  scope="col"
+                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600"
+                >
+                  Preço
+                </th>
+                <th
+                  scope="col"
+                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600"
+                >
+                  Status
+                </th>
+                <th
+                  scope="col"
+                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600"
+                >
+                  Atualizado
+                </th>
+                <th
+                  scope="col"
+                  className="relative min-w-[18rem] px-4 py-3 xl:min-w-[20rem]"
+                >
+                  <span className="sr-only">Ações</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {properties.map((property) => {
+                const thumb = thumbnailSrc(property.listThumbnailUrl);
+                return (
+                  <tr
+                    key={property.id}
+                    className="group border-b border-zinc-300 last:border-b-0"
+                  >
+                    <td className={adminTableTd(property.published)}>
+                      <div className="flex items-center gap-3">
+                        <div className="relative h-12 w-16 shrink-0 overflow-hidden rounded-lg bg-zinc-100">
+                          {thumb ? (
+                            <AdminPropertyThumbnail src={thumb} sizes="64px" />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-xs text-zinc-400">
+                              Sem img
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p
+                            className={`line-clamp-2 font-medium ${
+                              property.published ? "text-zinc-900" : "text-zinc-600"
+                            }`}
+                          >
+                            {property.title}
+                          </p>
+                          {property.slug && (
+                            <p className="mt-0.5 font-mono text-xs text-zinc-500">
+                              {property.slug}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td
+                      className={`${adminTableTd(property.published)} text-sm text-zinc-600`}
+                    >
+                      {locationLabel(property)}
+                    </td>
+                    <td
+                      className={`${adminTableTd(property.published)} text-sm font-medium tabular-nums text-zinc-900`}
+                    >
+                      {formatPrice(property.price)}
+                    </td>
+                    <td className={adminTableTd(property.published)}>
+                      <PropertyStatusBadges property={property} />
+                    </td>
+                    <td
+                      className={`${adminTableTd(property.published)} text-sm text-zinc-500`}
+                    >
+                      {formatDate(property.updatedAt)}
+                    </td>
+                    <td
+                      className={`${adminTableTd(property.published, "top")} min-w-0 max-w-88 xl:max-w-none`}
+                    >
+                      <PropertyRowActions
+                        propertyId={property.id}
+                        slug={property.slug}
+                        title={property.title}
+                        published={property.published}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </>
   );
 }

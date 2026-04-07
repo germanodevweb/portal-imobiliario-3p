@@ -11,6 +11,8 @@ const PROPERTY_TYPE_LABELS: Record<string, string> = {
   APARTAMENTO: "Apartamento",
   COBERTURA: "Cobertura",
   TERRENO: "Terreno",
+  LOTE: "Lote",
+  FAZENDA: "Fazenda",
   COMERCIAL: "Imóvel comercial",
   STUDIO: "Studio",
 };

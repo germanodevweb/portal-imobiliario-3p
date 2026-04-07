@@ -531,12 +531,49 @@ export const PROPERTY_TYPE_LABELS: Record<string, string> = {
   apartamento: "Apartamentos",
   cobertura: "Coberturas",
   terreno: "Terrenos",
+  lote: "Lotes",
+  fazenda: "Fazendas",
   comercial: "Imóveis Comerciais",
   studio: "Studios",
 };
 
 export function getPropertyTypeLabel(slug: string): string {
   return PROPERTY_TYPE_LABELS[slug] ?? slug;
+}
+
+// ---------------------------------------------------------------------------
+// Schema.org / JSON-LD — PostalAddress (SEO local)
+// ---------------------------------------------------------------------------
+
+/**
+ * Campos opcionais de `PostalAddress` a partir do cadastro do imóvel.
+ * - `postalCode`: só incluído quando preenchido (CEP).
+ * - `addressCountry`: padrão `BR`; se houver país no banco, normaliza
+ *   Brasil → ISO `BR`, siglas de 2 letras → maiúsculas, demais como texto (Schema.org aceita).
+ * Não altera slugs, canonical nem arquitetura de URLs.
+ */
+export function jsonLdPostalAddressEnhancements(
+  country: string | null | undefined,
+  postalCode: string | null | undefined
+): { postalCode?: string; addressCountry: string } {
+  const postal = postalCode?.trim();
+  const countryTrim = country?.trim();
+
+  let addressCountry = "BR";
+  if (countryTrim) {
+    if (/^(br|brasil|brazil)$/i.test(countryTrim)) {
+      addressCountry = "BR";
+    } else if (/^[A-Za-z]{2}$/.test(countryTrim)) {
+      addressCountry = countryTrim.toUpperCase();
+    } else {
+      addressCountry = countryTrim;
+    }
+  }
+
+  return {
+    ...(postal ? { postalCode: postal } : {}),
+    addressCountry,
+  };
 }
 
 // ---------------------------------------------------------------------------

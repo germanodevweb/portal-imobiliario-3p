@@ -14,6 +14,9 @@ export const IMAGE_ENVIRONMENTS = [
   { value: "área de lazer", label: "Área de lazer" },
   { value: "corredor", label: "Corredor" },
   { value: "escritório", label: "Escritório" },
+  { value: "fazenda", label: "Fazenda" },
+  { value: "terreno", label: "Terreno" },
+  { value: "lote", label: "Lote" },
   { value: "__OTHER__", label: "Outro" },
 ] as const;
 

@@ -25,6 +25,8 @@ const PROPERTY_TYPE_TO_SLUG: Record<PropertyType, string> = {
   APARTAMENTO: "apartamento",
   COBERTURA: "cobertura",
   TERRENO: "terreno",
+  LOTE: "lote",
+  FAZENDA: "fazenda",
   COMERCIAL: "comercial",
   STUDIO: "studio",
 };
@@ -36,6 +38,20 @@ function slugify(text: string): string {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
+}
+
+/** CEP brasileiro opcional: normaliza para NNNNN-NNN ou retorna erro. */
+function parseOptionalPostalCode(raw: string | undefined): {
+  value: string | null;
+  error?: string;
+} {
+  const trimmed = raw?.trim() ?? "";
+  if (!trimmed) return { value: null };
+  const digits = trimmed.replace(/\D/g, "");
+  if (digits.length !== 8) {
+    return { value: null, error: "CEP deve conter 8 dígitos" };
+  }
+  return { value: `${digits.slice(0, 5)}-${digits.slice(5)}` };
 }
 
 type ImagesDataItem = {
@@ -169,6 +185,11 @@ export async function createPropertyAction(
   const city = (formData.get("city") as string)?.trim();
   const neighborhood = (formData.get("neighborhood") as string)?.trim() || null;
   const state = (formData.get("state") as string)?.trim();
+  const countryRaw = (formData.get("country") as string)?.trim() || null;
+  const country = countryRaw && countryRaw.length > 0 ? countryRaw : null;
+  const postalParsed = parseOptionalPostalCode(
+    formData.get("postalCode") as string | undefined
+  );
   const typeStr = (formData.get("type") as string)?.trim();
   const bedrooms = parseInt((formData.get("bedrooms") as string) || "0", 10);
   const bathrooms = parseInt((formData.get("bathrooms") as string) || "0", 10);
@@ -195,6 +216,7 @@ export async function createPropertyAction(
   }
   if (!city) errors.city = "Cidade é obrigatória";
   if (!state) errors.state = "Estado é obrigatório";
+  if (postalParsed.error) errors.postalCode = postalParsed.error;
   if (!typeStr) {
     errors.type = "Tipo de imóvel é obrigatório";
   } else if (!PROPERTY_TYPE_TO_SLUG[typeStr as PropertyType]) {
@@ -219,6 +241,7 @@ export async function createPropertyAction(
   const propertyType = typeStr as PropertyType;
   const propertyTypeSlug = PROPERTY_TYPE_TO_SLUG[propertyType];
   const isSold = status === "VENDIDO";
+  const postalCode = postalParsed.value;
 
   const citySlug = slugify(city);
   const neighborhoodSlug = neighborhood ? slugify(neighborhood) : null;
@@ -245,6 +268,8 @@ export async function createPropertyAction(
       city,
       neighborhood,
       state,
+      country,
+      postalCode,
       citySlug,
       neighborhoodSlug,
       stateSlug: slugify(state),
@@ -400,6 +425,11 @@ export async function updatePropertyAction(
   const city = (formData.get("city") as string)?.trim();
   const neighborhood = (formData.get("neighborhood") as string)?.trim() || null;
   const state = (formData.get("state") as string)?.trim();
+  const countryRaw = (formData.get("country") as string)?.trim() || null;
+  const country = countryRaw && countryRaw.length > 0 ? countryRaw : null;
+  const postalParsed = parseOptionalPostalCode(
+    formData.get("postalCode") as string | undefined
+  );
   const typeStr = (formData.get("type") as string)?.trim();
   const bedrooms = parseInt((formData.get("bedrooms") as string) || "0", 10);
   const bathrooms = parseInt((formData.get("bathrooms") as string) || "0", 10);
@@ -426,6 +456,7 @@ export async function updatePropertyAction(
   }
   if (!city) errors.city = "Cidade é obrigatória";
   if (!state) errors.state = "Estado é obrigatório";
+  if (postalParsed.error) errors.postalCode = postalParsed.error;
   if (!typeStr) {
     errors.type = "Tipo de imóvel é obrigatório";
   } else if (!PROPERTY_TYPE_TO_SLUG[typeStr as PropertyType]) {
@@ -458,6 +489,7 @@ export async function updatePropertyAction(
   const propertyType = typeStr as PropertyType;
   const propertyTypeSlug = PROPERTY_TYPE_TO_SLUG[propertyType];
   const isSold = status === "VENDIDO";
+  const postalCode = postalParsed.value;
 
   const citySlug = slugify(city);
   const neighborhoodSlug = neighborhood ? slugify(neighborhood) : null;
@@ -492,6 +524,8 @@ export async function updatePropertyAction(
         city,
         neighborhood,
         state,
+        country,
+        postalCode,
         citySlug,
         neighborhoodSlug,
         stateSlug: slugify(state),

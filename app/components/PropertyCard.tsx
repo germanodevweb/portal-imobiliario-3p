@@ -2,7 +2,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { getWatermarkedImageUrl } from "@/lib/cloudinary/watermark";
 import { formatPriceBrl } from "@/lib/currency";
-import { banhLabel, dormLabel, formatPropertyAreaM2Line } from "@/lib/utils/property-display";
+import {
+  banhLabel,
+  dormLabel,
+  formatPropertyAreaM2Line,
+  isPropertyTypeAreaOnly,
+} from "@/lib/utils/property-display";
 
 export type Property = {
   id: string;
@@ -11,6 +16,7 @@ export type Property = {
   price: string;
   city: string;
   neighborhood: string | null;
+  propertyTypeSlug: string;
   bedrooms: number;
   bathrooms: number;
   area: number | null;
@@ -22,6 +28,7 @@ export type Property = {
 
 export function PropertyCard({ property }: { property: Property }) {
   const formattedPrice = formatPriceBrl(Number(property.price));
+  const areaOnly = isPropertyTypeAreaOnly(property.propertyTypeSlug);
 
   const location = property.neighborhood
     ? `${property.neighborhood}, ${property.city}`
@@ -30,7 +37,7 @@ export function PropertyCard({ property }: { property: Property }) {
   return (
     <Link
       href={`/imoveis/${property.slug}`}
-      className="group flex flex-col overflow-hidden rounded-xl border border-green-700/30 bg-white shadow-sm shadow-green-950/6 transition-all hover:-translate-y-0.5 hover:border-green-700/55 hover:shadow-md hover:shadow-green-950/12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700"
+      className="group flex flex-col overflow-hidden rounded-xl border-2 border-zinc-400/85 bg-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.9),0_10px_28px_-14px_rgba(15,23,42,0.4)] ring-1 ring-zinc-300/80 transition-all max-md:active:border-green-700/60 max-md:active:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.95),0_16px_40px_-16px_rgba(6,78,59,0.4)] max-md:active:ring-green-700/30 hover:-translate-y-0.5 hover:border-green-700/55 hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.95),0_16px_40px_-16px_rgba(6,78,59,0.4)] hover:ring-green-700/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700"
     >
       {/* Imagem */}
       <div className="relative aspect-video w-full overflow-hidden bg-zinc-100">
@@ -78,11 +85,17 @@ export function PropertyCard({ property }: { property: Property }) {
         </h2>
 
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-zinc-500">
-          <span>{dormLabel(property.bedrooms)}</span>
-          <span className="text-zinc-300">|</span>
-          <span>{banhLabel(property.bathrooms)}</span>
-          <span className="text-zinc-300">|</span>
-          <span>{formatPropertyAreaM2Line(property.area)}</span>
+          {areaOnly ? (
+            <span>{formatPropertyAreaM2Line(property.area)}</span>
+          ) : (
+            <>
+              <span>{dormLabel(property.bedrooms)}</span>
+              <span className="text-zinc-300">|</span>
+              <span>{banhLabel(property.bathrooms)}</span>
+              <span className="text-zinc-300">|</span>
+              <span>{formatPropertyAreaM2Line(property.area)}</span>
+            </>
+          )}
         </div>
 
         <p className="mt-1 whitespace-nowrap text-[15px] font-bold text-green-700 sm:text-base">

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Header } from "@/app/components/Header";
 import { Footer } from "@/app/components/Footer";
+import { WhatsAppButton } from "@/app/components/WhatsAppButton";
 import { ServiceHero } from "@/app/components/ServiceHero";
 import {
   buildCanonicalUrl,
@@ -33,28 +34,28 @@ export const metadata: Metadata = {
 
 const DIFERENCIAIS = [
   {
-    title: "Jornada completa",
+    title: "Jornada Consultiva",
     description:
-      "Acompanhamento em todas as etapas: busca, análise, visita, negociação e documentação.",
+      "Acompanhamento personalizado para entender sua real necessidade. Não é sobre o imóvel, é sobre entender sua necessidade e resolver.",
   },
   {
     title: "Due diligence técnica",
     description:
-      "Verificação de documentação, regularidade do imóvel e condições para decisões seguras.",
+      "Auditoria completa de documentação e regularidade do imóvel. Segurança técnica para evitar riscos jurídicos ou financeiros.",
   },
   {
-    title: "Alinhamento ao perfil",
+    title: "Análise de Viabilidade",
     description:
-      "Entendimento do seu objetivo, orçamento e preferências para recomendações adequadas.",
+      "Alinhamento com seu perfil de investidor ou financeiro, com foco total em rentabilidade e proteção de capital.",
   },
   {
-    title: "Transparência na negociação",
+    title: "Segurança Contratual",
     description:
-      "Suporte na negociação com clareza sobre valores, prazos e condições contratuais.",
+      "Assessoria completa no percurso da compra e venda, com clareza sobre valores, prazos e cláusulas, garantindo uma transação sem surpresas.",
   },
 ] as const;
 
-const WHATSAPP_URL = "https://wa.me/5511999999999";
+const WHATSAPP_URL = "https://wa.me/message/5YEBRRXV7OACK1";
 
 export default function ConsultoriaDeCompraPage() {
   return (
@@ -62,9 +63,24 @@ export default function ConsultoriaDeCompraPage() {
       <Header />
 
       <main className="min-h-screen">
+        <div className="border-b border-zinc-100 bg-white py-3 shadow-sm">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <nav aria-label="Atalho para página inicial">
+              <Link
+                href="/"
+                className="inline-flex items-center whitespace-nowrap text-sm font-semibold text-green-700 transition-colors hover:text-green-800"
+              >
+                <span className="sm:hidden">Início</span>
+                <span className="hidden sm:inline">← Página Inicial</span>
+              </Link>
+            </nav>
+          </div>
+        </div>
+
         <ServiceHero
           title="Consultoria de Compra e Venda"
           subtitle="Acompanhamento consultivo em toda a jornada de aquisição, com foco em segurança e decisões alinhadas ao seu perfil."
+          variant="brand"
         />
 
         {/* Seção explicativa */}
@@ -75,18 +91,19 @@ export default function ConsultoriaDeCompraPage() {
             </h2>
             <div className="mt-6 space-y-6 text-base leading-relaxed text-zinc-600 sm:text-lg">
               <p>
-                A Consultoria de Compra e Venda da 3Pinheiros oferece acompanhamento
-                consultivo em toda a jornada de aquisição de imóveis. Não
-                vendemos apenas propriedades — orientamos você em cada etapa,
-                desde a análise de oportunidades até a negociação e a
-                documentação final.
+                A Consultoria de Compra da 3 Pinheiros oferece acompanhamento
+                especializado em toda a jornada de aquisição de ativos
+                imobiliários. Aqui entra nosso grande diferencial: nosso
+                objetivo não é apenas vender ou comprar seu bem. É muito mais
+                que isso.
               </p>
               <p>
-                Realizamos due diligence técnica para verificar a regularidade do
-                imóvel, documentação e condições de compra. Apoiamos na
-                negociação com transparência sobre valores, prazos e condições
-                contratuais, sempre com foco em segurança e alinhamento ao seu
-                perfil e objetivos.
+                Nosso atendimento foca em entregar uma noção real e transparente
+                de toda a jornada, desde o primeiro contato. Realizamos uma due
+                diligence técnica rigorosa e analisamos as condições reais de
+                mercado. Atuamos com transparência total em todas as etapas,
+                desde a análise de viabilidade até a assinatura final do
+                contrato.
               </p>
             </div>
           </div>
@@ -121,18 +138,18 @@ export default function ConsultoriaDeCompraPage() {
           className="bg-white px-4 py-16 sm:px-6 sm:py-20 lg:px-8"
           aria-label="Chamada para ação"
         >
-          <div className="mx-auto max-w-2xl rounded-2xl border border-zinc-200 bg-zinc-900 px-8 py-12 text-center sm:px-12 sm:py-14">
-            <h2 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
+          <div className="mx-auto max-w-2xl rounded-2xl border border-emerald-800/70 bg-linear-to-b from-emerald-900 via-green-800 to-emerald-950 px-8 py-12 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_20px_45px_-24px_rgba(6,78,59,0.7)] sm:px-12 sm:py-14">
+            <h2 className="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
               Fale conosco
             </h2>
-            <p className="mt-3 text-sm text-zinc-400 sm:text-base">
+            <p className="mt-3 text-base font-medium text-emerald-100 sm:text-lg">
               Conte com nossa equipe para uma jornada de compra segura e
               transparente.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
               <Link
                 href="/contato"
-                className="inline-flex rounded-full bg-green-800 px-8 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-green-900"
+                className="inline-flex min-h-[46px] items-center rounded-full bg-white px-8 py-3.5 text-sm font-bold text-emerald-900 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-emerald-50 hover:shadow-md"
               >
                 Ir para Contato
               </Link>
@@ -140,7 +157,7 @@ export default function ConsultoriaDeCompraPage() {
                 href={WHATSAPP_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex rounded-full border border-zinc-600 px-8 py-3.5 text-sm font-semibold text-white transition-colors hover:border-zinc-500 hover:bg-zinc-800"
+                className="inline-flex min-h-[46px] items-center rounded-full border-2 border-emerald-200/80 bg-white/5 px-8 py-3.5 text-sm font-bold text-white transition-all duration-300 hover:-translate-y-0.5 hover:border-white hover:bg-white/15"
               >
                 WhatsApp
               </a>
@@ -149,6 +166,7 @@ export default function ConsultoriaDeCompraPage() {
         </section>
       </main>
 
+      <WhatsAppButton />
       <Footer />
     </>
   );

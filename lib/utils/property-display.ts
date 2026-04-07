@@ -1,5 +1,12 @@
 /** Texto curto para cards de imóvel (dormitórios / banheiros / área). */
 
+/** Tipos em que o card mostra só a área (sem dorms/banh.). */
+const PROPERTY_TYPES_AREA_ONLY = new Set(["fazenda", "lote", "terreno"]);
+
+export function isPropertyTypeAreaOnly(propertyTypeSlug: string): boolean {
+  return PROPERTY_TYPES_AREA_ONLY.has(propertyTypeSlug.trim().toLowerCase());
+}
+
 export function dormLabel(bedrooms: number): string {
   return bedrooms === 1 ? "1 dorm." : `${bedrooms} dorms.`;
 }

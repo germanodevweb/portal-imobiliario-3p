@@ -3,10 +3,11 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getOriginDisplayLabel } from "@/lib/constants/leads";
 import { LeadStatusSelect } from "@/app/components/admin/LeadStatusSelect";
+import { LeadPriceRangeEditor } from "@/app/components/admin/LeadPriceRangeEditor";
 import { LeadNotesEditor } from "@/app/components/admin/LeadNotesEditor";
 
 /**
- * Detalhe de um lead — status e anotações editáveis.
+ * Detalhe de um lead — faixa de valor, status e anotações editáveis.
  * Server Component. Restrito ao painel admin.
  */
 export const dynamic = "force-dynamic";
@@ -43,17 +44,17 @@ export default async function AdminLeadDetailPage({
       <div className="mb-6">
         <Link
           href="/admin/leads"
-          className="text-sm text-zinc-500 hover:text-zinc-700"
+          className="text-sm text-zinc-200 transition-colors hover:text-white"
         >
           ← Voltar para Leads
         </Link>
       </div>
 
       <header className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">
+        <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
           {lead.name}
         </h1>
-        <p className="mt-2 text-sm text-zinc-500">
+        <p className="mt-2 text-sm text-zinc-300">
           Lead cadastrado em {formatDate(lead.createdAt)}
         </p>
       </header>
@@ -72,8 +73,11 @@ export default async function AdminLeadDetailPage({
             <dt className="text-xs font-medium uppercase tracking-wider text-zinc-500">
               Faixa de valor
             </dt>
-            <dd className="mt-1 text-sm text-zinc-900">
-              {lead.desiredPriceRange ?? "—"}
+            <dd className="mt-1">
+              <LeadPriceRangeEditor
+                leadId={lead.id}
+                initialDesiredPriceRange={lead.desiredPriceRange}
+              />
             </dd>
           </div>
           <div>

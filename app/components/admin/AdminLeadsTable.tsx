@@ -19,6 +19,10 @@ function formatDate(date: Date): string {
   }).format(date);
 }
 
+/** Hover em <tr> é pouco confiável no WebKit; o fundo verde vai em cada <td>. */
+const LEADS_TD_HOVER =
+  "bg-white transition-colors duration-200 group-hover:bg-green-50";
+
 /**
  * Tabela administrativa de leads.
  */
@@ -42,81 +46,91 @@ export function AdminLeadsTable({ leads, isFiltered }: Props) {
 
   return (
     <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white">
-      <table className="min-w-full divide-y divide-zinc-200">
-        <thead>
+      <table className="min-w-full border-collapse">
+        <thead className="border-b border-zinc-200 bg-zinc-50">
           <tr>
             <th
               scope="col"
-              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500"
+              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600"
             >
               Nome
             </th>
             <th
               scope="col"
-              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500"
+              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600"
             >
               Telefone
             </th>
             <th
               scope="col"
-              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500"
+              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600"
             >
               Faixa de valor
             </th>
             <th
               scope="col"
-              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500"
+              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600"
             >
               Origem
             </th>
             <th
               scope="col"
-              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500"
+              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600"
             >
               Status
             </th>
             <th
               scope="col"
-              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500"
+              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600"
             >
               Data
             </th>
             <th
               scope="col"
-              className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500"
+              className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-600"
             >
               Ações
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-zinc-100">
+        <tbody>
           {leads.map((lead) => (
             <tr
               key={lead.id}
-              className="transition-colors hover:bg-zinc-50/50"
+              className="group border-b border-zinc-200 last:border-b-0"
             >
-              <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-zinc-900">
+              <td
+                className={`whitespace-nowrap px-4 py-3 text-sm font-medium text-zinc-900 ${LEADS_TD_HOVER}`}
+              >
                 {lead.name}
               </td>
-              <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-600">
+              <td
+                className={`whitespace-nowrap px-4 py-3 text-sm text-zinc-600 ${LEADS_TD_HOVER}`}
+              >
                 {lead.phone}
               </td>
-              <td className="px-4 py-3 text-sm text-zinc-600">
+              <td className={`px-4 py-3 text-sm text-zinc-600 ${LEADS_TD_HOVER}`}>
                 {lead.desiredPriceRange ?? "—"}
               </td>
-              <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-600">
+              <td
+                className={`whitespace-nowrap px-4 py-3 text-sm text-zinc-600 ${LEADS_TD_HOVER}`}
+              >
                 {getOriginDisplayLabel(lead.origin, lead.manualSource)}
               </td>
-              <td className="whitespace-nowrap px-4 py-3">
+              <td className={`whitespace-nowrap px-4 py-3 ${LEADS_TD_HOVER}`}>
                 <LeadStatusSelect
                   leadId={lead.id}
                   currentStatus={lead.status}
                 />
               </td>
-              <td className="whitespace-nowrap px-4 py-3 text-sm text-zinc-500">
+              <td
+                className={`whitespace-nowrap px-4 py-3 text-sm text-zinc-500 ${LEADS_TD_HOVER}`}
+              >
                 {formatDate(lead.createdAt)}
               </td>
-              <td className="whitespace-nowrap px-4 py-3 text-right">
+              <td
+                className={`whitespace-nowrap px-4 py-3 text-right ${LEADS_TD_HOVER}`}
+              >
                 <Link
                   href={`/admin/leads/${lead.id}`}
                   className="text-sm font-medium text-green-700 hover:text-green-800"
