@@ -31,6 +31,7 @@ import {
   type PropertyGalleryBadge,
 } from "@/lib/utils/property-gallery";
 import { buildWhatsAppShareUrl } from "@/lib/utils/whatsapp-share";
+import { getWhatsAppContactHref } from "@/lib/constants/contato";
 import { PropertyDescription } from "@/app/components/PropertyDescription";
 import { Share2 } from "lucide-react";
 
@@ -422,7 +423,7 @@ export default async function ImovelPage({ params }: PageProps) {
                   Solicitar informações
                 </Link>
                 <a
-                  href="https://wa.me/message/5YEBRRXV7OACK1"
+                  href={getWhatsAppContactHref()}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex min-h-[44px] items-center justify-center gap-2 rounded-full border border-green-600 px-4 py-3 text-sm font-medium text-green-700 transition-colors hover:bg-green-100"

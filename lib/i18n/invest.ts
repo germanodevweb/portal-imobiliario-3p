@@ -3,6 +3,8 @@
  * Vitrine de imóveis a partir de R$ 350.000 — sem simulação de pagamento.
  */
 
+import { buildWhatsAppChatHref } from "@/lib/constants/contato";
+
 export type InvestLocale = "pt" | "en" | "fr" | "es";
 
 export type InvestContent = {
@@ -54,8 +56,9 @@ export const CONTENT_PT: InvestContent = {
     subtitle: "",
     ctaPrimary: "Falar com um especialista",
     ctaSecondary: "Ver oportunidades de investimento",
-    ctaPrimaryHref:
-      "https://wa.me/message/5YEBRRXV7OACK1?text=Ol%C3%A1%2C%20tenho%20interesse%20em%20investir%20em%20im%C3%B3veis%20no%20Brasil.",
+    ctaPrimaryHref: buildWhatsAppChatHref(
+      "Olá, tenho interesse em investir em imóveis no Brasil."
+    ),
   },
   listing: {
     title: "Oportunidades de investimento",
@@ -94,7 +97,9 @@ export const CONTENT_EN: InvestContent = {
     subtitle: "",
     ctaPrimary: "Talk to a specialist",
     ctaSecondary: "View investment opportunities",
-    ctaPrimaryHref: "https://wa.me/message/5YEBRRXV7OACK1?text=Hi%2C%20I%27m%20interested%20in%20investing%20in%20Brazil%20real%20estate.",
+    ctaPrimaryHref: buildWhatsAppChatHref(
+      "Hi, I'm interested in investing in Brazil real estate."
+    ),
   },
   listing: {
     title: "Investment opportunities",
@@ -132,7 +137,9 @@ export const CONTENT_FR: InvestContent = {
     subtitle: "",
     ctaPrimary: "Parler à un spécialiste",
     ctaSecondary: "Voir les opportunités d'investissement",
-    ctaPrimaryHref: "https://wa.me/message/5YEBRRXV7OACK1?text=Bonjour%2C%20je%20suis%20int%C3%A9ress%C3%A9%20par%20l%27investissement%20immobilier%20au%20Br%C3%A9sil.",
+    ctaPrimaryHref: buildWhatsAppChatHref(
+      "Bonjour, je suis intéressé par l'investissement immobilier au Brésil."
+    ),
   },
   listing: {
     title: "Opportunités d'investissement",
@@ -170,7 +177,9 @@ export const CONTENT_ES: InvestContent = {
     subtitle: "Propiedades para inversión desde R$ 350.000",
     ctaPrimary: "Hablar con un especialista",
     ctaSecondary: "Ver oportunidades de inversión",
-    ctaPrimaryHref: "https://wa.me/message/5YEBRRXV7OACK1?text=Hola%2C%20estoy%20interesado%20en%20invertir%20en%20inmuebles%20en%20Brasil.",
+    ctaPrimaryHref: buildWhatsAppChatHref(
+      "Hola, estoy interesado en invertir en inmuebles en Brasil."
+    ),
   },
   listing: {
     title: "Oportunidades de inversión",

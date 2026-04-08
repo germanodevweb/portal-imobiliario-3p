@@ -8,7 +8,7 @@ import {
   SITE_NAME,
 } from "@/lib/seo";
 import { ContatoForm } from "@/app/components/ContatoForm";
-import { WHATSAPP_CONTACT_URL } from "@/lib/constants/contato";
+import { getWhatsAppContactHref } from "@/lib/constants/contato";
 
 const canonical = buildCanonicalUrl("/contato");
 
@@ -46,7 +46,7 @@ export default function ContatoPage() {
             {/* Sidebar — contato rápido (mesmo tom neutro da home) */}
             <aside className="flex flex-col gap-6">
               <a
-                href={WHATSAPP_CONTACT_URL}
+                href={getWhatsAppContactHref()}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-start gap-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm transition-colors hover:border-zinc-300 hover:bg-zinc-50/80"
@@ -68,7 +68,7 @@ export default function ContatoPage() {
               </a>
 
               <a
-                href={WHATSAPP_CONTACT_URL}
+                href={getWhatsAppContactHref()}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-start gap-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm transition-colors hover:border-zinc-300 hover:bg-zinc-50/80"
@@ -102,7 +102,7 @@ export default function ContatoPage() {
 
               {/* Botão flutuante WhatsApp */}
               <a
-                href={WHATSAPP_CONTACT_URL}
+                href={getWhatsAppContactHref()}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="fixed bottom-6 right-6 flex size-14 items-center justify-center rounded-full bg-green-700 shadow-lg transition-all duration-300 hover:bg-linear-to-b hover:from-emerald-900 hover:via-green-800 hover:to-emerald-950 lg:bottom-8 lg:right-8"

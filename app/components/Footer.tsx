@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Facebook, Instagram, Youtube } from "lucide-react";
+import { getWhatsAppContactHref } from "@/lib/constants/contato";
 
 const socialLinks = [
   {
@@ -92,7 +93,7 @@ export function Footer() {
               <ul className="flex flex-col gap-3 text-sm">
                 <li>
                   <a
-                    href="https://wa.me/message/5YEBRRXV7OACK1"
+                    href={getWhatsAppContactHref()}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm font-medium text-green-700 transition-colors hover:text-[#0f5132]"

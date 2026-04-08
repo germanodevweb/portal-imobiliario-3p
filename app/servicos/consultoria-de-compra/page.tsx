@@ -10,6 +10,7 @@ import {
   buildTwitterCard,
   SITE_NAME,
 } from "@/lib/seo";
+import { getWhatsAppContactHref } from "@/lib/constants/contato";
 
 const canonical = buildCanonicalUrl("/servicos/consultoria-de-compra");
 
@@ -54,8 +55,6 @@ const DIFERENCIAIS = [
       "Assessoria completa no percurso da compra e venda, com clareza sobre valores, prazos e cláusulas, garantindo uma transação sem surpresas.",
   },
 ] as const;
-
-const WHATSAPP_URL = "https://wa.me/message/5YEBRRXV7OACK1";
 
 export default function ConsultoriaDeCompraPage() {
   return (
@@ -154,7 +153,7 @@ export default function ConsultoriaDeCompraPage() {
                 Ir para Contato
               </Link>
               <a
-                href={WHATSAPP_URL}
+                href={getWhatsAppContactHref()}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex min-h-[46px] items-center rounded-full border-2 border-emerald-200/80 bg-white/5 px-8 py-3.5 text-sm font-bold text-white transition-all duration-300 hover:-translate-y-0.5 hover:border-white hover:bg-white/15"

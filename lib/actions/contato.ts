@@ -3,9 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
+  buildWhatsAppChatHref,
   CONTATO_ASSUNTO_LABELS,
   CONTATO_ASSUNTO_VALUES,
-  WHATSAPP_CONTACT_URL,
   type ContatoAssuntoValue,
 } from "@/lib/constants/contato";
 import { prisma } from "@/lib/prisma";
@@ -158,6 +158,5 @@ export async function submitContatoAction(
     assuntoLabel,
     mensagem,
   });
-  const url = `${WHATSAPP_CONTACT_URL}?text=${encodeURIComponent(text)}`;
-  redirect(url);
+  redirect(buildWhatsAppChatHref(text));
 }

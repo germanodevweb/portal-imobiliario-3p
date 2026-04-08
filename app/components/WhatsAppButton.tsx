@@ -1,7 +1,9 @@
+import { getWhatsAppContactHref } from "@/lib/constants/contato";
+
 export function WhatsAppButton() {
   return (
     <a
-      href="https://wa.me/message/5YEBRRXV7OACK1"
+      href={getWhatsAppContactHref()}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Fale conosco pelo WhatsApp"

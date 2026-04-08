@@ -3,7 +3,6 @@
  * Documentação: https://faq.whatsapp.com/general/chats/how-to-use-click-to-chat
  */
 export function buildWhatsAppShareUrl(text: string): string {
-  const url = new URL("https://api.whatsapp.com/send");
-  url.searchParams.set("text", text);
-  return url.toString();
+  // encodeURIComponent usa %20 para espaços; URLSearchParams usa "+" e o WhatsApp pode truncar a mensagem.
+  return `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
 }
