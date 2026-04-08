@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Header } from "@/app/components/Header";
 import { Footer } from "@/app/components/Footer";
@@ -146,13 +147,30 @@ export async function InvestPageContent({
           )}
         </section>
 
-        {/* Credibilidade */}
-        <section className="border-t border-zinc-200 bg-white px-4 py-16 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-2xl rounded-2xl border border-zinc-200 bg-zinc-50/50 p-8 text-center">
-            <h2 className="text-lg font-semibold text-zinc-900">
-              {content.credibility.title}
-            </h2>
-            <p className="mt-3 text-sm leading-relaxed text-zinc-600">
+        {/* Credibilidade — largura total, fundo verde; tipografia destacada + hover */}
+        <section className="w-full border-t border-emerald-950/30 bg-linear-to-b from-emerald-950 via-green-800 to-emerald-900 px-4 py-14 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
+          <div className="group mx-auto max-w-4xl cursor-default rounded-2xl px-3 py-2 text-center transition-colors duration-500 sm:px-6 sm:py-3 group-hover:bg-white/6">
+            <div className="mb-5 flex justify-center sm:mb-6">
+              <div className="transition-transform duration-500 ease-out group-hover:scale-105">
+                <Image
+                  src="/images/nar-logo-white.png"
+                  alt="National Association of REALTORS® (NAR)"
+                  width={120}
+                  height={96}
+                  className="h-auto w-[100px] object-contain sm:w-[120px]"
+                />
+              </div>
+            </div>
+            {content.credibility.title?.trim() ? (
+              <h2 className="text-lg font-semibold text-white">
+                {content.credibility.title}
+              </h2>
+            ) : null}
+            <p
+              className={`mx-auto max-w-3xl text-pretty text-base font-medium leading-snug text-white/90 [text-shadow:0_2px_24px_rgba(0,0,0,0.35)] transition-all duration-500 ease-out first-line:font-semibold first-line:text-white group-hover:scale-[1.02] group-hover:text-white group-hover:[text-shadow:0_4px_28px_rgba(0,0,0,0.45),0_0_40px_rgba(255,255,255,0.12)] sm:leading-relaxed md:text-lg lg:text-xl lg:leading-relaxed ${
+                content.credibility.title?.trim() ? "mt-3" : ""
+              }`}
+            >
               {content.credibility.description}
             </p>
           </div>

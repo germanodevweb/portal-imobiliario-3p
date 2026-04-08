@@ -1,7 +1,7 @@
 /**
  * Marca d'água via transformação do Cloudinary.
  *
- * O portal público usa URLs com marca d'água.
+ * O portal público aplica marca d'água só se `CLOUDINARY_WATERMARK_PUBLIC_ID` estiver definida.
  * O admin usa URLs originais (sem marca).
  *
  * Variável de ambiente:
@@ -12,18 +12,23 @@
 
 const CLOUDINARY_UPLOAD_REGEX = /^https:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/(.+)$/;
 
-const DEFAULT_WATERMARK_ID = "3p/logo";
-
 /**
  * Retorna a URL da imagem com marca d'água aplicada.
  * Se a URL não for do Cloudinary, retorna a URL original.
+ *
+ * A marca só é aplicada quando `CLOUDINARY_WATERMARK_PUBLIC_ID` está definida (ex.: `3p/logo`).
+ * Sem isso, devolve a URL original — evita 404 no portal quando a logo ainda não foi enviada ao Cloudinary.
  */
 export function getWatermarkedImageUrl(url: string): string {
   if (!url?.startsWith("https://res.cloudinary.com/")) {
     return url;
   }
 
-  const publicId = process.env.CLOUDINARY_WATERMARK_PUBLIC_ID ?? DEFAULT_WATERMARK_ID;
+  const publicId = process.env.CLOUDINARY_WATERMARK_PUBLIC_ID?.trim();
+  if (!publicId) {
+    return url;
+  }
+
   const overlayId = publicId.replace(/\//g, ":");
 
   const transformation = [

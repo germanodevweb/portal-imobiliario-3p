@@ -15,8 +15,15 @@ export type GenerateBlogContentOptions = {
   theme: string;
 };
 
-const GEMINI_MODEL_PRIMARY = "gemini-2.5-flash";
-const GEMINI_MODEL_FALLBACK = "gemini-3-flash-preview";
+/**
+ * Ordem: no free tier o 2.5-flash costuma ter cota baixa (ex.: 20 pedidos/dia por modelo);
+ * o 3-flash-preview costuma ter quota separada — tentar primeiro reduz espera e falhas 429.
+ * Sobrescreva com GEMINI_BLOG_MODEL_PRIMARY / GEMINI_BLOG_MODEL_FALLBACK no .env se quiser.
+ */
+const GEMINI_MODEL_PRIMARY =
+  process.env.GEMINI_BLOG_MODEL_PRIMARY?.trim() || "gemini-3-flash-preview";
+const GEMINI_MODEL_FALLBACK =
+  process.env.GEMINI_BLOG_MODEL_FALLBACK?.trim() || "gemini-2.5-flash";
 
 function diag(message: string, meta?: Record<string, unknown>) {
   const prod = process.env.NODE_ENV === "production";
@@ -33,10 +40,21 @@ function maskKeyInfo(apiKey: string) {
   return { length: t.length, suffix: t.length > 4 ? `…${t.slice(-4)}` : "(curta)" };
 }
 
-function isModelNotFound(e: unknown): boolean {
-  const status = typeof e === "object" && e !== null && "status" in e ? Number((e as { status?: number }).status) : NaN;
-  const msg = e instanceof Error ? e.message : String(e);
-  return status === 404 || /404|not\s+found|NOT_FOUND|model.*not found/i.test(msg);
+function extractJsonFromMarkdown(raw: string): string {
+  const trimmed = raw.trim();
+  const fence = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fence?.[1]) return fence[1].trim();
+  return trimmed;
+}
+
+/** Rejeita respostas “válidas” porém inúteis (Gemini às vezes devolve strings vazias). */
+function isValidBlogGeneration(r: GenerateBlogContentResult): boolean {
+  const textLen = r.content.replace(/<[^>]+>/g, "").trim().length;
+  return (
+    r.title.trim().length >= 5 &&
+    r.metaDescription.trim().length >= 20 &&
+    textLen >= 25
+  );
 }
 
 export async function generateBlogContent(options: GenerateBlogContentOptions): Promise<GenerateBlogContentResult> {
@@ -93,6 +111,8 @@ CONTEÚDO (content):
 TEMA SOLICITADO PELO USUÁRIO:
 "${options.theme.trim()}"
 
+Se o tema for uma URL ou nome de site, infira o nicho (ex.: imobiliário, incorporação) e escreva um artigo útil para leitores — não use a URL crua como título nem encha o texto só com o link.
+
 SAÍDA (OBRIGATÓRIA EM JSON, sem markdown cru à volta):
 {
   "title": "...",
@@ -112,30 +132,60 @@ async function tryGenerateWithGemini(options: GenerateBlogContentOptions): Promi
     diag("tentando modelo", { model: modelId });
     const raw = await generateContentJsonString(ai, modelId, textPrompt);
     const parsed = parseGeminiJsonResponse(raw);
-    if (!parsed) return null;
-    return {
+    if (!parsed) {
+      diag("parse JSON inválido ou campos vazios", { model: modelId });
+      return null;
+    }
+    const out: GenerateBlogContentResult = {
       title: parsed.title.trim(),
       metaDescription: parsed.metaDescription.trim(),
       content: normalizeContentForEditor(parsed.content),
     };
+    if (!isValidBlogGeneration(out)) {
+      diag("resposta rejeitada (conteúdo curto ou vazio após normalizar)", {
+        model: modelId,
+      });
+      return null;
+    }
+    return out;
   };
 
-  try {
-    const out = await runModel(GEMINI_MODEL_PRIMARY);
-    if (out) return out;
-    return null;
-  } catch (e) {
-    if (!isModelNotFound(e)) {
-      console.error("[blog-ai] Gemini erro primário:", e);
-      return null;
-    }
+  const models = [GEMINI_MODEL_PRIMARY, GEMINI_MODEL_FALLBACK].filter(
+    (m, i, a) => a.indexOf(m) === i
+  );
+
+  for (const modelId of models) {
     try {
-      return await runModel(GEMINI_MODEL_FALLBACK);
-    } catch (e2) {
-      console.error("[blog-ai] Gemini erro fallback:", e2);
-      return null;
+      const out = await runModel(modelId);
+      if (out) return out;
+    } catch (e) {
+      console.error(`[blog-ai] Gemini (${modelId}):`, e);
     }
   }
+  return null;
+}
+
+type GenContentPart = { text?: string };
+type GenContentResponseLike = {
+  text?: string;
+  candidates?: Array<{ content?: { parts?: GenContentPart[] } }>;
+};
+
+/** Junta texto do SDK (getter `.text`) ou, em fallback, das parts do 1.º candidate. */
+function extractTextFromGenerateContentResponse(response: unknown): string {
+  const r = response as GenContentResponseLike;
+  const fromGetter = r.text;
+  if (typeof fromGetter === "string" && fromGetter.trim()) {
+    return fromGetter;
+  }
+  const parts = r.candidates?.[0]?.content?.parts;
+  if (Array.isArray(parts)) {
+    const joined = parts
+      .map((p) => (typeof p?.text === "string" ? p.text : ""))
+      .join("");
+    if (joined.trim()) return joined;
+  }
+  return "";
 }
 
 async function generateContentJsonString(ai: GoogleGenAI, modelId: string, textPrompt: string): Promise<string> {
@@ -144,19 +194,34 @@ async function generateContentJsonString(ai: GoogleGenAI, modelId: string, textP
     contents: textPrompt,
     config: { temperature: 0.7, responseMimeType: "application/json" },
   });
-  const raw = typeof response.text === "string" ? response.text : (response as any).text?.();
-  if (typeof raw !== "string" || !raw.trim()) throw new Error("Resposta vazia");
+
+  const raw = extractTextFromGenerateContentResponse(response);
+  if (!raw.trim()) {
+    throw new Error("Resposta vazia do modelo");
+  }
   return raw;
 }
 
 function parseGeminiJsonResponse(raw: string): { title: string; metaDescription: string; content: string; } | null {
-  const cleaned = raw.trim().replace(/```(?:json)?\s*([\s\S]*?)```/, "$1").trim();
+  const cleaned = extractJsonFromMarkdown(raw);
   try {
     const data = JSON.parse(cleaned) as Record<string, unknown>;
-    if (!data || typeof data.title !== "string" || typeof data.metaDescription !== "string" || typeof data.content !== "string") {
+    if (!data || typeof data !== "object") return null;
+    const title = data.title;
+    const metaDescription = data.metaDescription;
+    const content = data.content;
+    if (
+      typeof title !== "string" ||
+      typeof metaDescription !== "string" ||
+      typeof content !== "string"
+    ) {
       return null;
     }
-    return { title: data.title, metaDescription: data.metaDescription, content: data.content };
+    const t = title.trim();
+    const m = metaDescription.trim();
+    const c = content.trim();
+    if (!t || !m || !c) return null;
+    return { title: t, metaDescription: m, content: c };
   } catch {
     return null;
   }

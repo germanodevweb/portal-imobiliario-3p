@@ -23,6 +23,7 @@ import {
   BASE_URL,
 } from "@/lib/seo";
 import { getBlogCoverImageProps } from "@/lib/utils/blog-image";
+import { BlogPostShare } from "@/app/components/BlogPostShare";
 
 type PageProps = { params: Promise<{ slug: string }> };
 
@@ -34,6 +35,9 @@ export async function generateStaticParams() {
   const slugs = await getPublishedPostSlugsForSitemap();
   return slugs.map((p) => ({ slug: p.slug }));
 }
+
+/** Alinhado à listagem do blog: evita cartões de imóveis relacionados ficarem desatualizados por muito tempo. */
+export const revalidate = 3600;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -272,6 +276,8 @@ export default async function BlogPostPage({ params }: PageProps) {
               className="prose-sm max-w-none text-zinc-700 [&>h2]:mb-3 [&>h2]:mt-8 [&>h2]:text-xl [&>h2]:font-bold [&>h2]:text-zinc-900 [&>h3]:mb-2 [&>h3]:mt-6 [&>h3]:text-lg [&>h3]:font-semibold [&>h3]:text-zinc-800 [&>p]:mb-4 [&>p]:leading-relaxed [&>ul]:mb-4 [&>ul]:list-disc [&>ul]:pl-5 [&>li]:mb-1 [&>a]:text-green-700 [&>a]:underline"
               dangerouslySetInnerHTML={{ __html: post.content }}
             />
+
+            <BlogPostShare shareUrl={canonical} title={post.title} />
 
             {/* Bloco de CTA editorial */}
             <section

@@ -43,7 +43,7 @@ const TEAM_MEMBERS = [
     name: "Germano Pinheiro",
     role: "Sócio",
     image: "/images/team/germano-pinheiro.jpg",
-    bio: "Bacharel em Ciências Contábeis e acadêmico de Análise de Sistemas, aplica seu conhecimento em números e inovação tecnológica no mercado imobiliário. Atua como Consultor Imobiliário e elabora Laudos Periciais Judiciais e Extrajudiciais. Associado à NAR (National Association of Realtors®), leva expertise e segurança ao investidor estrangeiro em negociações no Brasil.",
+    bio: "Bacharel em Ciências Contábeis e acadêmico de Análise de Sistemas, aplica seu conhecimento em números e inovação tecnológica no mercado imobiliário. Atua como Consultor Imobiliário e elabora Laudos Periciais Judiciais e Extrajudiciais. Associado à National Association of REALTORS® (NAR), leva expertise e segurança ao investidor estrangeiro em negociações no Brasil.",
   },
   {
     name: "Fabio Pinheiro",

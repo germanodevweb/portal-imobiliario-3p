@@ -158,6 +158,8 @@ DESCRIÇÃO:
 - Não repetir frases genéricas
 - Não usar linguagem robótica
 
+Se em "Descrição base" houver instruções no início (ex.: reescrever, remover * ou #, corrigir) seguidas do texto do imóvel, aplique as instruções ao texto do imóvel. Não devolva as instruções literais como parte da descrição final. Gere sempre título + descrição HTML novos conforme as regras.
+
 ENTRADA DO USUÁRIO:
 Tipo: ${type || "(não informado)"}
 Cidade: ${city || "(não informada)"}
@@ -425,8 +427,66 @@ function escapeHtml(text: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Mock (fallback — mesmo comportamento lógico anterior)
+// Mock (fallback sem Gemini) — não ecoar o prompt cru; limpar markdown básico
 // ---------------------------------------------------------------------------
+
+/**
+ * Separa blocos iniciais que parecem instruções do texto substantivo do imóvel.
+ */
+function extractSubstantiveBodyForFallback(prompt: string): string {
+  const t = prompt.trim();
+  if (!t) return "";
+  const blocks = t.split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
+  if (blocks.length > 1) {
+    const first = blocks[0]!;
+    const looksLikeInstruction =
+      first.length < 450 &&
+      /(refa(z|ça)|reescrev|retir|remov|tire\s+os|sem\s*[\s*#]|markdown|copiar|corrij|edite|ajuste|limpe)/i.test(
+        first
+      );
+    if (looksLikeInstruction) {
+      const rest = blocks.slice(1).join("\n\n").trim();
+      if (rest) return rest;
+    }
+  }
+
+  const one = blocks.length === 1 ? blocks[0]! : t;
+  const sobreM = one.match(/\bSobre\s+o\s+imóvel\b/i);
+  if (sobreM?.index != null && sobreM.index < 220) {
+    const after = one
+      .slice(sobreM.index + sobreM[0].length)
+      .replace(/^[.\s:—-]+/i, "")
+      .trim();
+    if (after.length > 80) return after;
+  }
+  return t;
+}
+
+/** Remove marcadores comuns de Markdown que o utilizador pediu para tirar (fallback local). */
+function stripMarkdownNoise(text: string): string {
+  let s = text.replace(/^#{1,6}\s+/gm, "");
+  s = s.replace(/\*\*([^*]+)\*\*/g, "$1");
+  s = s.replace(/\*([^*]+)\*/g, "$1");
+  s = s.replace(/__(.+?)__/g, "$1");
+  s = s.replace(/\*{2,}/g, "");
+  return s.replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function fallbackBodyToDescriptionHtml(body: string, cityPart: string): string {
+  const cleaned = stripMarkdownNoise(body);
+  if (!cleaned) {
+    return `<h2>Sobre o imóvel</h2><p>Excelente oportunidade${cityPart ? ` ${escapeHtml(cityPart.trim())}` : ""}.</p><p>Entre em contato para mais informações e agendamento de visita.</p>`;
+  }
+  const paras = cleaned
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const parts = paras.map((p) => {
+    const oneLine = p.replace(/\s*\n\s*/g, " ");
+    return `<p>${escapeHtml(oneLine)}</p>`;
+  });
+  return `<h2>Sobre o imóvel</h2>${parts.join("")}<p><strong>Entre em contato</strong> para mais informações e agendamento de visita.</p>`;
+}
 
 async function generatePropertyContentMock(
   options: GeneratePropertyContentOptions
@@ -449,17 +509,25 @@ async function generatePropertyContentMock(
       : "";
 
   const baseTitle = `${typeLabel}${cityPart}${roomsPart}${pricePart}`.trim();
-  const title = prompt.trim()
-    ? `${baseTitle}: ${truncate(prompt, 60)}`
-    : baseTitle || "Imóvel à venda";
+  const substantive = extractSubstantiveBodyForFallback(prompt);
+  const cleanedForTitle = stripMarkdownNoise(substantive);
+  const firstBit = cleanedForTitle.split(/[.!?]\s/)[0]?.trim() ?? cleanedForTitle;
+  const titleSuffix =
+    firstBit.length > 12 ? truncate(firstBit.replace(/\s+/g, " "), 52) : "";
 
-  const priceDesc =
-    context?.price != null && context.price > 0
-      ? ` Valor: R$ ${context.price.toLocaleString("pt-BR")}.`
-      : "";
+  const title = prompt.trim()
+    ? titleSuffix
+      ? clampTitle(`${baseTitle} — ${titleSuffix}`)
+      : clampTitle(baseTitle || "Imóvel à venda")
+    : clampTitle(baseTitle || "Imóvel à venda");
+
   const description = prompt.trim()
-    ? `Imóvel à venda${cityPart ? ` ${cityPart}` : ""}. ${prompt.trim()}\n\nEntre em contato para mais informações e agendamento de visita.`
-    : `Excelente ${typeLabel}${cityPart}${roomsPart}.${priceDesc}\n\nEntre em contato para mais informações e agendamento de visita.`;
+    ? fallbackBodyToDescriptionHtml(substantive, cityPart)
+    : `<h2>Sobre o imóvel</h2><p>Excelente ${escapeHtml(typeLabel)}${escapeHtml(cityPart)}${escapeHtml(roomsPart)}.${
+        context?.price != null && context.price > 0
+          ? ` Valor: R$ ${escapeHtml(context.price.toLocaleString("pt-BR"))}.`
+          : ""
+      }</p><p>Entre em contato para mais informações e agendamento de visita.</p>`;
 
   return { title, description };
 }

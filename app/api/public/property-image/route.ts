@@ -4,8 +4,8 @@ import { isAllowedImageProxyHost } from "@/lib/property/image-proxy-allowlist";
 const MAX_URL_LENGTH = 2048;
 
 /**
- * Proxy só para miniaturas no painel admin — o servidor busca a imagem e devolve bytes,
- * contornando bloqueio de hotlink / referrer no navegador.
+ * Proxy público para imagens de imóveis — mesmo allowlist que `/api/admin/property-image`.
+ * O admin usa URLs diretas ou proxy; o portal precisa da mesma regra para `next/image` e hosts fora de `remotePatterns`.
  */
 export async function GET(req: NextRequest) {
   const raw = req.nextUrl.searchParams.get("url");
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
       headers: {
         Accept: "image/*,*/*;q=0.8",
         "User-Agent":
-          "Mozilla/5.0 (compatible; 3PinheirosAdmin/1.0; +https://www.3pinheirosconsultoria.com.br)",
+          "Mozilla/5.0 (compatible; 3PinheirosPublic/1.0; +https://www.3pinheirosconsultoria.com.br)",
       },
       next: { revalidate: 3600 },
     });

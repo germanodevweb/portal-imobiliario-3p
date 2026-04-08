@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { Post } from "@/lib/generated/prisma/client";
+import { normalizePublicImageUrl } from "@/lib/utils/normalize-image-url";
 
 export type PublicPostListItem = Pick<
   Post,
@@ -97,7 +98,7 @@ export async function getPostsByTag(tag: string, limit = 6): Promise<PostCardDat
 export async function getRelatedPropertiesForPost(propertyIds: string[]) {
   if (!propertyIds || propertyIds.length === 0) return [];
 
-  return prisma.property.findMany({
+  const rows = await prisma.property.findMany({
     where: {
       id: { in: propertyIds },
       published: true,
@@ -112,11 +113,34 @@ export async function getRelatedPropertiesForPost(propertyIds: string[]) {
       bedrooms: true,
       bathrooms: true,
       area: true,
-      type: true,
       propertyTypeSlug: true,
       featuredImage: true,
-      featuredImageAlt: true,
-      transactionType: true,
+      galleryImages: true,
+      images: {
+        where: { isHidden: false },
+        select: { url: true },
+        orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
+      },
     },
+  });
+
+  return rows.map((p) => {
+    const fromFeatured = p.featuredImage?.trim();
+    const fromGalleryRow = p.images.find((i) => i.url?.trim())?.url;
+    const fromLegacyGallery = p.galleryImages.find((u) => u?.trim());
+    const raw = fromFeatured || fromGalleryRow || fromLegacyGallery || null;
+    return {
+      id: p.id,
+      slug: p.slug,
+      title: p.title,
+      price: p.price,
+      city: p.city,
+      neighborhood: p.neighborhood,
+      bedrooms: p.bedrooms,
+      bathrooms: p.bathrooms,
+      area: p.area,
+      propertyTypeSlug: p.propertyTypeSlug,
+      featuredImage: raw ? normalizePublicImageUrl(raw) : null,
+    };
   });
 }

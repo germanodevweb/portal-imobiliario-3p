@@ -3,7 +3,14 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { PostType, Post } from "@/lib/generated/prisma/client";
-import { generateBlogContent } from "@/lib/ai/blog";
+import {
+  generateBlogContent,
+  type GenerateBlogContentResult,
+} from "@/lib/ai/blog";
+
+export type GenerateBlogContentActionResult =
+  | { success: true; data: GenerateBlogContentResult }
+  | { success: false; error: string };
 
 export type AdminPostListItem = {
   id: string;
@@ -124,17 +131,34 @@ export async function savePostAction(input: SavePostInput) {
   return { success: true, id: postId };
 }
 
-export async function generateBlogContentAction(theme: string) {
-  if (!theme || !theme.trim()) {
-    throw new Error("O tema é obrigatório.");
+export async function generateBlogContentAction(
+  theme: string
+): Promise<GenerateBlogContentActionResult> {
+  const trimmed = theme?.trim();
+  if (!trimmed) {
+    return { success: false, error: "O tema é obrigatório." };
   }
 
   try {
-    const result = await generateBlogContent({ theme });
+    const result = await generateBlogContent({ theme: trimmed });
+    const bodyText = result.content.replace(/<[^>]+>/g, "").trim();
+    if (
+      !result.title?.trim() ||
+      !result.metaDescription?.trim() ||
+      bodyText.length < 20
+    ) {
+      return {
+        success: false,
+        error:
+          "A IA não devolveu texto suficiente. Tente outro tema, confira GEMINI_API_KEY no .env ou aguarde e tente de novo.",
+      };
+    }
     return { success: true, data: result };
   } catch (error) {
     console.error("[generateBlogContentAction] Erro:", error);
-    throw new Error(error instanceof Error ? error.message : "Erro ao gerar artigo.");
+    const msg =
+      error instanceof Error ? error.message : "Erro ao gerar artigo.";
+    return { success: false, error: msg };
   }
 }
 

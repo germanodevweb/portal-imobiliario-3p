@@ -68,16 +68,16 @@ export const CONTENT_PT: InvestContent = {
     headline: "Rede imobiliária global",
     associationLine: "Membro associado da National Association of REALTORS® (NAR)",
     ethicalText:
-      "Como membros da National Association of REALTORS® (NAR), seguimos os mais altos padrões éticos. Podemos conectar qualquer negócio imobiliário em qualquer parte do mundo.",
+      "Associado na National Association of REALTORS® (NAR), seguimos os mais altos padrões éticos. Podemos conectar qualquer negócio imobiliário em qualquer parte do mundo.",
     trustMessage:
       "Com a NAR, sua compra de imóvel no Brasil ou fora do Brasil é mais segura.",
     text: "Somos membros da National Association of REALTORS® (NAR), conectando nossos clientes a oportunidades imobiliárias em qualquer lugar do mundo com profissionais de confiança.",
     cta: "Falar com um especialista global",
   },
   credibility: {
-    title: "Consultor imobiliário internacional certificado",
+    title: "",
     description:
-      "Profissional certificado pela NAR (National Association of Realtors) com expertise em transações imobiliárias internacionais.",
+      "Germano Pinheiro é certificado pela National Association of REALTORS® (NAR) com expertise em transações imobiliárias internacionais.",
   },
   seo: {
     title: "Investir em Imóveis no Brasil | 3Pinheiros",
@@ -113,9 +113,9 @@ export const CONTENT_EN: InvestContent = {
     cta: "Talk to a global specialist",
   },
   credibility: {
-    title: "Certified international real estate advisor",
+    title: "",
     description:
-      "Professional certified by NAR (National Association of Realtors) with expertise in cross-border real estate transactions.",
+      "Germano Pinheiro is certified by the National Association of REALTORS® (NAR) with expertise in international real estate transactions.",
   },
   seo: {
     title: "Invest in Brazil Real Estate | 3Pinheiros",
@@ -151,9 +151,9 @@ export const CONTENT_FR: InvestContent = {
     cta: "Parler à un spécialiste international",
   },
   credibility: {
-    title: "Conseiller immobilier international certifié",
+    title: "",
     description:
-      "Professionnel certifié par la NAR (National Association of Realtors) avec expertise en transactions immobilières transfrontalières.",
+      "Germano Pinheiro est certifié par la National Association of REALTORS® (NAR), avec expertise en transactions immobilières internationales.",
   },
   seo: {
     title: "Investir au Brésil | 3Pinheiros",
@@ -189,9 +189,9 @@ export const CONTENT_ES: InvestContent = {
     cta: "Hablar con un especialista global",
   },
   credibility: {
-    title: "Asesor inmobiliario internacional certificado",
+    title: "",
     description:
-      "Profesional certificado por NAR (National Association of Realtors) con experiencia en transacciones inmobiliarias transfronterizas.",
+      "Germano Pinheiro está certificado por la National Association of REALTORS® (NAR), con experiencia en transacciones inmobiliarias internacionales.",
   },
   seo: {
     title: "Invertir en Brasil | 3Pinheiros",

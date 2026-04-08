@@ -1,6 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
-import { getWatermarkedImageUrl } from "@/lib/cloudinary/watermark";
+import {
+  getWatermarkedImageUrl,
+  shouldUseUnoptimizedNextImage,
+} from "@/lib/cloudinary/watermark";
+import { publicPropertyImageSrc } from "@/lib/utils/public-property-image-src";
 import { brlToEur, formatPriceEur, formatPriceBrl } from "@/lib/currency";
 import {
   banhLabel,
@@ -33,9 +37,12 @@ export function InvestmentPropertyCard({ property, eurToBrlRate }: InvestmentPro
       <div className="relative aspect-video w-full overflow-hidden bg-zinc-100">
         {property.featuredImage ? (
           <Image
-            src={getWatermarkedImageUrl(property.featuredImage)}
+            src={publicPropertyImageSrc(
+              getWatermarkedImageUrl(property.featuredImage)
+            )}
             alt={property.title}
             fill
+            unoptimized={shouldUseUnoptimizedNextImage(property.featuredImage)}
             className="object-cover transition-transform duration-300 group-hover:scale-105"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />

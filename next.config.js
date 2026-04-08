@@ -1,11 +1,49 @@
 /** @type {import('next').NextConfig} */
+
+/**
+ * URLs completas (http://host:porta) para aceder ao dev pela rede local.
+ * - allowedDevOrigins e experimental.serverActions.allowedOrigins derivam disto.
+ * - Se o teu IP mudar, edita só esta lista e reinicia `pnpm dev`.
+ */
+const DEV_LAN_ORIGIN_URLS = [
+  "http://192.168.0.15:3000",
+  "http://192.168.0.107:3000",
+  "http://192.168.0.102:3000",
+];
+
+/** Converte URL de dev para o formato host:porta esperado em serverActions.allowedOrigins */
+function toServerActionsOrigin(urlString) {
+  try {
+    const u = new URL(urlString);
+    const port = u.port || (u.protocol === "https:" ? "443" : "80");
+    return `${u.hostname}:${port}`;
+  } catch {
+    return null;
+  }
+}
+
+const serverActionsOriginsFromLan = DEV_LAN_ORIGIN_URLS.map(toServerActionsOrigin).filter(
+  Boolean
+);
+
 const nextConfig = {
-  // Permite acesso via IP de rede em desenvolvimento (não afeta produção)
-  allowedDevOrigins: [
-    "http://192.168.0.15:3000",
-    "http://192.168.0.107:3000",
-    "http://192.168.0.102:3000",
-  ],
+  allowedDevOrigins: DEV_LAN_ORIGIN_URLS,
+
+  // Server Actions (admin: salvar, IA): em dev via IP da LAN o Next pode bloquear CSRF
+  // se o host não estiver aqui. localhost/127.0.0.1 incluídos para uso no mesmo PC.
+  experimental: {
+    serverActions: {
+      // Upload de várias fotos no admin (cada JPG pode ter 3–8MB+). 4mb estoura com 2–3 imagens.
+      bodySizeLimit: "25mb",
+      allowedOrigins: [
+        "localhost:3000",
+        "127.0.0.1:3000",
+        "[::1]:3000",
+        ...serverActionsOriginsFromLan,
+      ],
+    },
+  },
+
   async redirects() {
     return [
       {
@@ -67,6 +105,20 @@ const nextConfig = {
       {
         source: "/685/imoveis/venda-apartamento-3-dormitorios-papicu-fortaleza-ce",
         destination: "/imoveis/lancamento-no-papicu-bella-rio-a-venda-ao-lado-do-shopping-riomar",
+        permanent: true,
+      },
+      {
+        source:
+          "/370/imoveis/venda-area-lagoa-do-paraiso-jijoca-de-jericoacoara-ce",
+        destination:
+          "/imoveis/gran-vellas-sao-475-unidades-em-condominio-fechado-jericoacoara",
+        permanent: true,
+      },
+      // Code49 (portal antigo): /{id}/imoveis/{slug} → /imoveis/{slug} (301).
+      // Por último: não sobrepõe as migrações explícitas acima (mesmo id+slug).
+      {
+        source: "/:id(\\d+)/imoveis/:slug",
+        destination: "/imoveis/:slug",
         permanent: true,
       },
     ];

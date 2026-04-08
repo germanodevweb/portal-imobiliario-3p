@@ -298,7 +298,7 @@ export function PropertyImageGallery({
                   <select
                     value={img.environment}
                     onChange={(e) => handleEnvironmentChange(index, e.target.value)}
-                    className="mt-0.5 block w-full rounded border border-zinc-300 px-2 py-1.5 text-sm"
+                    className="mt-0.5 block w-full rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900 [color-scheme:light]"
                   >
                     <option value="">Selecione</option>
                     {IMAGE_ENVIRONMENTS.map((e) => (
@@ -315,7 +315,7 @@ export function PropertyImageGallery({
                         handleEnvironmentCustomChange(index, e.target.value)
                       }
                       placeholder="Digite o ambiente"
-                      className="mt-1 block w-full rounded border border-zinc-300 px-2 py-1.5 text-sm"
+                      className="mt-1 block w-full rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900 placeholder:text-zinc-500"
                     />
                   )}
                 </div>
@@ -333,7 +333,7 @@ export function PropertyImageGallery({
                           ? "Preencha tipo e cidade para gerar automaticamente"
                           : "Texto alternativo"
                       }
-                      className="block flex-1 rounded border border-zinc-300 px-2 py-1.5 text-sm"
+                      className="block flex-1 rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900 placeholder:text-zinc-500"
                     />
                     {(img.environment || img.environmentCustom) && (
                       <button

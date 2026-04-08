@@ -1,6 +1,12 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import {
+  type FormEvent,
+  startTransition,
+  useActionState,
+  useRef,
+  useState,
+} from "react";
 import Link from "next/link";
 import {
   createPropertyAction,
@@ -29,6 +35,9 @@ export type EditFormInitialData = {
   price: string;
   city: string;
   neighborhood: string;
+  /** Logradouro e nº — cadastro interno */
+  street?: string;
+  streetNumber?: string;
   state: string;
   country: string;
   postalCode: string;
@@ -131,6 +140,17 @@ export function AdminImovelForm({
 
   const cityValue = cityEntryMode === "lista" ? citySelect : manualCity;
 
+  function submitPropertyForm(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    fd.set("description", descriptionHtml);
+    fd.set("imagesData", JSON.stringify(galleryImages));
+    // React 19: dispatch manual do useActionState tem de ir dentro de startTransition.
+    startTransition(() => {
+      formAction(fd);
+    });
+  }
+
   async function handleGenerateAi() {
     const form = formRef.current;
     if (!form) return;
@@ -138,16 +158,24 @@ export function AdminImovelForm({
     setAiLoading(true);
     try {
       const formData = new FormData(form);
+      formData.set("description", descriptionHtml);
       const result = await generatePropertyContentAction({}, formData);
       if (result.error) {
         setAiError(result.error);
+      } else if (!result.title?.trim() && !result.description?.trim()) {
+        setAiError("A IA não devolveu título nem descrição. Tente de novo ou verifique GEMINI_API_KEY.");
       } else {
-        if (result.title && titleRef.current) titleRef.current.value = result.title;
-        if (result.description) {
-          setDescriptionHtml(result.description);
+        if (result.title?.trim() && titleRef.current) {
+          titleRef.current.value = result.title.trim();
+        }
+        if (result.description?.trim()) {
+          setDescriptionHtml(result.description.trim());
           setDescriptionEditorKey((k) => k + 1);
         }
       }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erro ao chamar o assistente de IA.";
+      setAiError(msg);
     } finally {
       setAiLoading(false);
     }
@@ -156,7 +184,7 @@ export function AdminImovelForm({
   const formError = errors._form;
 
   return (
-    <form ref={formRef} action={formAction} className="space-y-6">
+    <form ref={formRef} className="space-y-6" onSubmit={submitPropertyForm}>
       {mode === "edit" && propertyId && (
         <input type="hidden" name="propertyId" value={propertyId} readOnly />
       )}
@@ -215,7 +243,6 @@ export function AdminImovelForm({
             Use a barra de ferramentas para negrito, títulos, listas e alinhamento. O texto
             é guardado em HTML e aparece formatado no site.
           </p>
-          <input type="hidden" name="description" value={descriptionHtml} readOnly />
           <div className="mt-2" aria-labelledby="description-label">
             <PropertyDescriptionEditor
               key={descriptionEditorKey}
@@ -247,8 +274,8 @@ export function AdminImovelForm({
         <div className="rounded-lg border border-zinc-200 bg-zinc-50/80 p-4">
           <p className="text-sm font-medium text-zinc-800">Localização</p>
           <p className="mt-1 text-xs text-zinc-500">
-            Cidade e estado podem ser escolhidos na lista ou digitados manualmente. Bairro é
-            sempre texto livre.
+            Cidade e estado podem ser escolhidos na lista ou digitados manualmente. Bairro,
+            endereço e nº são opcionais e servem para cadastro interno.
           </p>
         </div>
 
@@ -352,6 +379,36 @@ export function AdminImovelForm({
               placeholder="Brasil"
             />
             <p className="mt-1 text-xs text-zinc-500">Opcional no cadastro interno.</p>
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-[1fr_minmax(5.5rem,8rem)] sm:items-start">
+          <div>
+            <label htmlFor="street" className="block text-sm font-medium text-zinc-700">
+              Endereço (logradouro)
+            </label>
+            <input
+              id="street"
+              name="street"
+              type="text"
+              defaultValue={d?.street}
+              className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+              placeholder="Ex: Av. Beira Mar, Rua das Flores"
+            />
+            <p className="mt-1 text-xs text-zinc-500">Opcional — cadastro interno, não exibido no site.</p>
+          </div>
+          <div>
+            <label htmlFor="streetNumber" className="block text-sm font-medium text-zinc-700">
+              Nº
+            </label>
+            <input
+              id="streetNumber"
+              name="streetNumber"
+              type="text"
+              defaultValue={d?.streetNumber}
+              className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+              placeholder="Ex: 1201, S/N"
+            />
           </div>
         </div>
 
@@ -516,12 +573,6 @@ export function AdminImovelForm({
       </FormBlock>
 
       <FormBlock title="Galeria de imagens">
-        <input
-          type="hidden"
-          name="imagesData"
-          value={JSON.stringify(galleryImages)}
-          readOnly
-        />
         <PropertyImageGallery
           images={galleryImages}
           onImagesChange={setGalleryImages}

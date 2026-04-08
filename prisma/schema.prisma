@@ -72,6 +72,8 @@ model Property {
   // — Localização (labels para exibição)
   city         String
   neighborhood String?
+  street       String? @db.VarChar(512) // logradouro / endereço (uso interno admin)
+  streetNumber String? @db.VarChar(64) // nº (ex.: 123, S/N, 45-A)
   state        String
   country      String?
   postalCode   String? // CEP (formato livre; ex.: 60165-121)
@@ -139,9 +141,9 @@ model Property {
 model PropertyImage {
   id         String   @id @default(cuid())
   propertyId String
-  url        String
-  alt        String?
-  environment String?
+  url        String   @db.Text
+  alt        String?  @db.Text
+  environment String? @db.Text
   isPrimary  Boolean  @default(false)
   isHidden   Boolean  @default(false)
   sortOrder  Int      @default(0)

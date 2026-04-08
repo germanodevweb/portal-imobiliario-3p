@@ -1,5 +1,24 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Facebook, Instagram, Youtube } from "lucide-react";
+
+const socialLinks = [
+  {
+    href: "https://www.instagram.com/3pinheiros.consultoria/",
+    label: "Instagram 3 Pinheiros",
+    Icon: Instagram,
+  },
+  {
+    href: "https://www.facebook.com/3pinheiros.Imobiliaria",
+    label: "Facebook 3 Pinheiros",
+    Icon: Facebook,
+  },
+  {
+    href: "https://www.youtube.com/@3pinheirosconsultoriaimobi265",
+    label: "YouTube 3 Pinheiros",
+    Icon: Youtube,
+  },
+] as const;
 
 const navLinks = [
   { label: "Comprar imóvel", href: "/imoveis" },
@@ -39,17 +58,16 @@ export function Footer() {
                   </p>
                 </div>
               </Link>
-              <p className="max-w-xs text-sm leading-relaxed text-green-800">
-                Consultoria imobiliária com foco em segurança e transparência.
-              </p>
-              <p className="text-xs font-semibold tracking-wide text-green-700">
+              <p className="max-w-xs text-sm font-bold leading-relaxed tracking-wide text-[#0f5132]">
+                Ética e respeito com nosso cliente.
+                <br />
                 CRECI 1317J
               </p>
             </div>
 
             {/* Navegação */}
             <div>
-              <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-[#0f5132]">
+              <h3 className="mb-4 text-sm font-bold uppercase tracking-wide text-[#0f5132]">
                 Navegação
               </h3>
               <ul className="flex flex-col gap-3">
@@ -68,7 +86,7 @@ export function Footer() {
 
             {/* Contato */}
             <div>
-              <h3 className="mb-4 text-xs font-bold uppercase tracking-widest text-[#0f5132]">
+              <h3 className="mb-4 text-sm font-bold uppercase tracking-wide text-[#0f5132]">
                 Contato
               </h3>
               <ul className="flex flex-col gap-3 text-sm">
@@ -90,6 +108,24 @@ export function Footer() {
                     3pconsultoriaimobiliaria@gmail.com
                   </a>
                 </li>
+              </ul>
+              <ul
+                className="mt-5 flex flex-wrap items-center gap-2"
+                aria-label="Redes sociais da 3 Pinheiros"
+              >
+                {socialLinks.map(({ href, label, Icon }) => (
+                  <li key={href}>
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={label}
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-[#0f5132] text-white shadow-sm transition-colors hover:bg-[#0a3d26] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0f5132]"
+                    >
+                      <Icon className="h-5 w-5 shrink-0 text-white" strokeWidth={1.75} aria-hidden />
+                    </a>
+                  </li>
+                ))}
               </ul>
             </div>
           </div>

@@ -62,6 +62,8 @@ export default async function AdminImoveisEditarPage({ params }: PageProps) {
     price: String(property.price),
     city: property.city,
     neighborhood: property.neighborhood ?? "",
+    street: property.street ?? "",
+    streetNumber: property.streetNumber ?? "",
     state: property.state,
     country: property.country ?? "",
     postalCode: property.postalCode ?? "",

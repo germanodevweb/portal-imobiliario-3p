@@ -7,6 +7,7 @@ import { parseYouTubeVideoId } from "@/lib/utils/youtube";
 import type { PropertyType } from "@/lib/generated/prisma/client";
 import { generatePropertyContent } from "@/lib/ai/property";
 import { uploadPropertyImage } from "@/lib/upload/cloudinary";
+import { revalidateBlogPagesReferencingProperty } from "@/lib/admin/revalidate-blog-for-property";
 
 // ---------------------------------------------------------------------------
 // Tipos
@@ -56,13 +57,90 @@ function parseOptionalPostalCode(raw: string | undefined): {
 
 type ImagesDataItem = {
   url: string;
-  alt: string;
-  environment: string;
-  environmentCustom: string;
+  alt?: string;
+  environment?: string;
+  environmentCustom?: string;
+  isPrimary?: boolean;
+  isHidden?: boolean;
+  sortOrder?: number;
+};
+
+const OTHER_ENVIRONMENT_SENTINEL = "__OTHER__";
+const MAX_PROPERTY_IMAGE_ALT_LEN = 8000;
+const MAX_PROPERTY_IMAGE_ENV_LEN = 2000;
+
+type NormalizedPropertyImage = {
+  url: string;
+  alt: string | null;
+  environment: string | null;
   isPrimary: boolean;
   isHidden: boolean;
   sortOrder: number;
 };
+
+function asTrimmedString(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return value.replace(/\0/g, "").trim();
+  return String(value).replace(/\0/g, "").trim();
+}
+
+function coerceBoolean(value: unknown): boolean {
+  if (value === true || value === "true" || value === 1 || value === "1")
+    return true;
+  if (value === false || value === "false" || value === 0 || value === "0")
+    return false;
+  return false;
+}
+
+function coerceSortOrder(value: unknown, fallback: number): number {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.max(0, Math.floor(value));
+  }
+  if (typeof value === "string" && value.trim() !== "") {
+    const n = Number.parseInt(value, 10);
+    if (Number.isFinite(n)) return Math.max(0, n);
+  }
+  return Math.max(0, fallback);
+}
+
+/** Normaliza JSON da galeria antes do Prisma (tipos soltos do cliente, URLs longas, ambiente “Outro”). */
+function normalizePropertyImagesForDb(
+  imagesData: ImagesDataItem[]
+): NormalizedPropertyImage[] {
+  return imagesData
+    .map((raw, index) => {
+      const url = asTrimmedString(raw.url);
+      if (!url.startsWith("http://") && !url.startsWith("https://")) {
+        return null;
+      }
+      const env = asTrimmedString(raw.environment);
+      const custom = asTrimmedString(raw.environmentCustom);
+      let environment: string | null;
+      if (env === OTHER_ENVIRONMENT_SENTINEL) {
+        environment =
+          custom && custom !== OTHER_ENVIRONMENT_SENTINEL ? custom : null;
+      } else {
+        environment =
+          env && env !== OTHER_ENVIRONMENT_SENTINEL ? env : null;
+      }
+      if (environment) {
+        environment = environment.slice(0, MAX_PROPERTY_IMAGE_ENV_LEN);
+      }
+      const altRaw = asTrimmedString(raw.alt);
+      const alt = altRaw
+        ? altRaw.slice(0, MAX_PROPERTY_IMAGE_ALT_LEN)
+        : null;
+      return {
+        url,
+        alt,
+        environment,
+        isPrimary: coerceBoolean(raw.isPrimary),
+        isHidden: coerceBoolean(raw.isHidden),
+        sortOrder: coerceSortOrder(raw.sortOrder, index),
+      };
+    })
+    .filter((row): row is NormalizedPropertyImage => row !== null);
+}
 
 function parseImagesData(str: string | undefined): ImagesDataItem[] {
   if (!str) return [];
@@ -184,6 +262,8 @@ export async function createPropertyAction(
   const priceStr = (formData.get("price") as string)?.trim();
   const city = (formData.get("city") as string)?.trim();
   const neighborhood = (formData.get("neighborhood") as string)?.trim() || null;
+  const street = (formData.get("street") as string)?.trim() || null;
+  const streetNumber = (formData.get("streetNumber") as string)?.trim() || null;
   const state = (formData.get("state") as string)?.trim();
   const countryRaw = (formData.get("country") as string)?.trim() || null;
   const country = countryRaw && countryRaw.length > 0 ? countryRaw : null;
@@ -251,11 +331,14 @@ export async function createPropertyAction(
     (slugify(title) || `imovel-${propertyTypeSlug}-${citySlug}-${Date.now().toString(36)}`);
   const slug = await ensureUniqueSlug(baseSlug);
 
-  const validImages = imagesData.filter((i) => i.url.startsWith("http://") || i.url.startsWith("https://"));
-  const visibleImages = validImages.filter((i) => !i.isHidden).sort((a, b) => a.sortOrder - b.sortOrder);
-  const primaryImage = validImages.find((i) => i.isPrimary) ?? visibleImages[0];
-  const featuredImage = primaryImage?.url?.trim() || null;
-  const featuredImageAlt = primaryImage?.alt?.trim() || null;
+  const validImages = normalizePropertyImagesForDb(imagesData);
+  const visibleImages = validImages
+    .filter((i) => !i.isHidden)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+  const primaryImage =
+    validImages.find((i) => i.isPrimary) ?? visibleImages[0];
+  const featuredImage = primaryImage?.url || null;
+  const featuredImageAlt = primaryImage?.alt ?? null;
   const galleryImages = visibleImages.map((i) => i.url);
 
   const property = await prisma.property.create({
@@ -267,6 +350,8 @@ export async function createPropertyAction(
       price,
       city,
       neighborhood,
+      street,
+      streetNumber,
       state,
       country,
       postalCode,
@@ -295,13 +380,12 @@ export async function createPropertyAction(
 
   for (let i = 0; i < validImages.length; i++) {
     const img = validImages[i];
-    const envValue = img.environment === "__OTHER__" ? img.environmentCustom : img.environment;
     await prisma.propertyImage.create({
       data: {
         propertyId: property.id,
         url: img.url,
-        alt: img.alt?.trim() || null,
-        environment: envValue?.trim() || null,
+        alt: img.alt,
+        environment: img.environment,
         isPrimary: img.isPrimary,
         isHidden: img.isHidden,
         sortOrder: i,
@@ -348,6 +432,7 @@ export async function archivePropertyAction(
   revalidatePath("/admin/imoveis");
   revalidatePath("/imoveis");
   revalidatePath(`/imoveis/${existing.slug}`);
+  await revalidateBlogPagesReferencingProperty(propertyId);
   redirect("/admin/imoveis");
 }
 
@@ -374,6 +459,7 @@ export async function publishPropertyAction(
   revalidatePath("/admin/imoveis");
   revalidatePath("/imoveis");
   revalidatePath(`/imoveis/${existing.slug}`);
+  await revalidateBlogPagesReferencingProperty(propertyId);
   redirect("/admin/imoveis");
 }
 
@@ -400,6 +486,7 @@ export async function deletePropertyAction(
   revalidatePath("/admin/imoveis");
   revalidatePath("/imoveis");
   revalidatePath(`/imoveis/${existing.slug}`);
+  await revalidateBlogPagesReferencingProperty(propertyId);
   redirect("/admin/imoveis");
 }
 
@@ -424,6 +511,8 @@ export async function updatePropertyAction(
   const priceStr = (formData.get("price") as string)?.trim();
   const city = (formData.get("city") as string)?.trim();
   const neighborhood = (formData.get("neighborhood") as string)?.trim() || null;
+  const street = (formData.get("street") as string)?.trim() || null;
+  const streetNumber = (formData.get("streetNumber") as string)?.trim() || null;
   const state = (formData.get("state") as string)?.trim();
   const countryRaw = (formData.get("country") as string)?.trim() || null;
   const country = countryRaw && countryRaw.length > 0 ? countryRaw : null;
@@ -502,15 +591,14 @@ export async function updatePropertyAction(
       ? existing.slug
       : await ensureUniqueSlugForEdit(baseSlug, propertyId);
 
-  const validImages = imagesData.filter(
-    (i) => i.url.startsWith("http://") || i.url.startsWith("https://")
-  );
+  const validImages = normalizePropertyImagesForDb(imagesData);
   const visibleImages = validImages
     .filter((i) => !i.isHidden)
     .sort((a, b) => a.sortOrder - b.sortOrder);
-  const primaryImage = validImages.find((i) => i.isPrimary) ?? visibleImages[0];
-  const featuredImage = primaryImage?.url?.trim() || null;
-  const featuredImageAlt = primaryImage?.alt?.trim() || null;
+  const primaryImage =
+    validImages.find((i) => i.isPrimary) ?? visibleImages[0];
+  const featuredImage = primaryImage?.url || null;
+  const featuredImageAlt = primaryImage?.alt ?? null;
   const galleryImages = visibleImages.map((i) => i.url);
 
   await prisma.$transaction(async (tx) => {
@@ -523,6 +611,8 @@ export async function updatePropertyAction(
         price,
         city,
         neighborhood,
+        street,
+        streetNumber,
         state,
         country,
         postalCode,
@@ -552,14 +642,12 @@ export async function updatePropertyAction(
 
     for (let i = 0; i < validImages.length; i++) {
       const img = validImages[i];
-      const envValue =
-        img.environment === "__OTHER__" ? img.environmentCustom : img.environment;
       await tx.propertyImage.create({
         data: {
           propertyId,
           url: img.url,
-          alt: img.alt?.trim() || null,
-          environment: envValue?.trim() || null,
+          alt: img.alt,
+          environment: img.environment,
           isPrimary: img.isPrimary,
           isHidden: img.isHidden,
           sortOrder: i,
@@ -572,5 +660,6 @@ export async function updatePropertyAction(
   revalidatePath(`/admin/imoveis/${propertyId}/editar`);
   revalidatePath("/imoveis");
   revalidatePath(`/imoveis/${slug}`);
+  await revalidateBlogPagesReferencingProperty(propertyId);
   redirect("/admin/imoveis");
 }

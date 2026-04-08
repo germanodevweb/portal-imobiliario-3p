@@ -7,6 +7,7 @@ import {
   getWatermarkedImageUrl,
   shouldUseUnoptimizedNextImage,
 } from "@/lib/cloudinary/watermark";
+import { publicPropertyImageSrc } from "@/lib/utils/public-property-image-src";
 import type { PropertyGalleryBadge, PropertyGalleryItem } from "@/lib/utils/property-gallery";
 
 type PropertyGalleryProps = {
@@ -49,7 +50,7 @@ export function PropertyGallery({ images, badges = [] }: PropertyGalleryProps) {
       <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-zinc-100">
         <Image
           key={current.url}
-          src={getWatermarkedImageUrl(current.url)}
+          src={publicPropertyImageSrc(getWatermarkedImageUrl(current.url))}
           alt={current.alt}
           fill
           priority={safeIndex === 0}
@@ -127,7 +128,7 @@ export function PropertyGallery({ images, badges = [] }: PropertyGalleryProps) {
                 }`}
               >
                 <Image
-                  src={getWatermarkedImageUrl(img.url)}
+                  src={publicPropertyImageSrc(getWatermarkedImageUrl(img.url))}
                   alt=""
                   width={128}
                   height={72}

@@ -14,6 +14,10 @@ function hasAdminAuth(request: NextRequest): boolean {
 /**
  * Repassa o pathname para Server Components (ex.: root layout -> <html lang>).
  * Protege `/admin` e `/api/admin` com cookie de sessão simples.
+ *
+ * Redirecionos Code49 `/{id}/imoveis/{slug}` → `/imoveis/{slug}` estão em
+ * `next.config.js` (última regra do array), para 301 e para não sobrepor
+ * mapeamentos explícitos id+slug → slug novo.
  */
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
