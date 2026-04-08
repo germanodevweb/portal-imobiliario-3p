@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Post, PostType } from "@/lib/generated/prisma/client";
+import { PostType } from "@/lib/generated/prisma/enums";
 import {
   savePostAction,
   searchPropertiesForBlog,
@@ -11,8 +11,24 @@ import {
 } from "@/lib/admin/blog-actions";
 import { Sparkles, Loader2, Search, Plus, X } from "lucide-react";
 
+/** Subconjunto do Post usado no formulário — evita importar o entry Prisma no cliente (node:* / runtime). */
+type AdminPostFormInitialData = {
+  id: string;
+  title: string;
+  slug: string;
+  type: PostType;
+  excerpt: string | null;
+  content: string;
+  citySlug: string | null;
+  metaTitle: string | null;
+  metaDescription: string | null;
+  featuredImage: string | null;
+  published: boolean;
+  relatedPropertyIds: string[];
+};
+
 type Props = {
-  initialData?: Post;
+  initialData?: AdminPostFormInitialData;
 };
 
 const ADMIN_POST_SAVE_FORM_ID = "admin-post-save";
