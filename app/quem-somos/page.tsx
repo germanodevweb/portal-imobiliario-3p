@@ -71,12 +71,13 @@ export default function QuemSomosPage() {
               Quem Somos
             </h1>
             <p className="mt-8 text-base leading-relaxed text-zinc-600 sm:text-lg sm:leading-8">
-              Empresa familiar com um único objetivo: guiar você em uma jornada
-              segura, humana e confortável.
+              Existimos com um único objetivo: guiar você em uma jornada segura,
+              humana e confortável.
             </p>
             <p className="mt-5 text-base leading-relaxed text-zinc-600 sm:text-lg sm:leading-8">
               Não vendemos apenas imóveis — oferecemos atendimento com excelência,
-              transparência e respeito em cada etapa da sua conquista.
+              transparência e respeito em cada etapa. Podemos perder a venda, mas
+              jamais sua confiança!
             </p>
           </div>
         </section>

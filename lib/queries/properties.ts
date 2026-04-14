@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 
 // ---------------------------------------------------------------------------
@@ -440,11 +441,12 @@ export type PropertyDetail = {
   updatedAt: Date;
 };
 
-/**
- * Busca um imóvel publicado pelo slug com todos os campos necessários.
- * Envolto em React.cache para deduplicação entre generateMetadata e o componente.
- */
-export const getPropertyBySlug = cache(async function (
+/** Usar com `revalidateTag` no admin ao guardar/arquivar/apagar o imóvel. */
+export function propertyDetailRevalidateTag(slug: string): string {
+  return `property-detail:${slug}`;
+}
+
+async function fetchPublishedPropertyBySlug(
   slug: string
 ): Promise<PropertyDetail | null> {
   const result = await prisma.property.findUnique({
@@ -492,6 +494,24 @@ export const getPropertyBySlug = cache(async function (
 
   if (!result) return null;
   return { ...result, price: String(result.price) } as PropertyDetail;
+}
+
+/**
+ * Busca um imóvel publicado pelo slug.
+ * - React.cache: deduplica no mesmo request (metadata + página).
+ * - unstable_cache: reutiliza resultado entre requests (120s); admin invalida com `revalidateTag(propertyDetailRevalidateTag(slug))`.
+ */
+export const getPropertyBySlug = cache(async function (
+  slug: string
+): Promise<PropertyDetail | null> {
+  return unstable_cache(
+    () => fetchPublishedPropertyBySlug(slug),
+    ["property-detail", slug],
+    {
+      revalidate: 120,
+      tags: [propertyDetailRevalidateTag(slug)],
+    }
+  )();
 });
 
 /**
@@ -1379,17 +1399,47 @@ export const getAllPublishedProperties = cache(async function (
 
 const ALTO_PADRAO_MIN_PRICE = "1500000";
 
+function altoPadraoPriceWhere(filters: PropertyFilters): { gte: string; lte?: string } {
+  const gte =
+    filters.minPrice && /^\d+(\.\d+)?$/.test(filters.minPrice)
+      ? (BigInt(filters.minPrice.replace(/\D/g, "") || "0") >=
+        BigInt(ALTO_PADRAO_MIN_PRICE.replace(/\D/g, "") || "0")
+          ? filters.minPrice.replace(/\..*$/, "")
+          : ALTO_PADRAO_MIN_PRICE)
+      : ALTO_PADRAO_MIN_PRICE;
+  return {
+    gte,
+    ...(filters.maxPrice && /^\d+(\.\d+)?$/.test(filters.maxPrice)
+      ? { lte: filters.maxPrice.replace(/\..*$/, "") }
+      : {}),
+  };
+}
+
+function altoPadraoWhere(filters: PropertyFilters) {
+  return {
+    published: true,
+    isSold: false,
+    type: "APARTAMENTO" as const,
+    ...(filters.citySlug ? { citySlug: filters.citySlug } : {}),
+    ...(filters.neighborhoodSlug ? { neighborhoodSlug: filters.neighborhoodSlug } : {}),
+    ...(filters.propertyTypeSlug ? { propertyTypeSlug: filters.propertyTypeSlug } : {}),
+    ...(filters.bedrooms !== undefined
+      ? { bedrooms: filters.bedrooms >= 4 ? { gte: 4 } : filters.bedrooms }
+      : {}),
+    ...(filters.isFeatured === true ? { isFeatured: true } : {}),
+    ...(filters.isLaunch === true ? { isLaunch: true } : {}),
+    ...(filters.isOpportunity === true ? { isOpportunity: true } : {}),
+    price: altoPadraoPriceWhere(filters),
+  };
+}
+
 export const getAltoPadraoApartments = cache(async function (
   limit?: number,
-  skip = 0
+  skip = 0,
+  filters: PropertyFilters = {}
 ): Promise<PropertyCardData[]> {
   const results = await prisma.property.findMany({
-    where: {
-      published: true,
-      isSold: false,
-      type: "APARTAMENTO",
-      price: { gte: ALTO_PADRAO_MIN_PRICE },
-    },
+    where: altoPadraoWhere(filters),
     select: propertyCardSelect,
     orderBy: [{ publishedAt: { sort: "desc", nulls: "first" } }, { createdAt: "desc" }],
     ...(limit !== undefined ? { take: limit } : {}),
@@ -1399,14 +1449,11 @@ export const getAltoPadraoApartments = cache(async function (
   return results.map((p) => ({ ...p, price: String(p.price) }));
 });
 
-export const countAltoPadraoApartments = cache(async function (): Promise<number> {
+export const countAltoPadraoApartments = cache(async function (
+  filters: PropertyFilters = {}
+): Promise<number> {
   return prisma.property.count({
-    where: {
-      published: true,
-      isSold: false,
-      type: "APARTAMENTO",
-      price: { gte: ALTO_PADRAO_MIN_PRICE },
-    },
+    where: altoPadraoWhere(filters),
   });
 });
 
@@ -1418,16 +1465,46 @@ export const countAltoPadraoApartments = cache(async function (): Promise<number
 
 const INVESTMENT_MIN_PRICE = "350000";
 
+function investmentPriceWhere(filters: PropertyFilters): { gte: string; lte?: string } {
+  const gte =
+    filters.minPrice && /^\d+(\.\d+)?$/.test(filters.minPrice)
+      ? BigInt(filters.minPrice.replace(/\D/g, "") || "0") >=
+        BigInt(INVESTMENT_MIN_PRICE.replace(/\D/g, "") || "0")
+        ? filters.minPrice.replace(/\..*$/, "")
+        : INVESTMENT_MIN_PRICE
+      : INVESTMENT_MIN_PRICE;
+  return {
+    gte,
+    ...(filters.maxPrice && /^\d+(\.\d+)?$/.test(filters.maxPrice)
+      ? { lte: filters.maxPrice.replace(/\..*$/, "") }
+      : {}),
+  };
+}
+
+function internationalInvestmentWhere(filters: PropertyFilters) {
+  return {
+    published: true,
+    isSold: false,
+    ...(filters.citySlug ? { citySlug: filters.citySlug } : {}),
+    ...(filters.neighborhoodSlug ? { neighborhoodSlug: filters.neighborhoodSlug } : {}),
+    ...(filters.propertyTypeSlug ? { propertyTypeSlug: filters.propertyTypeSlug } : {}),
+    ...(filters.bedrooms !== undefined
+      ? { bedrooms: filters.bedrooms >= 4 ? { gte: 4 } : filters.bedrooms }
+      : {}),
+    ...(filters.isFeatured === true ? { isFeatured: true } : {}),
+    ...(filters.isLaunch === true ? { isLaunch: true } : {}),
+    ...(filters.isOpportunity === true ? { isOpportunity: true } : {}),
+    price: investmentPriceWhere(filters),
+  };
+}
+
 export const getInternationalInvestmentProperties = cache(async function (
   limit?: number,
-  skip = 0
+  skip = 0,
+  filters: PropertyFilters = {}
 ): Promise<PropertyCardData[]> {
   const results = await prisma.property.findMany({
-    where: {
-      published: true,
-      isSold: false,
-      price: { gte: INVESTMENT_MIN_PRICE },
-    },
+    where: internationalInvestmentWhere(filters),
     select: propertyCardSelect,
     orderBy: [
       { isLaunch: "desc" },
@@ -1441,12 +1518,10 @@ export const getInternationalInvestmentProperties = cache(async function (
   return results.map((p) => ({ ...p, price: String(p.price) }));
 });
 
-export const countInternationalInvestmentProperties = cache(async function (): Promise<number> {
+export const countInternationalInvestmentProperties = cache(async function (
+  filters: PropertyFilters = {}
+): Promise<number> {
   return prisma.property.count({
-    where: {
-      published: true,
-      isSold: false,
-      price: { gte: INVESTMENT_MIN_PRICE },
-    },
+    where: internationalInvestmentWhere(filters),
   });
 });

@@ -1,17 +1,20 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { Header } from "@/app/components/Header";
 import { Footer } from "@/app/components/Footer";
 import { WhatsAppButton } from "@/app/components/WhatsAppButton";
 import { PropertyCard } from "@/app/components/PropertyCard";
+import { ImoveisFilterPanel } from "@/app/components/ImoveisFilterPanel";
 import { Pagination } from "@/app/components/Pagination";
+import { parsePropertyListSearchParams as parseSearchParams } from "@/lib/imoveis/search-params";
+import { buildWhatsAppChatHref } from "@/lib/constants/contato";
 import {
   getFilteredProperties,
   countFilteredProperties,
   getAvailableCities,
   getAvailableNeighborhoods,
   getAvailablePropertyTypes,
-  type PropertyFilters,
 } from "@/lib/queries/properties";
 import {
   buildImoveisPageTitle,
@@ -34,6 +37,10 @@ import {
   ITEMS_PER_PAGE,
 } from "@/lib/pagination";
 
+/** Mensagem do CTA “Simule sua Prestação” (PGMV / faixa de renda) — WhatsApp via `NEXT_PUBLIC_WHATSAPP_PHONE`. */
+const WHATSAPP_SIMULE_PRESTACAO_MESSAGE =
+  "Olá! Quero simular a prestação de um imóvel dentro da minha renda.";
+
 // ---------------------------------------------------------------------------
 // Tipos
 // ---------------------------------------------------------------------------
@@ -43,92 +50,6 @@ type PageProps = {
 };
 
 const RESULTS_LIMIT = ITEMS_PER_PAGE;
-
-// ---------------------------------------------------------------------------
-// Sanitização de searchParams
-// Para evitar injeção de valores maliciosos na query Prisma.
-// ---------------------------------------------------------------------------
-
-/** Chave opcional `renda` na URL — só exibição; não entra no filtro Prisma. */
-const RENDA_QUERY_ALLOWED = new Set(["3200", "5000", "9600", "13000"]);
-
-function parseSearchParams(sp: { [key: string]: string | string[] | undefined }): {
-  filters: PropertyFilters;
-  rawCidade: string;
-  rawBairro: string;
-  rawTipo: string;
-  rawQuartos: string;
-  rawPrecoMin: string;
-  rawPrecoMax: string;
-  rawRenda: string;
-  rawDestaque: boolean;
-  rawLancamento: boolean;
-  rawOportunidade: boolean;
-  hasFilters: boolean;
-} {
-  const rawCidade = typeof sp.cidade === "string" ? sp.cidade.trim() : "";
-  const rawBairro = typeof sp.bairro === "string" ? sp.bairro.trim() : "";
-  const rawTipo = typeof sp.tipo === "string" ? sp.tipo.trim() : "";
-  const rawQuartos = typeof sp.quartos === "string" ? sp.quartos.trim() : "";
-  const rawPrecoMin = typeof sp.precoMin === "string" ? sp.precoMin.trim() : "";
-  const rawPrecoMax = typeof sp.precoMax === "string" ? sp.precoMax.trim() : "";
-  const rawRendaRaw = typeof sp.renda === "string" ? sp.renda.trim() : "";
-  const rawRenda = RENDA_QUERY_ALLOWED.has(rawRendaRaw) ? rawRendaRaw : "";
-  const rawDestaque = sp.destaque === "1" || sp.destaque === "true";
-  const rawLancamento = sp.lancamento === "1" || sp.lancamento === "true";
-  const rawOportunidade = sp.oportunidade === "1" || sp.oportunidade === "true";
-
-  const quartosParsed = parseInt(rawQuartos, 10);
-  const bedroomsFilter =
-    !isNaN(quartosParsed) && quartosParsed >= 1 && quartosParsed <= 10
-      ? quartosParsed
-      : undefined;
-
-  // Validação básica de preço: só aceita valores positivos
-  const minPriceFilter =
-    rawPrecoMin && /^\d+(\.\d+)?$/.test(rawPrecoMin) ? rawPrecoMin : undefined;
-  const maxPriceFilter =
-    rawPrecoMax && /^\d+(\.\d+)?$/.test(rawPrecoMax) ? rawPrecoMax : undefined;
-
-  const filters: PropertyFilters = {
-    ...(rawCidade ? { citySlug: rawCidade } : {}),
-    ...(rawBairro ? { neighborhoodSlug: rawBairro } : {}),
-    ...(rawTipo ? { propertyTypeSlug: rawTipo } : {}),
-    ...(bedroomsFilter !== undefined ? { bedrooms: bedroomsFilter } : {}),
-    ...(minPriceFilter ? { minPrice: minPriceFilter } : {}),
-    ...(maxPriceFilter ? { maxPrice: maxPriceFilter } : {}),
-    ...(rawDestaque ? { isFeatured: true } : {}),
-    ...(rawLancamento ? { isLaunch: true } : {}),
-    ...(rawOportunidade ? { isOpportunity: true } : {}),
-  };
-
-  const hasFilters = Boolean(
-    rawCidade ||
-      rawBairro ||
-      rawTipo ||
-      bedroomsFilter ||
-      minPriceFilter ||
-      maxPriceFilter ||
-      rawDestaque ||
-      rawLancamento ||
-      rawOportunidade
-  );
-
-  return {
-    filters,
-    rawCidade,
-    rawBairro,
-    rawTipo,
-    rawQuartos,
-    rawPrecoMin,
-    rawPrecoMax,
-    rawRenda,
-    rawDestaque,
-    rawLancamento,
-    rawOportunidade,
-    hasFilters,
-  };
-}
 
 // ---------------------------------------------------------------------------
 // Metadata
@@ -376,36 +297,6 @@ export default async function ImoveisPage({ searchParams }: PageProps) {
   if (rawLancamento) paginationParams.lancamento = "1";
   if (rawOportunidade) paginationParams.oportunidade = "1";
 
-  const baseFilterParams = new URLSearchParams();
-  if (rawCidade) baseFilterParams.set("cidade", rawCidade);
-  if (rawBairro) baseFilterParams.set("bairro", rawBairro);
-  if (rawTipo) baseFilterParams.set("tipo", rawTipo);
-  if (rawQuartos) baseFilterParams.set("quartos", rawQuartos);
-  if (rawPrecoMin) baseFilterParams.set("precoMin", rawPrecoMin);
-  if (rawPrecoMax) baseFilterParams.set("precoMax", rawPrecoMax);
-  if (rawRenda) baseFilterParams.set("renda", rawRenda);
-  if (rawOportunidade) baseFilterParams.set("oportunidade", "1");
-  if (rawLancamento) baseFilterParams.set("lancamento", "1");
-  if (rawDestaque) baseFilterParams.set("destaque", "1");
-
-  function buildBadgeFilterUrl(badge: "oportunidade" | "lancamento" | "destaque", active: boolean): string {
-    const params = new URLSearchParams(baseFilterParams);
-    if (active) params.delete(badge);
-    else params.set(badge, "1");
-    const qs = params.toString();
-    return qs ? `/imoveis?${qs}` : "/imoveis";
-  }
-
-  const clearBadgesParams = new URLSearchParams();
-  if (rawCidade) clearBadgesParams.set("cidade", rawCidade);
-  if (rawBairro) clearBadgesParams.set("bairro", rawBairro);
-  if (rawTipo) clearBadgesParams.set("tipo", rawTipo);
-  if (rawQuartos) clearBadgesParams.set("quartos", rawQuartos);
-  if (rawPrecoMin) clearBadgesParams.set("precoMin", rawPrecoMin);
-  if (rawPrecoMax) clearBadgesParams.set("precoMax", rawPrecoMax);
-  if (rawRenda) clearBadgesParams.set("renda", rawRenda);
-  const clearBadgesUrl = clearBadgesParams.toString() ? `/imoveis?${clearBadgesParams.toString()}` : "/imoveis";
-
   const filterSummary = buildFilterSummary({
     rawCidade,
     rawBairro,
@@ -469,18 +360,41 @@ export default async function ImoveisPage({ searchParams }: PageProps) {
               <>
                 <h1 className="max-w-4xl text-lg font-bold leading-snug tracking-tight text-zinc-900 sm:text-xl lg:text-2xl">
                   Com a renda até de {formatRendaValorParaTitulo(rendaPreset)} você pode comprar todos esses
-                  imóveis aqui abaixo, pelo PGMV da Caixa Econômica Federal.
+                  imóveis aqui abaixo, pelo{" "}
+                  <span className="inline-flex max-w-full flex-wrap items-center gap-2 align-middle sm:gap-3">
+                    <Image
+                      src="/images/minha-casa-minha-vida-logo-1.png"
+                      alt="Minha Casa Minha Vida"
+                      width={60}
+                      height={40}
+                      className="h-6 w-auto max-w-[min(72px,40vw)] object-contain sm:h-9 sm:max-w-[90px]"
+                      sizes="(max-width: 640px) 64px, 90px"
+                    />
+                    <span className="shrink-0 self-center font-bold">da</span>
+                    <Image
+                      src="/images/caixa-economica-federal-logo-png-0.png"
+                      alt="Caixa Econômica Federal"
+                      width={90}
+                      height={28}
+                      className="h-5 w-auto max-w-[min(90px,42vw)] object-contain sm:h-7 sm:max-w-[90px]"
+                      sizes="(max-width: 640px) 80px, 90px"
+                    />
+                  </span>
+                  .
                 </h1>
                 <p className="mt-2 text-sm text-zinc-600">
                   {count === 0
                     ? "Nenhum imóvel encontrado para este perfil de renda."
-                    : `${count} imóve${count !== 1 ? "is" : "l"} encontrado${count !== 1 ? "s" : ""}. Fale conosco agora e saiba como.`}
+                    : `${count} imóve${count !== 1 ? "is" : "l"} encontrado${count !== 1 ? "s" : ""}. Simule sua prestação com nossa equipe pelo botão abaixo.`}
                 </p>
                 <Link
-                  href="/contato"
+                  href={buildWhatsAppChatHref(WHATSAPP_SIMULE_PRESTACAO_MESSAGE)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Simular prestação do imóvel"
                   className="mt-3 inline-flex min-h-[44px] items-center rounded-full bg-green-700 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-green-800"
                 >
-                  Fale conosco
+                  Simule sua Prestação
                 </Link>
               </>
             ) : (
@@ -508,289 +422,22 @@ export default async function ImoveisPage({ searchParams }: PageProps) {
           )}
         </div>
 
-        {/* Filtros rápidos — sempre visíveis (mobile: 3 colunas na mesma linha) */}
-        <div className="mt-4 flex flex-col gap-2 sm:flex sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-          <div className="grid grid-cols-3 gap-1.5 sm:contents">
-            <Link
-              href={buildBadgeFilterUrl("oportunidade", rawOportunidade)}
-              className={`flex min-h-[44px] w-full items-center justify-center rounded-full px-2 py-2 text-center text-[11px] font-medium leading-tight transition-colors sm:inline-flex sm:w-auto sm:px-4 sm:py-2 sm:text-sm sm:leading-normal ${
-                rawOportunidade
-                  ? "bg-red-600 text-white shadow-sm"
-                  : "bg-red-50 text-red-800 hover:bg-red-100"
-              }`}
-            >
-              Oportunidades
-            </Link>
-            <Link
-              href={buildBadgeFilterUrl("lancamento", rawLancamento)}
-              className={`flex min-h-[44px] w-full items-center justify-center rounded-full px-2 py-2 text-center text-[11px] font-medium leading-tight transition-colors sm:inline-flex sm:w-auto sm:px-4 sm:py-2 sm:text-sm sm:leading-normal ${
-                rawLancamento
-                  ? "bg-green-600 text-white shadow-sm"
-                  : "bg-green-50 text-green-800 hover:bg-green-100"
-              }`}
-            >
-              Lançamentos
-            </Link>
-            <Link
-              href={buildBadgeFilterUrl("destaque", rawDestaque)}
-              className={`flex min-h-[44px] w-full items-center justify-center rounded-full px-2 py-2 text-center text-[11px] font-medium leading-tight transition-colors sm:inline-flex sm:w-auto sm:px-4 sm:py-2 sm:text-sm sm:leading-normal ${
-                rawDestaque
-                  ? "bg-amber-500 text-white shadow-sm"
-                  : "bg-amber-50 text-amber-800 hover:bg-amber-100"
-              }`}
-            >
-              Destaques
-            </Link>
-          </div>
-          {(rawOportunidade || rawLancamento || rawDestaque) && (
-            <Link
-              href={clearBadgesUrl}
-              className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-zinc-300 px-4 py-2.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50 sm:py-2"
-            >
-              Limpar badges
-            </Link>
-          )}
-        </div>
-
-        {/* ----------------------------------------------------------------
-            Painel de filtros — formulário GET puro, sem client JS.
-            Mobile: colapsável via <details>/<summary> (HTML nativo).
-            Desktop: sempre visível.
-        ---------------------------------------------------------------- */}
-        <details
-          className="mt-6 rounded-xl border border-zinc-200 bg-white"
-          open={hasFilters}
-        >
-          <summary className="flex min-h-[44px] cursor-pointer list-none items-center justify-between px-5 py-4 text-sm font-semibold text-zinc-800 [&::-webkit-details-marker]:hidden">
-            <span>Filtrar imóveis</span>
-            <svg
-              className="h-4 w-4 shrink-0 text-zinc-400 transition-transform details-open:rotate-180"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-              aria-hidden="true"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-            </svg>
-          </summary>
-
-          <form
-            method="GET"
-            action="/imoveis"
-            className="space-y-4 border-t border-zinc-100 px-5 pb-5 pt-4"
-          >
-            {rawRenda ? <input type="hidden" name="renda" value={rawRenda} /> : null}
-            {/* Botões rápidos — Oportunidades, Lançamento, Destaque */}
-            <div className="flex flex-col gap-2 sm:flex sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-              <span className="text-xs font-semibold text-zinc-500 max-sm:-mb-1 sm:mr-1">
-                Buscar:
-              </span>
-              <div className="grid grid-cols-3 gap-1.5 sm:contents">
-                <Link
-                  href={buildBadgeFilterUrl("oportunidade", rawOportunidade)}
-                  className={`flex min-h-[44px] w-full items-center justify-center rounded-full px-2 py-2 text-center text-[11px] font-medium leading-tight transition-colors sm:inline-flex sm:w-auto sm:px-4 sm:py-2 sm:text-sm sm:leading-normal ${
-                    rawOportunidade
-                      ? "bg-red-600 text-white shadow-sm"
-                      : "bg-red-50 text-red-800 hover:bg-red-100"
-                  }`}
-                >
-                  Oportunidades
-                </Link>
-                <Link
-                  href={buildBadgeFilterUrl("lancamento", rawLancamento)}
-                  className={`flex min-h-[44px] w-full items-center justify-center rounded-full px-2 py-2 text-center text-[11px] font-medium leading-tight transition-colors sm:inline-flex sm:w-auto sm:px-4 sm:py-2 sm:text-sm sm:leading-normal ${
-                    rawLancamento
-                      ? "bg-green-600 text-white shadow-sm"
-                      : "bg-green-50 text-green-800 hover:bg-green-100"
-                  }`}
-                >
-                  Lançamentos
-                </Link>
-                <Link
-                  href={buildBadgeFilterUrl("destaque", rawDestaque)}
-                  className={`flex min-h-[44px] w-full items-center justify-center rounded-full px-2 py-2 text-center text-[11px] font-medium leading-tight transition-colors sm:inline-flex sm:w-auto sm:px-4 sm:py-2 sm:text-sm sm:leading-normal ${
-                    rawDestaque
-                      ? "bg-amber-500 text-white shadow-sm"
-                      : "bg-amber-50 text-amber-800 hover:bg-amber-100"
-                  }`}
-                >
-                  Destaques
-                </Link>
-              </div>
-              {(rawOportunidade || rawLancamento || rawDestaque) && (
-                <Link
-                  href={clearBadgesUrl}
-                  className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-zinc-300 px-4 py-2.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50 sm:py-2"
-                >
-                  Limpar badges
-                </Link>
-              )}
-            </div>
-
-            {/* Checkboxes para combinar com outros filtros */}
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="text-xs font-semibold text-zinc-500">
-                Ou marque para combinar:
-              </span>
-              <label className="inline-flex min-h-[44px] cursor-pointer items-center gap-2">
-                <input
-                  type="checkbox"
-                  name="destaque"
-                  value="1"
-                  defaultChecked={rawDestaque}
-                  className="h-4 w-4 rounded border-zinc-300 text-amber-600 focus:ring-amber-500"
-                />
-                <span className="text-sm text-zinc-700">Destaque</span>
-              </label>
-              <label className="inline-flex min-h-[44px] cursor-pointer items-center gap-2">
-                <input
-                  type="checkbox"
-                  name="lancamento"
-                  value="1"
-                  defaultChecked={rawLancamento}
-                  className="h-4 w-4 rounded border-zinc-300 text-green-600 focus:ring-green-500"
-                />
-                <span className="text-sm text-zinc-700">Lançamento</span>
-              </label>
-              <label className="inline-flex min-h-[44px] cursor-pointer items-center gap-2">
-                <input
-                  type="checkbox"
-                  name="oportunidade"
-                  value="1"
-                  defaultChecked={rawOportunidade}
-                  className="h-4 w-4 rounded border-zinc-300 text-red-600 focus:ring-red-500"
-                />
-                <span className="text-sm text-zinc-700">Oportunidade</span>
-              </label>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-            {/* Cidade */}
-            <div className="flex flex-col gap-1">
-              <label htmlFor="filter-cidade" className="text-xs font-semibold text-zinc-500">
-                Cidade
-              </label>
-              <select
-                id="filter-cidade"
-                name="cidade"
-                defaultValue={rawCidade}
-                className="min-h-[44px] rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
-              >
-                <option value="">Todas</option>
-                {cities.map((c) => (
-                  <option key={c.citySlug} value={c.citySlug}>
-                    {c.city}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Bairro */}
-            <div className="flex flex-col gap-1">
-              <label htmlFor="filter-bairro" className="text-xs font-semibold text-zinc-500">
-                Bairro
-              </label>
-              <select
-                id="filter-bairro"
-                name="bairro"
-                defaultValue={rawBairro}
-                className="min-h-[44px] rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
-              >
-                <option value="">Todos</option>
-                {neighborhoods.map((n) => (
-                  <option key={n.neighborhoodSlug} value={n.neighborhoodSlug}>
-                    {n.neighborhood}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Tipo de imóvel */}
-            <div className="flex flex-col gap-1">
-              <label htmlFor="filter-tipo" className="text-xs font-semibold text-zinc-500">
-                Tipo
-              </label>
-              <select
-                id="filter-tipo"
-                name="tipo"
-                defaultValue={rawTipo}
-                className="min-h-[44px] rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
-              >
-                <option value="">Todos</option>
-                {propertyTypes.map((t) => (
-                  <option key={t.propertyTypeSlug} value={t.propertyTypeSlug}>
-                    {PROPERTY_TYPE_LABELS[t.propertyTypeSlug] ?? t.propertyTypeSlug}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Quartos */}
-            <div className="flex flex-col gap-1">
-              <label htmlFor="filter-quartos" className="text-xs font-semibold text-zinc-500">
-                Quartos
-              </label>
-              <select
-                id="filter-quartos"
-                name="quartos"
-                defaultValue={rawQuartos}
-                className="min-h-[44px] rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
-              >
-                <option value="">Qualquer</option>
-                <option value="1">1 quarto</option>
-                <option value="2">2 quartos</option>
-                <option value="3">3 quartos</option>
-                <option value="4">4+ quartos</option>
-              </select>
-            </div>
-
-            {/* Preço mínimo */}
-            <div className="flex flex-col gap-1">
-              <label htmlFor="filter-preco-min" className="text-xs font-semibold text-zinc-500">
-                Preço mínimo (R$)
-              </label>
-              <input
-                id="filter-preco-min"
-                type="number"
-                name="precoMin"
-                min="0"
-                step="10000"
-                placeholder="Ex: 200000"
-                defaultValue={rawPrecoMin}
-                className="min-h-[44px] rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 outline-none placeholder:text-zinc-400 focus:border-green-600 focus:ring-1 focus:ring-green-600"
-              />
-            </div>
-
-            {/* Preço máximo */}
-            <div className="flex flex-col gap-1">
-              <label htmlFor="filter-preco-max" className="text-xs font-semibold text-zinc-500">
-                Preço máximo (R$)
-              </label>
-              <input
-                id="filter-preco-max"
-                type="number"
-                name="precoMax"
-                min="0"
-                step="10000"
-                placeholder="Ex: 800000"
-                defaultValue={rawPrecoMax}
-                className="min-h-[44px] rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 outline-none placeholder:text-zinc-400 focus:border-green-600 focus:ring-1 focus:ring-green-600"
-              />
-            </div>
-
-            {/* Botão de aplicar — span completo no mobile */}
-            <div className="flex items-end sm:col-span-2 lg:col-span-3 xl:col-span-6">
-              <button
-                type="submit"
-                className="flex min-h-[44px] w-full items-center justify-center rounded-full bg-green-700 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-green-800 sm:w-auto"
-              >
-                Aplicar filtros
-              </button>
-            </div>
-            </div>
-          </form>
-        </details>
+        <ImoveisFilterPanel
+          listPath="/imoveis"
+          rawCidade={rawCidade}
+          rawBairro={rawBairro}
+          rawTipo={rawTipo}
+          rawQuartos={rawQuartos}
+          rawPrecoMin={rawPrecoMin}
+          rawPrecoMax={rawPrecoMax}
+          rawRenda={rawRenda}
+          rawDestaque={rawDestaque}
+          rawLancamento={rawLancamento}
+          rawOportunidade={rawOportunidade}
+          cities={cities}
+          neighborhoods={neighborhoods}
+          propertyTypes={propertyTypes}
+        />
 
         {/* ----------------------------------------------------------------
             Resultados
@@ -811,10 +458,17 @@ export default async function ImoveisPage({ searchParams }: PageProps) {
               .
             </p>
             <Link
-              href="/contato"
+              href={
+                rendaPreset
+                  ? buildWhatsAppChatHref(WHATSAPP_SIMULE_PRESTACAO_MESSAGE)
+                  : "/contato"
+              }
+              target={rendaPreset ? "_blank" : undefined}
+              rel={rendaPreset ? "noopener noreferrer" : undefined}
+              aria-label={rendaPreset ? "Simular prestação do imóvel" : undefined}
               className="mt-2 inline-flex min-h-[44px] items-center justify-center rounded-full bg-green-700 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-green-800"
             >
-              Falar com um consultor
+              {rendaPreset ? "Simule sua Prestação" : "Falar com um consultor"}
             </Link>
           </div>
         ) : (

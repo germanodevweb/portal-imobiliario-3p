@@ -44,12 +44,14 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
 }
 
 export default async function InvertirEnBrasilEsPage({ searchParams }: PageProps) {
-  const page = parsePage(await searchParams);
+  const sp = await searchParams;
+  const page = parsePage(sp);
   return (
     <InvestPageContent
       content={CONTENT_ES}
       page={page}
       basePath={BASE_PATH}
+      searchParams={sp}
     />
   );
 }

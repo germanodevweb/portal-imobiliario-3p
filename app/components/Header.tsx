@@ -26,8 +26,8 @@ export function Header() {
             alt=""
             width={36}
             height={36}
+            sizes="(max-width: 640px) 36px, 44px"
             className="object-contain sm:w-11 sm:h-11"
-            priority
           />
           <span className="hidden text-sm font-semibold leading-tight text-zinc-800 sm:block">
             3Pinheiros

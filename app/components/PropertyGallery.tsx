@@ -55,7 +55,7 @@ export function PropertyGallery({ images, badges = [] }: PropertyGalleryProps) {
           fill
           priority={safeIndex === 0}
           unoptimized={shouldUseUnoptimizedNextImage(current.url)}
-          sizes="(max-width: 768px) 100vw, (max-width: 1280px) 90vw, 1200px"
+          sizes="(max-width: 768px) 100vw, (max-width: 1280px) 90vw, 1152px"
           className="object-cover"
         />
 
@@ -132,7 +132,7 @@ export function PropertyGallery({ images, badges = [] }: PropertyGalleryProps) {
                   alt=""
                   width={128}
                   height={72}
-                  sizes="112px"
+                  sizes="(max-width: 640px) 112px, 128px"
                   loading={i === safeIndex ? "eager" : "lazy"}
                   unoptimized={shouldUseUnoptimizedNextImage(img.url)}
                   className="h-full w-full object-cover"

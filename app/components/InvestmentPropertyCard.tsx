@@ -44,7 +44,7 @@ export function InvestmentPropertyCard({ property, eurToBrlRate }: InvestmentPro
             fill
             unoptimized={shouldUseUnoptimizedNextImage(property.featuredImage)}
             className="object-cover transition-transform duration-300 group-hover:scale-105"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1536px) 33vw, 400px"
           />
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-zinc-400">

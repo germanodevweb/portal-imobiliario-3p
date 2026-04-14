@@ -44,6 +44,7 @@ export function Footer() {
                   alt="3Pinheiros"
                   width={40}
                   height={40}
+                  sizes="40px"
                   loading="lazy"
                   className="object-contain"
                 />

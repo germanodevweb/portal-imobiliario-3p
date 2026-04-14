@@ -50,6 +50,9 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      dotenv:
+        specifier: ^16
+        version: 16.6.1
       lucide-react:
         specifier: ^0.576.0
         version: 0.576.0(react@19.2.3)
@@ -93,9 +96,6 @@ importers:
       '@types/react-dom':
         specifier: ^19
         version: 19.2.3(@types/react@19.2.14)
-      dotenv:
-        specifier: ^16
-        version: 16.6.1
       eslint:
         specifier: ^9
         version: 9.39.3(jiti@2.6.1)

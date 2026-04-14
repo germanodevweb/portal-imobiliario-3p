@@ -10,6 +10,7 @@ function NarLogoBadge() {
         alt="National Association of REALTORS®"
         width={200}
         height={120}
+        loading="lazy"
         className="h-12 w-auto object-contain sm:h-14 lg:h-16"
         sizes="(max-width: 640px) 180px, (max-width: 1024px) 200px, 220px"
       />

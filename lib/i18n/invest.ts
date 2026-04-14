@@ -22,6 +22,8 @@ export type InvestContent = {
     empty: string;
     emptyHint: string;
     priceDisclaimer: string;
+    /** Link ao lado do título quando há filtros na URL (GET). */
+    clearFiltersLabel: string;
   };
   nar: {
     headline: string;
@@ -52,7 +54,7 @@ export const CONTENT_PT: InvestContent = {
   locale: "pt",
   route: INVEST_ROUTES.pt,
   hero: {
-    title: "Investir em Imóveis no Brasil",
+    title: "Investir : Brasil ou Exterior",
     subtitle: "",
     ctaPrimary: "Falar com um especialista",
     ctaSecondary: "Ver oportunidades de investimento",
@@ -66,6 +68,7 @@ export const CONTENT_PT: InvestContent = {
     emptyHint: "Entre em contato para ser avisado quando surgirem novas oportunidades.",
     priceDisclaimer:
       "Os preços em EUR são estimativas baseadas na cotação atual e podem variar.",
+    clearFiltersLabel: "Limpar filtros",
   },
   nar: {
     headline: "Rede imobiliária global",
@@ -83,7 +86,7 @@ export const CONTENT_PT: InvestContent = {
       "Germano Pinheiro é certificado pela National Association of REALTORS® (NAR) com expertise em transações imobiliárias internacionais.",
   },
   seo: {
-    title: "Investir em Imóveis no Brasil | 3Pinheiros",
+    title: "Investir : Brasil ou Exterior | 3Pinheiros",
     description:
       "Imóveis para investimento no Brasil a partir de R$ 350.000. Novos empreendimentos e oportunidades. Consultor internacional certificado.",
   },
@@ -107,6 +110,7 @@ export const CONTENT_EN: InvestContent = {
     emptyHint: "Contact us to be notified when new opportunities arise.",
     priceDisclaimer:
       "Prices shown in EUR are estimates based on the current exchange rate and may vary.",
+    clearFiltersLabel: "Clear filters",
   },
   nar: {
     headline: "Global Real Estate Network",
@@ -147,6 +151,7 @@ export const CONTENT_FR: InvestContent = {
     emptyHint: "Contactez-nous pour être informé des nouvelles opportunités.",
     priceDisclaimer:
       "Les prix en EUR sont des estimations basées sur le taux de change actuel et peuvent varier.",
+    clearFiltersLabel: "Effacer les filtres",
   },
   nar: {
     headline: "Réseau immobilier mondial",
@@ -187,6 +192,7 @@ export const CONTENT_ES: InvestContent = {
     emptyHint: "Contáctenos para ser notificado cuando surjan nuevas oportunidades.",
     priceDisclaimer:
       "Los precios en EUR son estimaciones basadas en el tipo de cambio actual y pueden variar.",
+    clearFiltersLabel: "Limpiar filtros",
   },
   nar: {
     headline: "Red inmobiliaria global",

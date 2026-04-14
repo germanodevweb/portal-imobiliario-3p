@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { parseYouTubeVideoId } from "@/lib/utils/youtube";
@@ -8,6 +8,7 @@ import type { PropertyType } from "@/lib/generated/prisma/client";
 import { generatePropertyContent } from "@/lib/ai/property";
 import { uploadPropertyImage } from "@/lib/upload/cloudinary";
 import { revalidateBlogPagesReferencingProperty } from "@/lib/admin/revalidate-blog-for-property";
+import { propertyDetailRevalidateTag } from "@/lib/queries/properties";
 
 // ---------------------------------------------------------------------------
 // Tipos
@@ -432,6 +433,7 @@ export async function archivePropertyAction(
   revalidatePath("/admin/imoveis");
   revalidatePath("/imoveis");
   revalidatePath(`/imoveis/${existing.slug}`);
+  revalidateTag(propertyDetailRevalidateTag(existing.slug));
   await revalidateBlogPagesReferencingProperty(propertyId);
   redirect("/admin/imoveis");
 }
@@ -459,6 +461,7 @@ export async function publishPropertyAction(
   revalidatePath("/admin/imoveis");
   revalidatePath("/imoveis");
   revalidatePath(`/imoveis/${existing.slug}`);
+  revalidateTag(propertyDetailRevalidateTag(existing.slug));
   await revalidateBlogPagesReferencingProperty(propertyId);
   redirect("/admin/imoveis");
 }
@@ -486,6 +489,7 @@ export async function deletePropertyAction(
   revalidatePath("/admin/imoveis");
   revalidatePath("/imoveis");
   revalidatePath(`/imoveis/${existing.slug}`);
+  revalidateTag(propertyDetailRevalidateTag(existing.slug));
   await revalidateBlogPagesReferencingProperty(propertyId);
   redirect("/admin/imoveis");
 }
@@ -660,6 +664,10 @@ export async function updatePropertyAction(
   revalidatePath(`/admin/imoveis/${propertyId}/editar`);
   revalidatePath("/imoveis");
   revalidatePath(`/imoveis/${slug}`);
+  revalidateTag(propertyDetailRevalidateTag(existing.slug));
+  if (slug !== existing.slug) {
+    revalidateTag(propertyDetailRevalidateTag(slug));
+  }
   await revalidateBlogPagesReferencingProperty(propertyId);
   redirect("/admin/imoveis");
 }

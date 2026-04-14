@@ -37,6 +37,9 @@ import { Share2 } from "lucide-react";
 
 type PageProps = { params: Promise<{ slug: string }> };
 
+/** ISR: revalida páginas pré-geradas a cada 120s (menos CPU na Vercel; dados e SEO mantêm-se corretos entre builds). */
+export const revalidate = 120;
+
 // ---------------------------------------------------------------------------
 // SSG: pré-gera rotas para todos os imóveis publicados
 // ---------------------------------------------------------------------------
@@ -237,6 +240,10 @@ export default async function ImovelPage({ params }: PageProps) {
   //   offers { Offer }               -> preco, disponibilidade, seller
   const listingImageUrls = buildRealEstateListingImageUrls(property);
 
+  const datePostedIso = (
+    property.publishedAt ? new Date(property.publishedAt) : new Date(property.updatedAt)
+  ).toISOString();
+
   const realEstateJsonLd = {
     "@context": "https://schema.org",
     "@type": "RealEstateListing",
@@ -246,7 +253,7 @@ export default async function ImovelPage({ params }: PageProps) {
       `${typeName} para ${txLabel.toLowerCase()} em ${property.city}.`,
     url: canonical,
     ...(listingImageUrls.length > 0 ? { image: listingImageUrls } : {}),
-    datePosted: property.publishedAt?.toISOString() ?? property.updatedAt.toISOString(),
+    datePosted: datePostedIso,
     contentLocation: {
       "@type": "Place",
       name: property.neighborhood
@@ -289,8 +296,7 @@ export default async function ImovelPage({ params }: PageProps) {
         thumbnailUrl: `https://img.youtube.com/vi/${property.youtubeVideoId}/hqdefault.jpg`,
         contentUrl: `https://www.youtube.com/watch?v=${property.youtubeVideoId}`,
         embedUrl: `https://www.youtube.com/embed/${property.youtubeVideoId}`,
-        uploadDate:
-          property.publishedAt?.toISOString() ?? property.updatedAt.toISOString(),
+        uploadDate: datePostedIso,
       }
     : null;
 

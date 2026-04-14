@@ -4,9 +4,15 @@ import { Header } from "@/app/components/Header";
 import { Footer } from "@/app/components/Footer";
 import { WhatsAppButton } from "@/app/components/WhatsAppButton";
 import { PropertyList } from "@/app/components/PropertyList";
+import { ImoveisFilterPanel } from "@/app/components/ImoveisFilterPanel";
+import { Pagination } from "@/app/components/Pagination";
+import { parsePropertyListSearchParams } from "@/lib/imoveis/search-params";
 import {
   getAltoPadraoApartments,
   countAltoPadraoApartments,
+  getAvailableCities,
+  getAvailableNeighborhoods,
+  getAvailablePropertyTypes,
 } from "@/lib/queries/properties";
 import {
   buildAltoPadraoPageTitle,
@@ -14,6 +20,9 @@ import {
   buildCanonicalUrl,
   buildOpenGraph,
   buildTwitterCard,
+  buildImoveisFilteredTitle,
+  getPropertyTypeLabel,
+  SITE_NAME,
 } from "@/lib/seo";
 import {
   buildPageTitle,
@@ -23,7 +32,6 @@ import {
   ITEMS_PER_PAGE,
   parsePage,
 } from "@/lib/pagination";
-import { Pagination } from "@/app/components/Pagination";
 
 type PageProps = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -32,30 +40,114 @@ type PageProps = {
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
   const sp = await searchParams;
   const page = parsePage(sp);
-  const count = await countAltoPadraoApartments();
-  const title = buildPageTitle(buildAltoPadraoPageTitle(), page);
-  const description = buildAltoPadraoPageDescription(count);
-  const canonical = buildCanonicalUrl(buildPaginatedCanonical("/imoveis/alto-padrao", page));
+  const {
+    filters,
+    rawCidade,
+    rawBairro,
+    rawTipo,
+    rawQuartos,
+    rawPrecoMin,
+    rawPrecoMax,
+    rawRenda,
+    rawDestaque,
+    rawLancamento,
+    rawOportunidade,
+    hasFilters,
+  } = parsePropertyListSearchParams(sp);
+
+  const basePath = "/imoveis/alto-padrao";
+  const baseCanonical = buildCanonicalUrl(basePath);
+
+  if (!hasFilters) {
+    const count = await countAltoPadraoApartments(filters);
+    const title = buildPageTitle(buildAltoPadraoPageTitle(), page);
+    const description = buildAltoPadraoPageDescription(count);
+    const canonical = buildPaginatedCanonical(baseCanonical, page);
+
+    return {
+      title,
+      description,
+      alternates: { canonical },
+      openGraph: buildOpenGraph({ title, description, url: canonical }),
+      twitter: buildTwitterCard({ title, description }),
+      robots: { index: true, follow: true },
+    };
+  }
+
+  const city = rawCidade
+    ? (await getAvailableCities()).find((c) => c.citySlug === rawCidade)?.city
+    : undefined;
+
+  const filteredCore = buildImoveisFilteredTitle({
+    typeName: rawTipo ? getPropertyTypeLabel(rawTipo) : undefined,
+    city,
+    bedrooms: rawQuartos ? parseInt(rawQuartos, 10) : undefined,
+  });
+  const title = buildPageTitle(`Alto padrão · ${filteredCore}`, page);
+  const description = `Resultados filtrados em imóveis de alto padrão na 3Pinheiros. ${SITE_NAME}.`;
+
+  const filterParams: Record<string, string> = {};
+  if (rawCidade) filterParams.cidade = rawCidade;
+  if (rawBairro) filterParams.bairro = rawBairro;
+  if (rawTipo) filterParams.tipo = rawTipo;
+  if (rawQuartos) filterParams.quartos = rawQuartos;
+  if (rawPrecoMin) filterParams.precoMin = rawPrecoMin;
+  if (rawPrecoMax) filterParams.precoMax = rawPrecoMax;
+  if (rawRenda) filterParams.renda = rawRenda;
+  if (rawDestaque) filterParams.destaque = "1";
+  if (rawLancamento) filterParams.lancamento = "1";
+  if (rawOportunidade) filterParams.oportunidade = "1";
+
+  const canonical = buildPaginatedCanonical(baseCanonical, page, filterParams);
 
   return {
     title,
     description,
     alternates: { canonical },
-    openGraph: buildOpenGraph({ title, description, url: canonical }),
-    twitter: buildTwitterCard({ title, description }),
-    robots: { index: true, follow: true },
+    robots: { index: false, follow: false },
   };
 }
 
 export default async function AltoPadraoPage({ searchParams }: PageProps) {
   const sp = await searchParams;
+  const {
+    filters,
+    rawCidade,
+    rawBairro,
+    rawTipo,
+    rawQuartos,
+    rawPrecoMin,
+    rawPrecoMax,
+    rawRenda,
+    rawDestaque,
+    rawLancamento,
+    rawOportunidade,
+    hasFilters,
+  } = parsePropertyListSearchParams(sp);
   const page = parsePage(sp);
   const skip = getSkip(page);
-  const [properties, count] = await Promise.all([
-    getAltoPadraoApartments(ITEMS_PER_PAGE, skip),
-    countAltoPadraoApartments(),
+
+  const [properties, count, cities, neighborhoods, propertyTypes] = await Promise.all([
+    getAltoPadraoApartments(ITEMS_PER_PAGE, skip, filters),
+    countAltoPadraoApartments(filters),
+    getAvailableCities(),
+    getAvailableNeighborhoods(),
+    getAvailablePropertyTypes(),
   ]);
+
   const totalPages = calculateTotalPages(count);
+
+  const paginationParams: Record<string, string> = {};
+  if (rawCidade) paginationParams.cidade = rawCidade;
+  if (rawBairro) paginationParams.bairro = rawBairro;
+  if (rawTipo) paginationParams.tipo = rawTipo;
+  if (rawQuartos) paginationParams.quartos = rawQuartos;
+  if (rawPrecoMin) paginationParams.precoMin = rawPrecoMin;
+  if (rawPrecoMax) paginationParams.precoMax = rawPrecoMax;
+  if (rawRenda) paginationParams.renda = rawRenda;
+  if (rawDestaque) paginationParams.destaque = "1";
+  if (rawLancamento) paginationParams.lancamento = "1";
+  if (rawOportunidade) paginationParams.oportunidade = "1";
 
   return (
     <>
@@ -92,11 +184,11 @@ export default async function AltoPadraoPage({ searchParams }: PageProps) {
         {/* Listagem */}
         <section
           id="imoveis"
-          className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8"
+          className="mx-auto max-w-7xl px-4 pt-8 pb-14 sm:px-6 sm:pt-10 sm:pb-16 lg:px-8 lg:pt-10 lg:pb-20"
         >
           <nav
             aria-label="Breadcrumb"
-            className="mb-10 flex items-center gap-2 text-sm text-zinc-500"
+            className="mb-4 flex items-center gap-2 text-sm text-zinc-500 sm:mb-5"
           >
             <Link href="/" className="transition-colors hover:text-green-700">
               Início
@@ -111,16 +203,48 @@ export default async function AltoPadraoPage({ searchParams }: PageProps) {
             </span>
           </nav>
 
-          <div className="mb-12">
-            <h2 className="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">
-              {count === 0
-                ? "Nenhum imóvel encontrado neste momento"
-                : `${count} ${count !== 1 ? "imóveis" : "imóvel"} de alto padrão`}
-            </h2>
-            <p className="mt-2 text-zinc-600">
-              {count > 0 &&
-                "Imóveis selecionados com preço a partir de R$ 1.500.000."}
-            </p>
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-3 sm:mb-5 sm:gap-4">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">
+                {count === 0 && !hasFilters
+                  ? "Nenhum imóvel encontrado neste momento"
+                  : count === 0
+                    ? "Nenhum imóvel de alto padrão para os filtros aplicados"
+                    : `${count} ${count !== 1 ? "imóveis" : "imóvel"} de alto padrão`}
+              </h2>
+              <p className="mt-1.5 text-zinc-600 sm:mt-2">
+                {(count > 0 || hasFilters) &&
+                  "Apartamentos a partir de R$ 1.500.000; use os filtros para refinar a lista."}
+              </p>
+            </div>
+            {hasFilters && (
+              <Link
+                href="/imoveis/alto-padrao"
+                className="flex min-h-[44px] shrink-0 items-center text-sm font-medium text-green-700 underline-offset-2 hover:underline"
+              >
+                Limpar filtros
+              </Link>
+            )}
+          </div>
+
+          <div className="mb-10 sm:mb-12 lg:mb-14">
+            <ImoveisFilterPanel
+              density="compact"
+              listPath="/imoveis/alto-padrao"
+              rawCidade={rawCidade}
+              rawBairro={rawBairro}
+              rawTipo={rawTipo}
+              rawQuartos={rawQuartos}
+              rawPrecoMin={rawPrecoMin}
+              rawPrecoMax={rawPrecoMax}
+              rawRenda={rawRenda}
+              rawDestaque={rawDestaque}
+              rawLancamento={rawLancamento}
+              rawOportunidade={rawOportunidade}
+              cities={cities}
+              neighborhoods={neighborhoods}
+              propertyTypes={propertyTypes}
+            />
           </div>
 
           {count > 0 ? (
@@ -130,8 +254,25 @@ export default async function AltoPadraoPage({ searchParams }: PageProps) {
                 currentPage={page}
                 totalPages={totalPages}
                 basePath="/imoveis/alto-padrao"
+                queryParams={Object.keys(paginationParams).length > 0 ? paginationParams : undefined}
               />
             </>
+          ) : hasFilters ? (
+            <div className="mt-6 rounded-2xl border border-zinc-200 bg-zinc-50/50 py-12 text-center sm:mt-8">
+              <p className="text-zinc-700">
+                Nenhum imóvel de alto padrão corresponde a estes filtros.
+              </p>
+              <p className="mt-2 text-sm text-zinc-500">
+                Tente ampliar os critérios ou{" "}
+                <Link
+                  href="/imoveis/alto-padrao"
+                  className="font-medium text-green-700 underline-offset-2 hover:underline"
+                >
+                  limpar os filtros
+                </Link>
+                .
+              </p>
+            </div>
           ) : (
             <div className="rounded-2xl border border-zinc-200 bg-zinc-50/50 py-16 text-center">
               <p className="text-zinc-600">

@@ -12,6 +12,8 @@ export function NARAuthoritySection() {
         alt="National Association of REALTORS"
         width={100}
         height={80}
+        sizes="100px"
+        loading="lazy"
         className="object-contain"
       />
     </div>

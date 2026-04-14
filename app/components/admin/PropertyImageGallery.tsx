@@ -212,7 +212,7 @@ export function PropertyImageGallery({
             <p className="text-sm font-medium text-red-800">Erro no upload</p>
             <p className="mt-1 text-sm text-red-600">{uploadError}</p>
             <p className="mt-2 text-xs text-red-500">
-              Verifique se as variáveis CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY e CLOUDINARY_API_SECRET estão definidas no .env
+              Verifique se CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY e CLOUDINARY_API_SECRET estão em .env ou .env.local na raiz do projeto e reinicie o pnpm dev.
             </p>
           </div>
         )}

@@ -45,6 +45,14 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
 }
 
 export default async function InvestirNoBrasilPage({ searchParams }: PageProps) {
-  const page = parsePage(await searchParams);
-  return <InvestPageContent content={CONTENT_PT} page={page} basePath={BASE_PATH} />;
+  const sp = await searchParams;
+  const page = parsePage(sp);
+  return (
+    <InvestPageContent
+      content={CONTENT_PT}
+      page={page}
+      basePath={BASE_PATH}
+      searchParams={sp}
+    />
+  );
 }
