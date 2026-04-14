@@ -499,7 +499,7 @@ async function fetchPublishedPropertyBySlug(
 /**
  * Busca um imóvel publicado pelo slug.
  * - React.cache: deduplica no mesmo request (metadata + página).
- * - unstable_cache: reutiliza resultado entre requests (120s); admin invalida com `revalidateTag(propertyDetailRevalidateTag(slug))`.
+ * - unstable_cache: reutiliza resultado entre requests (120s); admin invalida com `revalidateTag(propertyDetailRevalidateTag(slug), "max")` (Next 16+).
  */
 export const getPropertyBySlug = cache(async function (
   slug: string

@@ -10,6 +10,11 @@ import { uploadPropertyImage } from "@/lib/upload/cloudinary";
 import { revalidateBlogPagesReferencingProperty } from "@/lib/admin/revalidate-blog-for-property";
 import { propertyDetailRevalidateTag } from "@/lib/queries/properties";
 
+/** Next.js 16 exige o 2º argumento em `revalidateTag`; `"max"` alinha à invalidação imediata do cache do detalhe. */
+function revalidatePropertyDetailBySlug(slug: string) {
+  revalidateTag(propertyDetailRevalidateTag(slug), "max");
+}
+
 // ---------------------------------------------------------------------------
 // Tipos
 // ---------------------------------------------------------------------------
@@ -433,7 +438,7 @@ export async function archivePropertyAction(
   revalidatePath("/admin/imoveis");
   revalidatePath("/imoveis");
   revalidatePath(`/imoveis/${existing.slug}`);
-  revalidateTag(propertyDetailRevalidateTag(existing.slug));
+  revalidatePropertyDetailBySlug(existing.slug);
   await revalidateBlogPagesReferencingProperty(propertyId);
   redirect("/admin/imoveis");
 }
@@ -461,7 +466,7 @@ export async function publishPropertyAction(
   revalidatePath("/admin/imoveis");
   revalidatePath("/imoveis");
   revalidatePath(`/imoveis/${existing.slug}`);
-  revalidateTag(propertyDetailRevalidateTag(existing.slug));
+  revalidatePropertyDetailBySlug(existing.slug);
   await revalidateBlogPagesReferencingProperty(propertyId);
   redirect("/admin/imoveis");
 }
@@ -489,7 +494,7 @@ export async function deletePropertyAction(
   revalidatePath("/admin/imoveis");
   revalidatePath("/imoveis");
   revalidatePath(`/imoveis/${existing.slug}`);
-  revalidateTag(propertyDetailRevalidateTag(existing.slug));
+  revalidatePropertyDetailBySlug(existing.slug);
   await revalidateBlogPagesReferencingProperty(propertyId);
   redirect("/admin/imoveis");
 }
@@ -664,9 +669,9 @@ export async function updatePropertyAction(
   revalidatePath(`/admin/imoveis/${propertyId}/editar`);
   revalidatePath("/imoveis");
   revalidatePath(`/imoveis/${slug}`);
-  revalidateTag(propertyDetailRevalidateTag(existing.slug));
+  revalidatePropertyDetailBySlug(existing.slug);
   if (slug !== existing.slug) {
-    revalidateTag(propertyDetailRevalidateTag(slug));
+    revalidatePropertyDetailBySlug(slug);
   }
   await revalidateBlogPagesReferencingProperty(propertyId);
   redirect("/admin/imoveis");
