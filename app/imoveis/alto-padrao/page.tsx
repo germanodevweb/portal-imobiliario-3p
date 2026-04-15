@@ -8,8 +8,8 @@ import { ImoveisFilterPanel } from "@/app/components/ImoveisFilterPanel";
 import { Pagination } from "@/app/components/Pagination";
 import { parsePropertyListSearchParams } from "@/lib/imoveis/search-params";
 import {
-  getAltoPadraoApartments,
-  countAltoPadraoApartments,
+  getAltoPadraoProperties,
+  countAltoPadraoProperties,
   getAvailableCities,
   getAvailableNeighborhoods,
   getAvailablePropertyTypes,
@@ -59,7 +59,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const baseCanonical = buildCanonicalUrl(basePath);
 
   if (!hasFilters) {
-    const count = await countAltoPadraoApartments(filters);
+    const count = await countAltoPadraoProperties(filters);
     const title = buildPageTitle(buildAltoPadraoPageTitle(), page);
     const description = buildAltoPadraoPageDescription(count);
     const canonical = buildPaginatedCanonical(baseCanonical, page);
@@ -128,8 +128,8 @@ export default async function AltoPadraoPage({ searchParams }: PageProps) {
   const skip = getSkip(page);
 
   const [properties, count, cities, neighborhoods, propertyTypes] = await Promise.all([
-    getAltoPadraoApartments(ITEMS_PER_PAGE, skip, filters),
-    countAltoPadraoApartments(filters),
+    getAltoPadraoProperties(ITEMS_PER_PAGE, skip, filters),
+    countAltoPadraoProperties(filters),
     getAvailableCities(),
     getAvailableNeighborhoods(),
     getAvailablePropertyTypes(),
@@ -210,11 +210,11 @@ export default async function AltoPadraoPage({ searchParams }: PageProps) {
                   ? "Nenhum imóvel encontrado neste momento"
                   : count === 0
                     ? "Nenhum imóvel de alto padrão para os filtros aplicados"
-                    : `${count} ${count !== 1 ? "imóveis" : "imóvel"} de alto padrão`}
+                    : `${count} ${count !== 1 ? "Imóveis" : "Imóvel"} de Alto Padrão`}
               </h2>
               <p className="mt-1.5 text-zinc-600 sm:mt-2">
                 {(count > 0 || hasFilters) &&
-                  "Apartamentos a partir de R$ 1.500.000; use os filtros para refinar a lista."}
+                  "Imóveis a partir de R$ 1.500.000,00. Use os filtros para refinar sua pesquisa."}
               </p>
             </div>
             {hasFilters && (

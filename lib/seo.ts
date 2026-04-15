@@ -321,7 +321,7 @@ export function buildAltoPadraoPageTitle(): string {
  * Meta description para página de alto padrão.
  */
 export function buildAltoPadraoPageDescription(count: number): string {
-  const plural = count !== 1 ? "apartamentos exclusivos" : "apartamento exclusivo";
+  const plural = count !== 1 ? "imóveis exclusivos" : "imóvel exclusivo";
   return `Seleção de ${count} ${plural} acima de R$ 1,5 milhão. Localização nobre, sofisticação e imóveis de alto valor. Fale com um especialista 3Pinheiros. CRECI 1317J.`;
 }
 

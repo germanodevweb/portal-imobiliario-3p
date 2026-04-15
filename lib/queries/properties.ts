@@ -1393,7 +1393,7 @@ export const getAllPublishedProperties = cache(async function (
 });
 
 // ---------------------------------------------------------------------------
-// Apartamentos de Alto Padrão — acima de R$ 1,5 milhão
+// Imóveis de Alto Padrão — acima de R$ 1,5 milhão
 // Usado em: /imoveis/alto-padrao
 // ---------------------------------------------------------------------------
 
@@ -1419,7 +1419,6 @@ function altoPadraoWhere(filters: PropertyFilters) {
   return {
     published: true,
     isSold: false,
-    type: "APARTAMENTO" as const,
     ...(filters.citySlug ? { citySlug: filters.citySlug } : {}),
     ...(filters.neighborhoodSlug ? { neighborhoodSlug: filters.neighborhoodSlug } : {}),
     ...(filters.propertyTypeSlug ? { propertyTypeSlug: filters.propertyTypeSlug } : {}),
@@ -1433,7 +1432,7 @@ function altoPadraoWhere(filters: PropertyFilters) {
   };
 }
 
-export const getAltoPadraoApartments = cache(async function (
+export const getAltoPadraoProperties = cache(async function (
   limit?: number,
   skip = 0,
   filters: PropertyFilters = {}
@@ -1449,7 +1448,7 @@ export const getAltoPadraoApartments = cache(async function (
   return results.map((p) => ({ ...p, price: String(p.price) }));
 });
 
-export const countAltoPadraoApartments = cache(async function (
+export const countAltoPadraoProperties = cache(async function (
   filters: PropertyFilters = {}
 ): Promise<number> {
   return prisma.property.count({
