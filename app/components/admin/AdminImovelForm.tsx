@@ -579,6 +579,7 @@ export function AdminImovelForm({
           formRef={formRef}
           cityValue={cityValue}
         />
+        <FieldError message={errors.images} />
       </FormBlock>
 
       <FormBlock title="Status">

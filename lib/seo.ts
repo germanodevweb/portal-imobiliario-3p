@@ -9,6 +9,12 @@ export const SITE_NAME = "3Pinheiros Consultoria Imobiliária";
 const DEFAULT_SITE_BASE_URL = "https://www.3pinheirosconsultoria.com.br";
 
 /**
+ * Origem fixa para `metadataBase` no `app/layout.tsx` (Next.js).
+ * Deve coincidir com o domínio canônico oficial; URLs relativas em `metadata` resolvem-se contra ela.
+ */
+export const SITE_METADATA_BASE = new URL(DEFAULT_SITE_BASE_URL);
+
+/**
  * Em produção, substitui o domínio legado incorreto pelo canônico (evita SEO duplicado).
  */
 function normalizeLegacyBaseUrlInProduction(base: string): string {
@@ -515,6 +521,7 @@ export function formatPriceShort(price: string): string {
 
 /**
  * Monta URL canônica absoluta para uso em <link rel="canonical"> e og:url.
+ * Usa `BASE_URL` (env + normalização); em produção alinha-se a `SITE_METADATA_BASE` quando a env aponta para o site oficial.
  * Ex: buildCanonicalUrl("/imoveis/casa-vila-madalena-sp")
  */
 export function buildCanonicalUrl(path: string): string {

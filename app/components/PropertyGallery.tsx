@@ -128,7 +128,7 @@ export function PropertyGallery({ images, badges = [] }: PropertyGalleryProps) {
                 }`}
               >
                 <Image
-                  src={publicPropertyImageSrc(getWatermarkedImageUrl(img.url))}
+                  src={publicPropertyImageSrc(getWatermarkedImageUrl(img.url, "compact"))}
                   alt=""
                   width={128}
                   height={72}

@@ -9,6 +9,7 @@ import { generatePropertyContent } from "@/lib/ai/property";
 import { uploadPropertyImage } from "@/lib/upload/cloudinary";
 import { revalidateBlogPagesReferencingProperty } from "@/lib/admin/revalidate-blog-for-property";
 import { propertyDetailRevalidateTag } from "@/lib/queries/properties";
+import { PROPERTY_GALLERY_MAX_IMAGES } from "@/lib/constants/property-gallery";
 
 /** Next.js 16 exige o 2º argumento em `revalidateTag`; `"max"` alinha à invalidação imediata do cache do detalhe. */
 function revalidatePropertyDetailBySlug(slug: string) {
@@ -317,6 +318,9 @@ export async function createPropertyAction(
   if (areaStr && (isNaN(Number(areaStr)) || Number(areaStr) < 0)) {
     errors.area = "Área deve ser um número positivo";
   }
+  if (imagesData.length > PROPERTY_GALLERY_MAX_IMAGES) {
+    errors.images = `Máximo de ${PROPERTY_GALLERY_MAX_IMAGES} fotos por imóvel. Remova imagens antes de salvar.`;
+  }
 
   if (Object.keys(errors).length > 0) {
     return { errors };
@@ -568,6 +572,9 @@ export async function updatePropertyAction(
   if (garage < 0) errors.garage = "Deve ser 0 ou mais";
   if (areaStr && (isNaN(Number(areaStr)) || Number(areaStr) < 0)) {
     errors.area = "Área deve ser um número positivo";
+  }
+  if (imagesData.length > PROPERTY_GALLERY_MAX_IMAGES) {
+    errors.images = `Máximo de ${PROPERTY_GALLERY_MAX_IMAGES} fotos por imóvel. Remova imagens antes de salvar.`;
   }
 
   if (Object.keys(errors).length > 0) {

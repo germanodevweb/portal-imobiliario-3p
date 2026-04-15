@@ -4,12 +4,13 @@ import Image from "next/image";
 import { useRef, useState } from "react";
 import { adminImageSrc } from "@/lib/admin/admin-image-src";
 import { uploadPropertyImageAction } from "@/lib/admin/actions";
-import { validatePropertyImage } from "@/lib/upload/validation";
+import { PROPERTY_IMAGE_MAX_SIZE_MB, validatePropertyImage } from "@/lib/upload/validation";
 import { generateFeaturedImageAlt } from "@/lib/utils/featuredImageAlt";
 import {
   IMAGE_ENVIRONMENTS,
   OTHER_ENVIRONMENT_VALUE,
 } from "@/lib/constants/image-environments";
+import { PROPERTY_GALLERY_MAX_IMAGES } from "@/lib/constants/property-gallery";
 
 export type GalleryImageItem = {
   url: string;
@@ -27,7 +28,8 @@ function ImageGuidance() {
       <p className="font-medium text-zinc-700">Orientações para SEO e performance</p>
       <ul className="mt-2 list-inside list-disc space-y-1">
         <li>Formatos aceitos: JPG, JPEG, PNG</li>
-        <li>Tamanho máximo: 5MB por imagem</li>
+        <li>Tamanho máximo: {PROPERTY_IMAGE_MAX_SIZE_MB}MB por imagem</li>
+        <li>Máximo de {PROPERTY_GALLERY_MAX_IMAGES} fotos por imóvel</li>
         <li>Recomendado: até 2000px de largura</li>
         <li>Imagens devem ser otimizadas para web</li>
         <li>O alt da imagem ajuda no SEO e acessibilidade</li>
@@ -53,6 +55,7 @@ export function PropertyImageGallery({
   const [uploadLoading, setUploadLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [capacityNotice, setCapacityNotice] = useState<string | null>(null);
 
   function readFormContext(): { type: string; neighborhood: string } {
     const form = formRef.current;
@@ -71,9 +74,20 @@ export function PropertyImageGallery({
     const files = e.target.files;
     if (!files?.length) return;
     setUploadError(null);
+    setCapacityNotice(null);
+
+    const slots = PROPERTY_GALLERY_MAX_IMAGES - images.length;
+    if (slots <= 0) {
+      setUploadError(
+        `Limite de ${PROPERTY_GALLERY_MAX_IMAGES} fotos atingido. Remova imagens para adicionar outras.`
+      );
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
     setUploadLoading(true);
 
-    const validFiles: { file: File; previewUrl: string }[] = [];
+    const validAll: { file: File; previewUrl: string }[] = [];
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -83,17 +97,27 @@ export function PropertyImageGallery({
         continue;
       }
       const previewUrl = URL.createObjectURL(file);
-      validFiles.push({ file, previewUrl });
+      validAll.push({ file, previewUrl });
     }
 
-    if (validFiles.length === 0) {
+    if (validAll.length === 0) {
       setUploadLoading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
+    const validToUpload = validAll.slice(0, slots);
+    if (validAll.length > slots) {
+      for (let j = slots; j < validAll.length; j++) {
+        URL.revokeObjectURL(validAll[j].previewUrl);
+      }
+      setCapacityNotice(
+        `Foram adicionadas apenas ${validToUpload.length} foto(s) nesta seleção (limite de ${PROPERTY_GALLERY_MAX_IMAGES} por imóvel).`
+      );
+    }
+
     const startCount = images.length;
-    const newItems: GalleryImageItem[] = validFiles.map(({ previewUrl }, i) => ({
+    const newItems: GalleryImageItem[] = validToUpload.map(({ previewUrl }, i) => ({
       url: previewUrl,
       alt: "",
       environment: "",
@@ -106,9 +130,9 @@ export function PropertyImageGallery({
     onImagesChange([...images, ...newItems]);
 
     try {
-      for (let i = 0; i < validFiles.length; i++) {
-        setUploadProgress(`Enviando ${i + 1} de ${validFiles.length}...`);
-        const { file, previewUrl } = validFiles[i];
+      for (let i = 0; i < validToUpload.length; i++) {
+        setUploadProgress(`Enviando ${i + 1} de ${validToUpload.length}...`);
+        const { file, previewUrl } = validToUpload[i];
         const formData = new FormData();
         formData.append("file", file);
         const result = await uploadPropertyImageAction({}, formData);
@@ -192,6 +216,13 @@ export function PropertyImageGallery({
         >
           Adicionar fotos
         </label>
+        <p className="mt-1 text-sm text-zinc-600">
+          Limite de até {PROPERTY_GALLERY_MAX_IMAGES} fotos por imóvel. Escolha boas imagens — não é
+          possível adicionar mais de {PROPERTY_GALLERY_MAX_IMAGES}.
+        </p>
+        <p className="mt-0.5 text-xs text-zinc-500">
+          Fotos na galeria: {images.length}/{PROPERTY_GALLERY_MAX_IMAGES}
+        </p>
         <input
           ref={fileInputRef}
           id="galleryFiles"
@@ -199,9 +230,16 @@ export function PropertyImageGallery({
           accept=".jpg,.jpeg,.png,image/jpeg,image/jpg,image/png"
           multiple
           onChange={handleFilesSelected}
-          disabled={uploadLoading}
-          className="mt-1 block w-full text-sm text-zinc-600 file:mr-4 file:rounded-lg file:border-0 file:bg-zinc-100 file:px-4 file:py-2 file:text-sm file:font-medium file:text-zinc-700 hover:file:bg-zinc-200"
+          disabled={
+            uploadLoading || images.length >= PROPERTY_GALLERY_MAX_IMAGES
+          }
+          className="mt-1 block w-full text-sm text-zinc-600 file:mr-4 file:rounded-lg file:border-0 file:bg-zinc-100 file:px-4 file:py-2 file:text-sm file:font-medium file:text-zinc-700 hover:file:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-60"
         />
+        {capacityNotice && (
+          <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+            <p className="text-sm text-amber-900">{capacityNotice}</p>
+          </div>
+        )}
         {uploadLoading && (
           <p className="mt-1 text-sm text-zinc-500">
             {uploadProgress ?? "Enviando imagens..."}

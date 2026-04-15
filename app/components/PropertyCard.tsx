@@ -48,7 +48,7 @@ export function PropertyCard({ property }: { property: Property }) {
         {property.featuredImage ? (
           <Image
             src={publicPropertyImageSrc(
-              getWatermarkedImageUrl(property.featuredImage)
+              getWatermarkedImageUrl(property.featuredImage, "compact")
             )}
             alt={property.title}
             fill

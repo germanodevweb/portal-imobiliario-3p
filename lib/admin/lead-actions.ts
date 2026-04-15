@@ -188,3 +188,29 @@ export async function updateLeadNotesAction(
     };
   }
 }
+
+// ---------------------------------------------------------------------------
+// Server Action: excluir lead
+// ---------------------------------------------------------------------------
+
+export async function deleteLeadAction(
+  leadId: string
+): Promise<{ ok: boolean; error?: string }> {
+  const id = leadId?.trim();
+  if (!id) {
+    return { ok: false, error: "Lead inválido" };
+  }
+
+  try {
+    await prisma.lead.delete({ where: { id } });
+    revalidatePath("/admin/leads");
+    revalidatePath(`/admin/leads/${id}`);
+    return { ok: true };
+  } catch (e) {
+    console.error("[deleteLeadAction]", e);
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Erro ao excluir o lead",
+    };
+  }
+}

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
+import { SITE_METADATA_BASE } from "@/lib/seo";
 import {
   buildOrganizationJsonLd,
   serializeJsonLd,
@@ -18,6 +19,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: SITE_METADATA_BASE,
   title: "3Pinheiros Consultoria Imobiliária | CRECI 1317J",
   description:
     "Encontre casas, apartamentos e imóveis comerciais com a 3Pinheiros Consultoria Imobiliária. Atendimento personalizado para compra, venda e investimento. CRECI 1317J.",

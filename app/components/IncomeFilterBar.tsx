@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 /** Destaque — tipografia editorial + hover com brilho e elevação */
 const chipOrange =
   "group/chip relative z-0 flex min-h-[48px] w-full touch-manipulation items-center justify-center overflow-hidden rounded-full px-3 py-2.5 text-center sm:px-4 " +
-  "text-[14px] font-semibold leading-snug tracking-tight text-white antialiased [text-shadow:0_1px_2px_rgba(0,0,0,0.18)] " +
+  "text-sm font-bold uppercase leading-tight tracking-[0.14em] text-white antialiased md:text-base [text-shadow:0_1px_2px_rgba(0,0,0,0.22),0_0_1px_rgba(0,0,0,0.35)] " +
   "bg-linear-to-b from-orange-500 to-orange-600 shadow-md shadow-orange-950/30 ring-1 ring-white/25 " +
   "transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] " +
   "before:pointer-events-none before:absolute before:inset-0 before:rounded-full before:bg-linear-to-tr before:from-white/25 before:via-transparent before:to-transparent before:opacity-0 before:transition-opacity before:duration-300 " +
@@ -17,7 +17,7 @@ const chipOrange =
   "hover:z-10 hover:-translate-y-1 hover:scale-[1.02] hover:shadow-[0_14px_44px_-12px_rgba(249,115,22,0.65)] hover:ring-orange-200/50 hover:before:opacity-100 " +
   "active:translate-y-0 active:scale-[0.99] active:shadow-md " +
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/90 focus-visible:ring-offset-2 focus-visible:ring-offset-green-700 " +
-  "sm:text-[15px] md:min-h-[44px] md:px-5 md:text-base";
+  "md:min-h-[44px] md:px-5";
 
 /** Neutro — texto refinado + hover “flutuante” com anel esmeralda */
 const chipWhite =

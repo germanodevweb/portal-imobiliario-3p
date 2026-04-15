@@ -26,8 +26,31 @@ const serverActionsOriginsFromLan = DEV_LAN_ORIGIN_URLS.map(toServerActionsOrigi
   Boolean
 );
 
+/**
+ * Watermark (Cloudinary): `PropertyGallery` é Client Component — no browser só existe
+ * `process.env.NEXT_PUBLIC_*`. Se a logo estiver só em `CLOUDINARY_WATERMARK_PUBLIC_ID`,
+ * espelha aqui para o cliente ver o mesmo public_id (sem duplicar o segredo Cloudinary).
+ */
+const watermarkPublicIdForClientBundle =
+  process.env.NEXT_PUBLIC_CLOUDINARY_WATERMARK_PUBLIC_ID?.trim() ||
+  process.env.CLOUDINARY_WATERMARK_PUBLIC_ID?.trim() ||
+  "";
+
 const nextConfig = {
   allowedDevOrigins: DEV_LAN_ORIGIN_URLS,
+
+  /**
+   * Metadados “bloqueantes” para todos os user-agents (desliga streaming de metadata).
+   * Sem isto, o Next 15+ pode adiar `generateMetadata` (canonical, og, etc.) no fluxo
+   * de streaming — em alguns casos o “Ver código-fonte” não mostra `<link rel="canonical">`
+   * no `<head>` inicial, o que prejudica SEO e ferramentas que leem só o HTML estático.
+   * @see https://nextjs.org/docs/app/api-reference/config/next-config-js/htmlLimitedBots
+   */
+  htmlLimitedBots: /.*/,
+
+  env: {
+    NEXT_PUBLIC_CLOUDINARY_WATERMARK_PUBLIC_ID: watermarkPublicIdForClientBundle,
+  },
 
   // Server Actions (admin: salvar, IA): em dev via IP da LAN o Next pode bloquear CSRF
   // se o host não estiver aqui. localhost/127.0.0.1 incluídos para uso no mesmo PC.

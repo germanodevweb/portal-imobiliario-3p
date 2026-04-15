@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { AdminLeadListItem } from "@/lib/admin/queries";
 import { LeadStatusSelect } from "@/app/components/admin/LeadStatusSelect";
+import { LeadDeleteButton } from "@/app/components/admin/LeadDeleteButton";
 import { getOriginDisplayLabel } from "@/lib/constants/leads";
 
 type Props = {
@@ -131,12 +132,18 @@ export function AdminLeadsTable({ leads, isFiltered }: Props) {
               <td
                 className={`whitespace-nowrap px-4 py-3 text-right ${LEADS_TD_HOVER}`}
               >
-                <Link
-                  href={`/admin/leads/${lead.id}`}
-                  className="text-sm font-medium text-green-700 hover:text-green-800"
-                >
-                  Ver
-                </Link>
+                <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
+                  <Link
+                    href={`/admin/leads/${lead.id}`}
+                    className="text-sm font-medium text-green-700 hover:text-green-800"
+                  >
+                    Ver
+                  </Link>
+                  <span className="text-zinc-300" aria-hidden>
+                    |
+                  </span>
+                  <LeadDeleteButton leadId={lead.id} leadName={lead.name} />
+                </div>
               </td>
             </tr>
           ))}

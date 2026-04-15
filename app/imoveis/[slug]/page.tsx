@@ -238,7 +238,9 @@ export default async function ImovelPage({ params }: PageProps) {
   //   datePosted, contentLocation,
   //   publisher                      -> CreativeWork
   //   offers { Offer }               -> preco, disponibilidade, seller
-  const listingImageUrls = buildRealEstateListingImageUrls(property);
+  const listingImageUrls = buildRealEstateListingImageUrls(property).map((u) =>
+    getWatermarkedImageUrl(u)
+  );
 
   const datePostedIso = (
     property.publishedAt ? new Date(property.publishedAt) : new Date(property.updatedAt)

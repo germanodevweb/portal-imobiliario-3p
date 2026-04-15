@@ -14,8 +14,8 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-zinc-100 bg-white shadow-sm">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Logo */}
+      <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        {/* Logo + marca (mesmo bloco em mobile e desktop) */}
         <Link
           href="/"
           className="flex shrink-0 items-center gap-2 py-2"
@@ -27,16 +27,13 @@ export function Header() {
             width={36}
             height={36}
             sizes="(max-width: 640px) 36px, 44px"
-            className="object-contain sm:w-11 sm:h-11"
+            className="object-contain sm:h-11 sm:w-11"
           />
-          <span className="hidden text-sm font-semibold leading-tight text-zinc-800 sm:block">
+          <span className="text-sm font-semibold leading-tight text-zinc-800">
             3Pinheiros
             <span className="block text-xs font-normal text-green-700">
               Consultoria Imobiliária
             </span>
-          </span>
-          <span className="text-sm font-semibold text-zinc-800 sm:hidden">
-            3Pinheiros
           </span>
         </Link>
 
