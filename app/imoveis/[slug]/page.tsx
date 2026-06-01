@@ -10,6 +10,7 @@ import {
   getSimilarProperties,
   getPublishedPropertySlugsForSitemap,
 } from "@/lib/queries/properties";
+import { hasPropertyListedPrice, formatPropertyPriceBrlCompact } from "@/lib/utils/property-price";
 import {
   buildPropertyPageTitle,
   buildPropertyPageDescription,
@@ -32,6 +33,10 @@ import {
 } from "@/lib/utils/property-gallery";
 import { buildWhatsAppShareUrl } from "@/lib/utils/whatsapp-share";
 import { getWhatsAppContactHref } from "@/lib/constants/contato";
+import {
+  buildPropertyAreaFloorSizeJsonLd,
+  formatPropertyAreaDisplay,
+} from "@/lib/utils/property-area";
 import { PropertyDescription } from "@/app/components/PropertyDescription";
 import { Share2 } from "lucide-react";
 
@@ -52,14 +57,6 @@ export async function generateStaticParams() {
 // ---------------------------------------------------------------------------
 // Helpers de formatação — funções puras, sem acesso a banco
 // ---------------------------------------------------------------------------
-
-function formatPrice(price: string): string {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    maximumFractionDigits: 0,
-  }).format(Number(price));
-}
 
 function transactionLabel(type: "SALE" | "RENT"): string {
   return type === "SALE" ? "Venda" : "Locação";
@@ -118,7 +115,7 @@ export default async function ImovelPage({ params }: PageProps) {
   });
 
   const canonical = buildCanonicalUrl(`/imoveis/${slug}`);
-  const formattedPrice = formatPrice(property.price);
+  const formattedPrice = formatPropertyPriceBrlCompact(property.price);
 
   const whatsappShareText = [
     "Olá! Encontrei este imóvel na 3Pinheiros e queria partilhar:",
@@ -130,6 +127,16 @@ export default async function ImovelPage({ params }: PageProps) {
   const whatsappShareHref = buildWhatsAppShareUrl(whatsappShareText);
   const typeName = getPropertyTypeLabel(property.propertyTypeSlug);
   const txLabel = transactionLabel(property.transactionType);
+  const areaDisplay = formatPropertyAreaDisplay({
+    area: property.area,
+    areaMin: property.areaMin,
+    areaMax: property.areaMax,
+  });
+  const areaFloorSizeJsonLd = buildPropertyAreaFloorSizeJsonLd({
+    area: property.area,
+    areaMin: property.areaMin,
+    areaMax: property.areaMax,
+  });
 
   const galleryItems = buildPropertyGalleryItems({
     title: property.title,
@@ -273,20 +280,25 @@ export default async function ImovelPage({ params }: PageProps) {
       name: SITE_NAME,
       url: buildCanonicalUrl("/"),
     },
-    offers: {
-      "@type": "Offer",
-      price: Number(property.price),
-      priceCurrency: "BRL",
-      availability: property.isSold
-        ? "https://schema.org/SoldOut"
-        : "https://schema.org/InStock",
-      url: canonical,
-      seller: {
-        "@type": "Organization",
-        name: SITE_NAME,
-        url: buildCanonicalUrl("/"),
-      },
-    },
+    ...(areaFloorSizeJsonLd ? { floorSize: areaFloorSizeJsonLd } : {}),
+    ...(hasPropertyListedPrice(property.price)
+      ? {
+          offers: {
+            "@type": "Offer",
+            price: Number(property.price),
+            priceCurrency: "BRL",
+            availability: property.isSold
+              ? "https://schema.org/SoldOut"
+              : "https://schema.org/InStock",
+            url: canonical,
+            seller: {
+              "@type": "Organization",
+              name: SITE_NAME,
+              url: buildCanonicalUrl("/"),
+            },
+          },
+        }
+      : {}),
   };
 
   const videoJsonLd = property.youtubeVideoId
@@ -372,12 +384,12 @@ export default async function ImovelPage({ params }: PageProps) {
 
             {/* Métricas principais */}
             <div className="mt-6 flex flex-wrap gap-4 border-y border-zinc-100 py-4 sm:gap-6">
-              {property.area && (
+              {areaDisplay.hasArea && (
                 <div className="flex flex-col items-center gap-0.5">
                   <span className="text-lg font-bold text-zinc-900">
-                    {property.area}m²
+                    {areaDisplay.headline}
                   </span>
-                  <span className="text-xs text-zinc-500">Área</span>
+                  <span className="text-xs text-zinc-500">Área privativa</span>
                 </div>
               )}
               {property.bedrooms > 0 && (

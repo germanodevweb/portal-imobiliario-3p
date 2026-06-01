@@ -15,6 +15,8 @@
     "import:properties": "tsx scripts/import-properties.ts",
     "import:imagens": "tsx scripts/import-imagens-code49.ts",
     "repair:gallery-fields": "tsx scripts/repair-property-gallery-fields.ts",
+    "migrate:legacy-images": "tsx scripts/migrate-legacy-images-to-cloudinary.ts",
+    "consolidate:cities": "tsx scripts/consolidate-cities.ts",
     "seed:all": "prisma generate && tsx scripts/seed-properties.ts && tsx scripts/seed-blog.ts"
   },
   "dependencies": {

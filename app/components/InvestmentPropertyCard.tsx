@@ -7,10 +7,15 @@ import {
 import { publicPropertyImageSrc } from "@/lib/utils/public-property-image-src";
 import { brlToEur, formatPriceEur, formatPriceBrl } from "@/lib/currency";
 import {
+  formatPropertyPriceBrl,
+  hasPropertyListedPrice,
+} from "@/lib/utils/property-price";
+import {
   banhLabel,
   dormLabel,
   formatPropertyAreaM2Line,
   isPropertyTypeAreaOnly,
+  type PropertyAreaFields,
 } from "@/lib/utils/property-display";
 import type { PropertyCardData } from "@/lib/queries/properties";
 
@@ -20,9 +25,15 @@ type InvestmentPropertyCardProps = {
 };
 
 export function InvestmentPropertyCard({ property, eurToBrlRate }: InvestmentPropertyCardProps) {
+  const hasPrice = hasPropertyListedPrice(property.price);
   const priceBrl = Number(property.price);
-  const priceEur = brlToEur(priceBrl, eurToBrlRate);
+  const priceEur = hasPrice ? brlToEur(priceBrl, eurToBrlRate) : null;
   const areaOnly = isPropertyTypeAreaOnly(property.propertyTypeSlug);
+  const areaFields: PropertyAreaFields = {
+    area: property.area,
+    areaMin: property.areaMin,
+    areaMax: property.areaMax,
+  };
 
   const location = property.neighborhood
     ? `${property.neighborhood}, ${property.city}`
@@ -82,25 +93,27 @@ export function InvestmentPropertyCard({ property, eurToBrlRate }: InvestmentPro
 
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-zinc-500">
           {areaOnly ? (
-            <span>{formatPropertyAreaM2Line(property.area)}</span>
+            <span>{formatPropertyAreaM2Line(areaFields)}</span>
           ) : (
             <>
               <span>{dormLabel(property.bedrooms)}</span>
               <span className="text-zinc-300">|</span>
               <span>{banhLabel(property.bathrooms)}</span>
               <span className="text-zinc-300">|</span>
-              <span>{formatPropertyAreaM2Line(property.area)}</span>
+              <span>{formatPropertyAreaM2Line(areaFields)}</span>
             </>
           )}
         </div>
 
-        {/* Preço principal em EUR */}
+        {/* Preço principal em EUR ou Sob Consulta */}
         <p className="mt-2 text-base font-bold text-green-700">
-          {formatPriceEur(priceEur)}
+          {hasPrice && priceEur !== null
+            ? formatPriceEur(priceEur)
+            : formatPropertyPriceBrl(property.price)}
         </p>
-        <p className="text-xs text-zinc-500">
-          ≈ {formatPriceBrl(priceBrl)}
-        </p>
+        {hasPrice ? (
+          <p className="text-xs text-zinc-500">≈ {formatPriceBrl(priceBrl)}</p>
+        ) : null}
       </div>
     </Link>
   );

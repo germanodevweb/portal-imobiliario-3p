@@ -4,6 +4,10 @@
  */
 
 import { BASE_URL } from "@/lib/seo";
+import {
+  buildEmpresaPostalAddressJsonLd,
+  EMPRESA_POSTAL_ADDRESS,
+} from "@/lib/constants/endereco-empresa";
 
 /** Nome legal usado nos schemas (alinhado ao cadastro informado pelo cliente). */
 export const SITE_ENTITY_LEGAL_NAME =
@@ -36,6 +40,7 @@ export function buildOrganizationJsonLd(): Record<string, unknown> {
     url: BASE_URL,
     logo: SITE_LOGO_URL,
     telephone: TELEPHONE,
+    address: buildEmpresaPostalAddressJsonLd(),
     sameAs: [...SITE_ENTITY_SAME_AS],
   };
 }
@@ -48,18 +53,10 @@ export function buildHomeRealEstateAgentJsonLd(): Record<string, unknown> {
     image: SITE_LOGO_URL,
     url: BASE_URL,
     telephone: TELEPHONE,
-    address: {
-      "@type": "PostalAddress",
-      streetAddress: "R. Cel. Luiz David de Souza, n° 72",
-      addressNeighborhood: "Presidente Kennedy",
-      addressLocality: "Fortaleza",
-      addressRegion: "CE",
-      postalCode: "60355-337",
-      addressCountry: "BR",
-    },
+    address: buildEmpresaPostalAddressJsonLd(),
     areaServed: {
       "@type": "City",
-      name: "Fortaleza",
+      name: EMPRESA_POSTAL_ADDRESS.addressLocality,
       containedInPlace: {
         "@type": "State",
         name: "Ceará",

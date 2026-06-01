@@ -20,6 +20,7 @@
  */
 
 import { normalizePublicImageUrl } from "@/lib/utils/normalize-image-url";
+import { isLegacyCode49PropertyImageUrl } from "@/lib/property/legacy-image-url";
 
 const WM_DEBUG =
   process.env.NODE_ENV === "development" && process.env.NEXT_PUBLIC_WATERMARK_DEBUG === "1";
@@ -165,9 +166,12 @@ export function getWatermarkedImageUrl(
 /**
  * `next/image` otimiza no servidor; hosts legados (ex.: fotos em /admin/imovel/)
  * costumam falhar no fetch do otimizador (404). Cloudinary responde de forma previsível.
- * Use `unoptimized` na galeria pública quando esta função retornar true.
+ * Em `pnpm dev`, o otimizador local costuma falhar com URLs Cloudinary longas (marca d'água);
+ * produção na Vercel não tem esse problema — daí fotos OK em prod e quebradas no localhost.
  */
 export function shouldUseUnoptimizedNextImage(url: string): boolean {
+  if (process.env.NODE_ENV === "development") return true;
+  if (isLegacyCode49PropertyImageUrl(url)) return true;
   const resolved = getWatermarkedImageUrl(url);
   const isCloudinary =
     resolved.startsWith("https://res.cloudinary.com/") ||

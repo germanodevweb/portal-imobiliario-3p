@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { validateBrazilianWhatsappField } from "@/lib/utils/phone";
 
 // ---------------------------------------------------------------------------
 // Tipos
@@ -33,13 +34,18 @@ export async function createLeadAction(
   const errors: Record<string, string> = {};
 
   const name = (formData.get("name") as string)?.trim();
-  const phone = (formData.get("phone") as string)?.trim();
+  const phoneRaw = (formData.get("phone") as string)?.trim();
   const desiredPriceRange = (formData.get("desiredPriceRange") as string)?.trim();
   const manualSource = (formData.get("manualSource") as string)?.trim() || null;
   const notes = (formData.get("notes") as string)?.trim() || null;
 
   if (!name) errors.name = "Nome é obrigatório";
-  if (!phone) errors.phone = "Telefone é obrigatório";
+
+  const phoneValidation = validateBrazilianWhatsappField(phoneRaw ?? "");
+  if (!phoneValidation.ok) {
+    errors.phone = phoneValidation.error;
+  }
+
   if (!manualSource) errors.manualSource = "Origem (manual) é obrigatória";
   if (!desiredPriceRange) {
     errors.desiredPriceRange = "Faixa de valor é obrigatória";
@@ -59,10 +65,14 @@ export async function createLeadAction(
     return { errors };
   }
 
+  if (!phoneValidation.ok) {
+    return { errors: { phone: phoneValidation.error } };
+  }
+
   await prisma.lead.create({
     data: {
       name,
-      phone,
+      phone: phoneValidation.normalized,
       desiredPriceRange,
       notes,
       origin: "manual",
@@ -211,6 +221,44 @@ export async function deleteLeadAction(
     return {
       ok: false,
       error: e instanceof Error ? e.message : "Erro ao excluir o lead",
+    };
+  }
+}
+
+const MAX_BULK_DELETE = 100;
+
+export async function deleteLeadsBulkAction(
+  leadIds: string[]
+): Promise<{ ok: boolean; deletedCount?: number; error?: string }> {
+  const ids = [...new Set(leadIds.map((id) => id.trim()).filter(Boolean))];
+
+  if (ids.length === 0) {
+    return { ok: false, error: "Nenhum lead selecionado" };
+  }
+
+  if (ids.length > MAX_BULK_DELETE) {
+    return {
+      ok: false,
+      error: `Selecione no máximo ${MAX_BULK_DELETE} leads por vez`,
+    };
+  }
+
+  try {
+    const result = await prisma.lead.deleteMany({
+      where: { id: { in: ids } },
+    });
+
+    revalidatePath("/admin/leads");
+    for (const id of ids) {
+      revalidatePath(`/admin/leads/${id}`);
+    }
+
+    return { ok: true, deletedCount: result.count };
+  } catch (e) {
+    console.error("[deleteLeadsBulkAction]", e);
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Erro ao excluir os leads",
     };
   }
 }

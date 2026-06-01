@@ -12,15 +12,26 @@ export type GeneratePropertyContentResult = {
   description: string;
 };
 
+export type PropertyAiContext = {
+  type?: string;
+  typeLabel?: string;
+  city?: string;
+  state?: string;
+  neighborhood?: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  garage?: number;
+  area?: number;
+  areaMin?: number;
+  areaMax?: number;
+  price?: number;
+  builderName?: string;
+};
+
 export type GeneratePropertyContentOptions = {
   prompt: string;
-  /** Contexto opcional: tipo, cidade, quartos — melhora a qualidade da sugestão */
-  context?: {
-    type?: string;
-    city?: string;
-    bedrooms?: number;
-    price?: number;
-  };
+  /** Contexto do formulário — melhora SEO local/GEO na sugestão */
+  context?: PropertyAiContext;
 };
 
 /** Ordem de tentativa: documentação atual Gemini API (Developer). */
@@ -107,14 +118,35 @@ export async function generatePropertyContent(
 // Gemini (@google/genai)
 // ---------------------------------------------------------------------------
 
+function formatContextNumber(value: number | undefined): string {
+  if (value == null || Number.isNaN(value) || value < 0) return "";
+  return String(value);
+}
+
+function formatContextArea(context: PropertyAiContext | undefined): string {
+  if (!context) return "";
+  const { areaMin, areaMax, area } = context;
+  if (areaMin != null && areaMax != null && areaMin > 0 && areaMax > 0) {
+    if (areaMin === areaMax) return `${areaMin} m²`;
+    return `${areaMin} a ${areaMax} m²`;
+  }
+  if (areaMin != null && areaMin > 0) return `a partir de ${areaMin} m²`;
+  if (areaMax != null && areaMax > 0) return `até ${areaMax} m²`;
+  if (area != null && area > 0) return `${area} m²`;
+  return "";
+}
+
 function buildGeminiUserPrompt(options: GeneratePropertyContentOptions): string {
   const { prompt, context } = options;
-  const type = context?.type ?? "";
+  const typeLabel = context?.typeLabel ?? context?.type ?? "";
   const city = context?.city ?? "";
-  const bedrooms =
-    context?.bedrooms != null && context.bedrooms >= 0
-      ? String(context.bedrooms)
-      : "";
+  const state = context?.state ?? "";
+  const neighborhood = context?.neighborhood ?? "";
+  const bedrooms = formatContextNumber(context?.bedrooms);
+  const bathrooms = formatContextNumber(context?.bathrooms);
+  const garage = formatContextNumber(context?.garage);
+  const areaText = formatContextArea(context);
+  const builderName = context?.builderName ?? "";
   const price =
     context?.price != null &&
     typeof context.price === "number" &&
@@ -133,14 +165,15 @@ REGRAS:
 
 TÍTULO:
 - Máximo 60–70 caracteres
-- Incluir tipo do imóvel + localização + diferencial
+- Incluir tipo do imóvel + localização (bairro e/ou cidade) + diferencial
 - Linguagem natural e comercial
-- Evitar termos genéricos
+- Evitar termos genéricos e repetição de palavras-chave
 
 DESCRIÇÃO:
 - Escrever em português do Brasil
 - Entre 500 e 900 palavras (quando houver conteúdo suficiente nas observações; se o usuário enviou pouco texto, expanda com base no contexto de forma honesta, sem inventar dados concretos inexistentes)
-- Estrutura obrigatória com estes títulos:
+- ANTES de qualquer <h2>, inclua um único parágrafo <p> com resumo factual curto (1–2 frases, 40–80 palavras), com fatos do imóvel: tipo, quartos (se houver), bairro, cidade/UF, metragem (se informada), vagas, preço (se informado) e 1 diferencial real das observações. Exemplo: "Apartamento de 2 quartos na Maraponga, em Fortaleza/CE, com lazer completo, vaga de garagem e possibilidade de financiamento."
+- Depois do resumo, use esta estrutura com <h2>:
   Sobre o imóvel
   Localização
   Infraestrutura
@@ -154,17 +187,24 @@ DESCRIÇÃO:
 
 - Usar parágrafos curtos
 - Usar listas quando fizer sentido
-- Incluir termos de busca locais naturalmente (cidade, região quando fizer sentido)
+- Incluir termos de busca locais naturalmente (bairro, cidade, estado quando fizer sentido)
 - Não repetir frases genéricas
 - Não usar linguagem robótica
+- Não inventar metragem, preço, endereço exato ou documentação não informados
 
 Se em "Descrição base" houver instruções no início (ex.: reescrever, remover * ou #, corrigir) seguidas do texto do imóvel, aplique as instruções ao texto do imóvel. Não devolva as instruções literais como parte da descrição final. Gere sempre título + descrição HTML novos conforme as regras.
 
 ENTRADA DO USUÁRIO:
-Tipo: ${type || "(não informado)"}
+Tipo: ${typeLabel || "(não informado)"}
 Cidade: ${city || "(não informada)"}
+Estado: ${state || "(não informado)"}
+Bairro: ${neighborhood || "(não informado)"}
 Quartos: ${bedrooms || "(não informado)"}
+Banheiros: ${bathrooms || "(não informado)"}
+Vagas de garagem: ${garage || "(não informado)"}
+Área: ${areaText || "(não informada)"}
 Preço: ${price || "(não informado)"}
+Construtora: ${builderName || "(não informada)"}
 Descrição base: ${prompt.trim() || "(nenhuma — infira apenas a partir do contexto acima, de forma conservadora)"}
 
 SAÍDA (OBRIGATÓRIA EM JSON, sem markdown à volta do JSON):

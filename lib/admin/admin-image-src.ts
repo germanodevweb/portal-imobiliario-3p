@@ -1,7 +1,7 @@
 /**
- * URLs de preview no admin: mesmo pipeline que o portal (next/image + remotePatterns),
- * com fallback para o proxy só quando o host não está na allowlist do Next.
+ * URLs de preview no admin: proxy quando host fora da allowlist ou foto legada Code49.
  */
+import { isLegacyCode49PropertyImageUrl } from "@/lib/property/legacy-image-url";
 
 const NEXT_IMAGE_HOSTS = new Set([
   "res.cloudinary.com",
@@ -18,6 +18,9 @@ export function adminImageSrc(url: string): string {
   try {
     const u = new URL(url);
     if (u.protocol !== "http:" && u.protocol !== "https:") return url;
+    if (isLegacyCode49PropertyImageUrl(url)) {
+      return `/api/admin/property-image?url=${encodeURIComponent(url)}`;
+    }
     if (NEXT_IMAGE_HOSTS.has(u.hostname)) return url;
   } catch {
     return url;

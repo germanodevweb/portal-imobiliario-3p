@@ -1,4 +1,5 @@
 import { PROPERTY_TYPE_LABELS } from "@/lib/seo";
+import { formatPropertyAreaDisplay, type PropertyAreaFields } from "@/lib/utils/property-area";
 
 // ---------------------------------------------------------------------------
 // Helpers compartilhados entre os feeds Meta e Google Merchant.
@@ -45,14 +46,15 @@ export function buildFeedDescription(opts: {
   neighborhood: string | null;
   bedrooms: number;
   bathrooms: number;
-  area: number | null;
-}): string {
-  const { typeName, txLabel, city, neighborhood, bedrooms, bathrooms, area } = opts;
+} & PropertyAreaFields): string {
+  const { typeName, txLabel, city, neighborhood, bedrooms, bathrooms, area, areaMin, areaMax } =
+    opts;
   const location = neighborhood ? `${neighborhood}, ${city}` : city;
   const parts = [`${typeName} ${txLabel} em ${location}.`];
   if (bedrooms > 0) parts.push(`${bedrooms} quarto${bedrooms !== 1 ? "s" : ""}.`);
   if (bathrooms > 0) parts.push(`${bathrooms} banheiro${bathrooms !== 1 ? "s" : ""}.`);
-  if (area) parts.push(`${area}m2.`);
+  const areaDisplay = formatPropertyAreaDisplay({ area, areaMin, areaMax });
+  if (areaDisplay.hasArea) parts.push(`${areaDisplay.compact}.`);
   return parts.join(" ");
 }
 

@@ -35,6 +35,8 @@ export async function GET() {
           bedrooms: p.bedrooms,
           bathrooms: p.bathrooms,
           area: p.area,
+          areaMin: p.areaMin,
+          areaMax: p.areaMax,
         });
 
       // Google Merchant aceita descricoes de ate 5 000 caracteres

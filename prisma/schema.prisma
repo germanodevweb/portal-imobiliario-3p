@@ -91,6 +91,8 @@ model Property {
   bathrooms Int          @default(0)
   garage    Int          @default(0)
   area      Float?
+  areaMin   Float?
+  areaMax   Float?
 
   // — Mídia
   featuredImage     String?
@@ -101,6 +103,10 @@ model Property {
   // — Dados do proprietário (uso interno, nunca expostos no portal)
   ownerName  String?
   ownerPhone String?
+
+  // — Construtora (uso interno admin; slug preparado para páginas SEO futuras)
+  builderName String?
+  builderSlug String?
 
   // — SEO on-page
   metaTitle       String?
@@ -129,9 +135,74 @@ model Property {
   @@index([published, publishedAt])
   @@index([isFeatured])
   @@index([city, neighborhood])
+  @@index([builderSlug])
 
   // — Galeria de imagens (PropertyImage)
   images PropertyImage[]
+}
+
+// ---------------------------------------------------------------------------
+// Bairros — cadastro canônico (deduplicação por chave normalizada + cidade/estado)
+// Property mantém neighborhood/neighborhoodSlug desnormalizados para SEO e queries existentes.
+// ---------------------------------------------------------------------------
+
+model Neighborhood {
+  id             String   @id @default(cuid())
+  name           String
+  normalizedKey  String
+  slug           String
+  city           String
+  citySlug       String
+  state          String
+  stateSlug      String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([normalizedKey, citySlug, stateSlug])
+  @@index([citySlug])
+  @@index([stateSlug])
+  @@index([slug])
+  @@index([city, state])
+}
+
+// ---------------------------------------------------------------------------
+// Cidades — cadastro canônico (deduplicação por chave normalizada + estado)
+// Property mantém city/citySlug/state/stateSlug desnormalizados para SEO.
+// ---------------------------------------------------------------------------
+
+model City {
+  id            String   @id @default(cuid())
+  name          String
+  normalizedKey String
+  slug          String
+  state         String
+  stateSlug     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([normalizedKey, stateSlug])
+  @@index([slug])
+  @@index([stateSlug])
+  @@index([state, name])
+}
+
+// ---------------------------------------------------------------------------
+// Construtoras — cadastro canônico (deduplicação por chave normalizada)
+// Property mantém builderName/builderSlug desnormalizados para admin e SEO futuro.
+// ---------------------------------------------------------------------------
+
+model Builder {
+  id            String   @id @default(cuid())
+  name          String
+  normalizedKey String   @unique
+  slug          String   @unique
+  contactName   String?
+  contactPhone  String?
+  contactEmail  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([slug])
 }
 
 // ---------------------------------------------------------------------------

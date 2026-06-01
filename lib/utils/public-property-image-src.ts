@@ -1,7 +1,8 @@
 /**
- * URLs no portal público: mesma ideia do `adminImageSrc` — hosts na allowlist do Next
- * passam direto; os restantes usam proxy same-origin (evita 404 do otimizador e hosts fora de `remotePatterns`).
+ * URLs no portal público: hosts na allowlist passam direto, exceto fotos legadas Code49
+ * (/admin/imovel/*), que hoje devolvem login — usam proxy same-origin.
  */
+import { isLegacyCode49PropertyImageUrl } from "@/lib/property/legacy-image-url";
 const NEXT_IMAGE_HOSTS = new Set([
   "res.cloudinary.com",
   "www.3pinheirosconsultoria.com.br",
@@ -22,6 +23,9 @@ export function publicPropertyImageSrc(url: string): string {
   try {
     const u = new URL(url);
     if (u.protocol !== "http:" && u.protocol !== "https:") return url;
+    if (isLegacyCode49PropertyImageUrl(url)) {
+      return `/api/public/property-image?url=${encodeURIComponent(url)}`;
+    }
     if (isDirectRemoteHost(u.hostname)) return url;
   } catch {
     return url;

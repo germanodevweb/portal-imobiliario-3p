@@ -1,6 +1,8 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@/lib/generated/prisma/client";
+import { HOME_LISTING_MIN_PRICE } from "@/lib/constants/home-listing";
 
 // ---------------------------------------------------------------------------
 // Tipos derivados das queries — sem `any`, sem duplicação de schema
@@ -17,6 +19,8 @@ export type PropertyCardData = {
   bedrooms: number;
   bathrooms: number;
   area: number | null;
+  areaMin: number | null;
+  areaMax: number | null;
   featuredImage: string | null;
   isFeatured: boolean;
   isLaunch: boolean;
@@ -53,6 +57,8 @@ const propertyCardSelect = {
   bedrooms: true,
   bathrooms: true,
   area: true,
+  areaMin: true,
+  areaMax: true,
   featuredImage: true,
   isFeatured: true,
   isLaunch: true,
@@ -424,6 +430,8 @@ export type PropertyDetail = {
   bathrooms: number;
   garage: number;
   area: number | null;
+  areaMin: number | null;
+  areaMax: number | null;
   featuredImage: string | null;
   featuredImageAlt: string | null;
   galleryImages: string[];
@@ -471,6 +479,8 @@ async function fetchPublishedPropertyBySlug(
       bathrooms: true,
       garage: true,
       area: true,
+      areaMin: true,
+      areaMax: true,
       featuredImage: true,
       featuredImageAlt: true,
       galleryImages: true,
@@ -590,6 +600,8 @@ export type MetaFeedProperty = {
   bedrooms: number;
   bathrooms: number;
   area: number | null;
+  areaMin: number | null;
+  areaMax: number | null;
   city: string;
   neighborhood: string | null;
   citySlug: string;
@@ -612,6 +624,8 @@ export async function getPropertiesForMetaFeed(): Promise<MetaFeedProperty[]> {
       bedrooms: true,
       bathrooms: true,
       area: true,
+      areaMin: true,
+      areaMax: true,
       city: true,
       neighborhood: true,
       citySlug: true,
@@ -1283,9 +1297,27 @@ export type PropertyFilters = {
 };
 
 /**
+ * Badges comerciais (Destaque, Lançamento, Oportunidade) combinam com OR:
+ * imóvel entra se tiver pelo menos uma flag selecionada.
+ */
+function propertyBadgeFlagsWhere(
+  filters: Pick<PropertyFilters, "isFeatured" | "isLaunch" | "isOpportunity">
+): Prisma.PropertyWhereInput {
+  const orConditions: Prisma.PropertyWhereInput[] = [];
+
+  if (filters.isFeatured === true) orConditions.push({ isFeatured: true });
+  if (filters.isLaunch === true) orConditions.push({ isLaunch: true });
+  if (filters.isOpportunity === true) orConditions.push({ isOpportunity: true });
+
+  if (orConditions.length === 0) return {};
+  if (orConditions.length === 1) return orConditions[0]!;
+  return { OR: orConditions };
+}
+
+/**
  * Imóveis publicados com filtros condicionais.
- * Cada campo presente no filtro adiciona uma cláusula AND ao WHERE.
- * Campos ausentes não afetam a query.
+ * Campos de localização/tipo/preço/quartos combinam com AND entre si;
+ * badges comerciais selecionadas combinam com OR entre si.
  * Usado em: /imoveis com query params.
  */
 export const getFilteredProperties = cache(async function (
@@ -1310,9 +1342,7 @@ export const getFilteredProperties = cache(async function (
             },
           }
         : {}),
-      ...(filters.isFeatured === true ? { isFeatured: true } : {}),
-      ...(filters.isLaunch === true ? { isLaunch: true } : {}),
-      ...(filters.isOpportunity === true ? { isOpportunity: true } : {}),
+      ...propertyBadgeFlagsWhere(filters),
     },
     select: propertyCardSelect,
     orderBy: [{ publishedAt: { sort: "desc", nulls: "first" } }, { createdAt: "desc" }],
@@ -1347,9 +1377,7 @@ export const countFilteredProperties = cache(async function (
             },
           }
         : {}),
-      ...(filters.isFeatured === true ? { isFeatured: true } : {}),
-      ...(filters.isLaunch === true ? { isLaunch: true } : {}),
-      ...(filters.isOpportunity === true ? { isOpportunity: true } : {}),
+      ...propertyBadgeFlagsWhere(filters),
     },
   });
 });
@@ -1393,6 +1421,39 @@ export const getAllPublishedProperties = cache(async function (
 });
 
 // ---------------------------------------------------------------------------
+// Vitrine da Home — imóveis a partir de HOME_LISTING_MIN_PRICE (lib/constants/home-listing.ts)
+// Usado em: app/page.tsx
+// ---------------------------------------------------------------------------
+
+function homeListingWhere() {
+  return {
+    published: true,
+    price: { gte: HOME_LISTING_MIN_PRICE },
+  };
+}
+
+export const getHomeListingProperties = cache(async function (
+  limit?: number,
+  skip = 0
+): Promise<PropertyCardData[]> {
+  const results = await prisma.property.findMany({
+    where: homeListingWhere(),
+    select: propertyCardSelect,
+    orderBy: [{ publishedAt: { sort: "desc", nulls: "first" } }, { createdAt: "desc" }],
+    ...(limit !== undefined ? { take: limit } : {}),
+    ...(skip > 0 ? { skip } : {}),
+  });
+
+  return results.map((p) => ({ ...p, price: String(p.price) }));
+});
+
+export const countHomeListingProperties = cache(async function (): Promise<number> {
+  return prisma.property.count({
+    where: homeListingWhere(),
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Imóveis de Alto Padrão — acima de R$ 1,5 milhão
 // Usado em: /imoveis/alto-padrao
 // ---------------------------------------------------------------------------
@@ -1425,9 +1486,7 @@ function altoPadraoWhere(filters: PropertyFilters) {
     ...(filters.bedrooms !== undefined
       ? { bedrooms: filters.bedrooms >= 4 ? { gte: 4 } : filters.bedrooms }
       : {}),
-    ...(filters.isFeatured === true ? { isFeatured: true } : {}),
-    ...(filters.isLaunch === true ? { isLaunch: true } : {}),
-    ...(filters.isOpportunity === true ? { isOpportunity: true } : {}),
+    ...propertyBadgeFlagsWhere(filters),
     price: altoPadraoPriceWhere(filters),
   };
 }
@@ -1490,9 +1549,7 @@ function internationalInvestmentWhere(filters: PropertyFilters) {
     ...(filters.bedrooms !== undefined
       ? { bedrooms: filters.bedrooms >= 4 ? { gte: 4 } : filters.bedrooms }
       : {}),
-    ...(filters.isFeatured === true ? { isFeatured: true } : {}),
-    ...(filters.isLaunch === true ? { isLaunch: true } : {}),
-    ...(filters.isOpportunity === true ? { isOpportunity: true } : {}),
+    ...propertyBadgeFlagsWhere(filters),
     price: investmentPriceWhere(filters),
   };
 }

@@ -3,6 +3,8 @@
 // Sem chamadas a banco. Podem ser usadas em generateMetadata() e Server Components.
 // ---------------------------------------------------------------------------
 
+import { formatPropertyPriceBrlCompact } from "@/lib/utils/property-price";
+
 export const SITE_NAME = "3Pinheiros Consultoria Imobiliária";
 
 /** Domínio canônico oficial quando NEXT_PUBLIC_BASE_URL não está definida ou é inválida em produção. */
@@ -476,13 +478,9 @@ export function buildPropertyPageDescription(
   title: string,
   city: string,
   bedrooms: number,
-  price: string
+  price: string | number | null | undefined
 ): string {
-  const formattedPrice = new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    maximumFractionDigits: 0,
-  }).format(Number(price));
+  const formattedPrice = formatPropertyPriceBrlCompact(price);
 
   return `${title} em ${city}. ${bedrooms} quarto${bedrooms !== 1 ? "s" : ""}. ${formattedPrice}. Consulte condições com a 3Pinheiros Consultoria Imobiliária.`;
 }

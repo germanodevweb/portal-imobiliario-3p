@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import { Header } from "./components/Header";
 import { IncomeFilter } from "./components/IncomeFilter";
 import { PropertyList } from "./components/PropertyList";
-import { ServicesSection } from "./components/ServicesSection";
+import { GoogleReviewsSection } from "./components/GoogleReviewsSection";
 import { WhatsAppButton } from "./components/WhatsAppButton";
 import { Footer } from "./components/Footer";
 import {
-  countFilteredProperties,
-  getAllPublishedProperties,
+  countHomeListingProperties,
+  getHomeListingProperties,
 } from "@/lib/queries/properties";
 import {
   buildHomePageTitle,
@@ -56,8 +56,8 @@ export default async function Home({ searchParams }: PageProps) {
   const page = parsePage(sp);
   const skip = getSkip(page);
   const [properties, count] = await Promise.all([
-    getAllPublishedProperties(ITEMS_PER_PAGE, skip),
-    countFilteredProperties({}),
+    getHomeListingProperties(ITEMS_PER_PAGE, skip),
+    countHomeListingProperties(),
   ]);
   const totalPages = calculateTotalPages(count);
 
@@ -75,18 +75,15 @@ export default async function Home({ searchParams }: PageProps) {
       <main className="mx-auto max-w-7xl px-4 py-8 pb-24 sm:px-6 sm:py-12 sm:pb-12 lg:px-8">
         <div className="mb-6 sm:mb-8">
           <h1 className="text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl">
-            Imóveis em destaque
+            Os melhores lançamentos em Fortaleza
           </h1>
-          <p className="mt-1 text-sm text-zinc-500">
-            {count} {count !== 1 ? "imóveis disponíveis" : "imóvel disponível"}
-          </p>
         </div>
 
         <PropertyList properties={properties} />
         <Pagination currentPage={page} totalPages={totalPages} basePath="/" />
       </main>
 
-      <ServicesSection />
+      <GoogleReviewsSection />
 
       <WhatsAppButton />
       <Footer />

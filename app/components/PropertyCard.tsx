@@ -5,12 +5,13 @@ import {
   shouldUseUnoptimizedNextImage,
 } from "@/lib/cloudinary/watermark";
 import { publicPropertyImageSrc } from "@/lib/utils/public-property-image-src";
-import { formatPriceBrl } from "@/lib/currency";
+import { formatPropertyPriceBrl } from "@/lib/utils/property-price";
 import {
   banhLabel,
   dormLabel,
   formatPropertyAreaM2Line,
   isPropertyTypeAreaOnly,
+  type PropertyAreaFields,
 } from "@/lib/utils/property-display";
 
 export type Property = {
@@ -24,6 +25,8 @@ export type Property = {
   bedrooms: number;
   bathrooms: number;
   area: number | null;
+  areaMin?: number | null;
+  areaMax?: number | null;
   featuredImage: string | null;
   isFeatured?: boolean;
   isLaunch?: boolean;
@@ -31,8 +34,13 @@ export type Property = {
 };
 
 export function PropertyCard({ property }: { property: Property }) {
-  const formattedPrice = formatPriceBrl(Number(property.price));
+  const formattedPrice = formatPropertyPriceBrl(property.price);
   const areaOnly = isPropertyTypeAreaOnly(property.propertyTypeSlug);
+  const areaFields: PropertyAreaFields = {
+    area: property.area,
+    areaMin: property.areaMin ?? null,
+    areaMax: property.areaMax ?? null,
+  };
 
   const location = property.neighborhood
     ? `${property.neighborhood}, ${property.city}`
@@ -93,14 +101,14 @@ export function PropertyCard({ property }: { property: Property }) {
 
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-zinc-500">
           {areaOnly ? (
-            <span>{formatPropertyAreaM2Line(property.area)}</span>
+            <span>{formatPropertyAreaM2Line(areaFields)}</span>
           ) : (
             <>
               <span>{dormLabel(property.bedrooms)}</span>
               <span className="text-zinc-300">|</span>
               <span>{banhLabel(property.bathrooms)}</span>
               <span className="text-zinc-300">|</span>
-              <span>{formatPropertyAreaM2Line(property.area)}</span>
+              <span>{formatPropertyAreaM2Line(areaFields)}</span>
             </>
           )}
         </div>

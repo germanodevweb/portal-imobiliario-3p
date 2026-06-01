@@ -2,22 +2,29 @@ import Image from "next/image";
 import Link from "next/link";
 import { Facebook, Instagram, Youtube } from "lucide-react";
 import { getWhatsAppContactHref } from "@/lib/constants/contato";
+import { EMPRESA_ENDERECO_DISPLAY } from "@/lib/constants/endereco-empresa";
 
 const socialLinks = [
   {
     href: "https://www.instagram.com/3pinheiros.consultoria/",
     label: "Instagram 3 Pinheiros",
     Icon: Instagram,
+    buttonClassName:
+      "bg-linear-to-br from-[#833AB4] via-[#E1306C] to-[#F77737] hover:opacity-90 focus-visible:outline-[#E1306C]",
   },
   {
     href: "https://www.facebook.com/3pinheiros.Imobiliaria",
     label: "Facebook 3 Pinheiros",
     Icon: Facebook,
+    buttonClassName:
+      "bg-[#1877F2] hover:bg-[#166FE5] focus-visible:outline-[#1877F2]",
   },
   {
     href: "https://www.youtube.com/@3pinheirosconsultoriaimobi265",
     label: "YouTube 3 Pinheiros",
     Icon: Youtube,
+    buttonClassName:
+      "bg-[#FF0000] hover:bg-[#CC0000] focus-visible:outline-[#FF0000]",
   },
 ] as const;
 
@@ -26,6 +33,7 @@ const navLinks = [
   { label: "Alto Padrão", href: "/imoveis/alto-padrao" },
   { label: "Investimento", href: "/investir-no-brasil" },
   { label: "Quem Somos", href: "/quem-somos" },
+  { label: "Blog Imobiliário", href: "/blog" },
   { label: "Contato", href: "/contato" },
 ];
 
@@ -110,19 +118,28 @@ export function Footer() {
                     3pconsultoriaimobiliaria@gmail.com
                   </a>
                 </li>
+                <li>
+                  <address className="not-italic text-sm font-medium leading-relaxed text-green-700">
+                    {EMPRESA_ENDERECO_DISPLAY.linha1}
+                    <br />
+                    {EMPRESA_ENDERECO_DISPLAY.linha2}
+                    <br />
+                    {EMPRESA_ENDERECO_DISPLAY.linha3}
+                  </address>
+                </li>
               </ul>
               <ul
                 className="mt-5 flex flex-wrap items-center gap-2"
                 aria-label="Redes sociais da 3 Pinheiros"
               >
-                {socialLinks.map(({ href, label, Icon }) => (
+                {socialLinks.map(({ href, label, Icon, buttonClassName }) => (
                   <li key={href}>
                     <a
                       href={href}
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={label}
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-[#0f5132] text-white shadow-sm transition-colors hover:bg-[#0a3d26] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0f5132]"
+                      className={`inline-flex size-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-white shadow-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 ${buttonClassName}`}
                     >
                       <Icon className="h-5 w-5 shrink-0 text-white" strokeWidth={1.75} aria-hidden />
                     </a>

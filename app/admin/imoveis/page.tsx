@@ -14,15 +14,39 @@ export default async function AdminImoveisPage() {
     properties = await getAdminProperties();
   } catch (err) {
     console.error("[AdminImoveisPage] Erro ao carregar imóveis:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    const needsMigration =
+      message.includes("builderName") ||
+      message.includes("Builder") ||
+      message.includes("Neighborhood");
+
     return (
       <div className="rounded-xl border border-red-200 bg-red-50 p-6">
         <h2 className="font-semibold text-red-800">Erro ao carregar imóveis</h2>
-        <p className="mt-2 text-sm text-red-700">
-          {err instanceof Error ? err.message : String(err)}
-        </p>
-        <p className="mt-2 text-xs text-red-600">
-          Verifique se o banco está sincronizado (pnpm prisma db push) e o Prisma Client foi regenerado (pnpm prisma generate).
-        </p>
+        <p className="mt-2 text-sm text-red-700">{message}</p>
+        {needsMigration ? (
+          <div className="mt-4 space-y-3 text-sm text-red-900">
+            <p className="font-medium">Migration pendente no banco ou Prisma Client desatualizado.</p>
+            <ol className="list-decimal space-y-2 pl-5">
+              <li>
+                No <strong>SQL Editor do Supabase</strong>, execute as migrations pendentes em{" "}
+                <code className="rounded bg-red-100 px-1">prisma/migrations/</code> (Builder e
+                Neighborhood, se ainda não rodou).
+              </li>
+              <li>
+                No terminal:{" "}
+                <code className="rounded bg-zinc-900 px-2 py-1 text-xs text-zinc-100">
+                  pnpm prisma generate
+                </code>
+              </li>
+              <li>Reinicie o servidor dev (pare e rode <code className="rounded bg-red-100 px-1">pnpm dev</code> de novo).</li>
+            </ol>
+          </div>
+        ) : (
+          <p className="mt-2 text-xs text-red-600">
+            Verifique se o banco está sincronizado e o Prisma Client foi regenerado.
+          </p>
+        )}
       </div>
     );
   }

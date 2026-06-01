@@ -9,6 +9,11 @@ import {
   type ContatoAssuntoValue,
 } from "@/lib/constants/contato";
 import { prisma } from "@/lib/prisma";
+import {
+  formatBrazilianPhoneDisplay,
+  validateBrazilianWhatsappField,
+} from "@/lib/utils/phone";
+import { validateEmailField } from "@/lib/utils/email";
 
 // ---------------------------------------------------------------------------
 // Tipos
@@ -19,20 +24,14 @@ export type SubmitContatoState = {
   errors?: Record<string, string>;
 };
 
-const MIN_PHONE_DIGITS = 8;
-const MAX_MESSAGE_LENGTH = 8000;
 const MIN_NAME_LENGTH = 2;
 const MIN_MESSAGE_LENGTH = 3;
+const MAX_MESSAGE_LENGTH = 8000;
 
 const ASSUNTO_SET = new Set<string>([...CONTATO_ASSUNTO_VALUES]);
 
 function isContatoAssunto(value: string): value is ContatoAssuntoValue {
   return ASSUNTO_SET.has(value);
-}
-
-function isValidEmail(email: string): boolean {
-  if (email.length === 0 || email.length > 254) return false;
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 function buildContatoNotes(params: {
@@ -91,15 +90,14 @@ export async function submitContatoAction(
     errors.nome = "Informe seu nome completo";
   }
 
-  const phoneDigits = telefone.replace(/\D/g, "");
-  if (phoneDigits.length < MIN_PHONE_DIGITS) {
-    errors.telefone = "Informe um telefone válido (DDD + número)";
+  const phoneValidation = validateBrazilianWhatsappField(telefone);
+  if (!phoneValidation.ok) {
+    errors.telefone = phoneValidation.error;
   }
 
-  if (!email) {
-    errors.email = "E-mail é obrigatório";
-  } else if (!isValidEmail(email)) {
-    errors.email = "E-mail inválido";
+  const emailValidation = validateEmailField(email);
+  if (!emailValidation.ok) {
+    errors.email = emailValidation.error;
   }
 
   if (!isContatoAssunto(assuntoRaw)) {
@@ -118,13 +116,25 @@ export async function submitContatoAction(
     return { errors };
   }
 
+  if (!phoneValidation.ok) {
+    return { errors: { telefone: phoneValidation.error } };
+  }
+
+  if (!emailValidation.ok) {
+    return { errors: { email: emailValidation.error } };
+  }
+
+  const normalizedPhone = phoneValidation.normalized;
+  const telefoneFormatado = formatBrazilianPhoneDisplay(normalizedPhone);
+  const normalizedEmail = emailValidation.normalized;
+
   if (!isContatoAssunto(assuntoRaw)) {
     return { errors: { assunto: "Selecione um assunto" } };
   }
 
   const assuntoLabel = CONTATO_ASSUNTO_LABELS[assuntoRaw];
   const notes = buildContatoNotes({
-    email,
+    email: normalizedEmail,
     assuntoLabel,
     mensagem,
   });
@@ -133,7 +143,7 @@ export async function submitContatoAction(
     await prisma.lead.create({
       data: {
         name: nome,
-        phone: telefone,
+        phone: normalizedPhone,
         desiredPriceRange: null,
         origin: "site",
         status: "novo",
@@ -153,8 +163,8 @@ export async function submitContatoAction(
 
   const text = buildWhatsAppText({
     nome,
-    telefone,
-    email,
+    telefone: telefoneFormatado,
+    email: normalizedEmail,
     assuntoLabel,
     mensagem,
   });

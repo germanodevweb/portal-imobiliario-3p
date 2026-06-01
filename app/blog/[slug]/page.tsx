@@ -334,6 +334,8 @@ export default async function BlogPostPage({ params }: PageProps) {
                           bedrooms: p.bedrooms,
                           bathrooms: p.bathrooms,
                           area: p.area,
+                          areaMin: p.areaMin,
+                          areaMax: p.areaMax,
                           featuredImage: p.featuredImage,
                         }}
                       />

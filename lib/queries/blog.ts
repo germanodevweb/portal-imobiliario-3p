@@ -113,6 +113,8 @@ export async function getRelatedPropertiesForPost(propertyIds: string[]) {
       bedrooms: true,
       bathrooms: true,
       area: true,
+      areaMin: true,
+      areaMax: true,
       propertyTypeSlug: true,
       featuredImage: true,
       galleryImages: true,
@@ -139,6 +141,8 @@ export async function getRelatedPropertiesForPost(propertyIds: string[]) {
       bedrooms: p.bedrooms,
       bathrooms: p.bathrooms,
       area: p.area,
+      areaMin: p.areaMin,
+      areaMax: p.areaMax,
       propertyTypeSlug: p.propertyTypeSlug,
       featuredImage: raw ? normalizePublicImageUrl(raw) : null,
     };

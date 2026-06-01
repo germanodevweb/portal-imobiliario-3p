@@ -4,7 +4,14 @@ import { ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { INCOME_FILTER_LINKS } from "@/lib/constants/income-filter-links";
+import { SERVICE_FILTER_LINKS } from "@/lib/constants/service-filter-links";
 import { cn } from "@/lib/utils";
+
+const dropdownMenuClasses =
+  "absolute top-full z-70 mt-1 max-h-[min(70vh,24rem)] overflow-y-auto overflow-x-hidden rounded-2xl border border-zinc-200/80 bg-white/98 py-1.5 shadow-xl shadow-black/15 ring-1 ring-black/5 backdrop-blur-md left-0 right-0 w-full min-w-0 translate-x-0 md:left-0 md:right-auto md:mt-0 md:w-auto md:min-w-[min(17rem,calc(100vw-2rem))] md:max-w-[min(20rem,calc(100vw-2rem))]";
+
+const dropdownItemClasses =
+  "block touch-manipulation px-3 py-2.5 text-sm font-semibold text-zinc-700 transition-colors duration-200 first:pt-2.5 last:pb-2.5 active:bg-green-800 sm:px-4 hover:bg-green-700 hover:text-white focus-visible:bg-green-700 focus-visible:text-white focus-visible:outline-none";
 
 /** Destaque — tipografia editorial + hover com brilho e elevação */
 const chipOrange =
@@ -26,17 +33,26 @@ const chipWhite =
   "shadow-md shadow-green-950/15 ring-1 ring-white/65 " +
   "transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] " +
   "max-md:hover:translate-y-0 max-md:hover:scale-100 max-md:hover:shadow-md " +
-  "hover:z-10 hover:-translate-y-1 hover:scale-[1.02] hover:border-white hover:bg-white hover:text-zinc-950 " +
+  "hover:z-10 hover:-translate-y-1 hover:scale-[1.02] hover:border-white hover:bg-white hover:text-green-800 " +
   "hover:shadow-[0_12px_40px_-10px_rgba(6,78,59,0.28)] hover:ring-emerald-400/45 " +
   "active:translate-y-0 active:scale-[0.99] " +
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-green-700 " +
   "sm:px-4 sm:text-[14px] md:min-h-[44px] md:text-base";
 
+/** Botão branco com dropdown — mesma altura mínima nos dois menus */
+const chipWhiteDropdown = cn(
+  chipWhite,
+  "h-full w-full min-h-[3.5rem] gap-1.5 sm:min-h-[3.75rem] md:min-h-[3.5rem]"
+);
+
 export function IncomeFilter() {
   const [incomeMenuOpen, setIncomeMenuOpen] = useState(false);
+  const [servicesMenuOpen, setServicesMenuOpen] = useState(false);
   const incomeWrapRef = useRef<HTMLDivElement>(null);
+  const servicesWrapRef = useRef<HTMLDivElement>(null);
 
   const closeIncomeMenu = useCallback(() => setIncomeMenuOpen(false), []);
+  const closeServicesMenu = useCallback(() => setServicesMenuOpen(false), []);
 
   useEffect(() => {
     if (!incomeMenuOpen) return;
@@ -47,13 +63,22 @@ export function IncomeFilter() {
     return () => document.removeEventListener("mousedown", onDoc);
   }, [incomeMenuOpen, closeIncomeMenu]);
 
+  useEffect(() => {
+    if (!servicesMenuOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (!servicesWrapRef.current?.contains(e.target as Node)) closeServicesMenu();
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [servicesMenuOpen, closeServicesMenu]);
+
   return (
     <section
       className="border-b border-emerald-900/60 bg-linear-to-b from-emerald-900 via-green-800 to-emerald-950 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] sm:py-3.5"
       aria-label="Atalhos para imóveis por perfil e renda"
     >
       <div className="mx-auto max-w-7xl pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] sm:pl-4 sm:pr-4 lg:pl-8 lg:pr-8">
-        <div className="grid grid-cols-2 gap-2 sm:gap-3.5 md:grid-cols-4 md:items-stretch md:gap-3 lg:gap-4">
+        <div className="grid grid-cols-2 items-stretch gap-2 sm:gap-3.5 md:grid-cols-4 md:gap-3 lg:gap-4">
           <Link href="/imoveis/alto-padrao" className={chipOrange}>
             Alto Padrão
           </Link>
@@ -64,14 +89,14 @@ export function IncomeFilter() {
 
           <div
             ref={incomeWrapRef}
-            className={cn("group relative", incomeMenuOpen && "z-60")}
+            className={cn("group relative h-full", incomeMenuOpen && "z-60")}
           >
             <button
               type="button"
               aria-haspopup="menu"
               aria-expanded={incomeMenuOpen}
               onClick={() => setIncomeMenuOpen((v) => !v)}
-              className={cn(chipWhite, "gap-1.5")}
+              className={chipWhiteDropdown}
             >
               <span className="min-w-0 flex-1 text-balance">
                 Imóvel Compatível Com Sua Renda
@@ -79,7 +104,7 @@ export function IncomeFilter() {
               <ChevronDown
                 aria-hidden
                 className={cn(
-                  "h-4 w-4 shrink-0 text-zinc-500 transition-all duration-300 ease-out group-hover/chip:text-emerald-600",
+                  "h-4 w-4 shrink-0 text-zinc-500 transition-all duration-300 ease-out group-hover/chip:text-green-800",
                   incomeMenuOpen
                     ? "rotate-180 text-emerald-600"
                     : "md:group-hover:rotate-180"
@@ -92,11 +117,7 @@ export function IncomeFilter() {
               role="menu"
               aria-label="Faixas de renda"
               className={cn(
-                "absolute top-full z-70 mt-1 max-h-[min(70vh,24rem)] overflow-y-auto overflow-x-hidden rounded-2xl border border-zinc-200/80 bg-white/98 py-1.5 shadow-xl shadow-black/15 ring-1 ring-black/5 backdrop-blur-md",
-                // Mobile-first: largura da célula, sem translate — evita menu cortado na borda da tela
-                "left-0 right-0 w-full min-w-0 translate-x-0",
-                // md+: ancorado ao botão, largura mínima confortável
-                "md:left-0 md:right-auto md:mt-0 md:w-auto md:min-w-[min(17rem,calc(100vw-2rem))] md:max-w-[min(20rem,calc(100vw-2rem))]",
+                dropdownMenuClasses,
                 incomeMenuOpen
                   ? "visible opacity-100"
                   : "invisible pointer-events-none opacity-0 md:group-hover:visible md:group-hover:pointer-events-auto md:group-hover:opacity-100"
@@ -107,7 +128,7 @@ export function IncomeFilter() {
                   <Link
                     role="menuitem"
                     href={item.href}
-                    className="block touch-manipulation px-3 py-2.5 text-sm font-semibold text-zinc-700 transition-colors duration-200 first:pt-2.5 last:pb-2.5 active:bg-green-800 sm:px-4 hover:bg-green-700 hover:text-white focus-visible:bg-green-700 focus-visible:text-white focus-visible:outline-none"
+                    className={dropdownItemClasses}
                     onClick={closeIncomeMenu}
                   >
                     {item.label}
@@ -117,9 +138,55 @@ export function IncomeFilter() {
             </ul>
           </div>
 
-          <Link href="/imoveis" className={chipWhite}>
-            Busca Avançada
-          </Link>
+          <div
+            ref={servicesWrapRef}
+            className={cn("group relative h-full", servicesMenuOpen && "z-60")}
+          >
+            <button
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded={servicesMenuOpen}
+              onClick={() => setServicesMenuOpen((v) => !v)}
+              className={chipWhiteDropdown}
+            >
+              <span className="min-w-0 flex-1 text-balance">Serviços Imobiliários</span>
+              <ChevronDown
+                aria-hidden
+                className={cn(
+                  "h-4 w-4 shrink-0 text-zinc-500 transition-all duration-300 ease-out group-hover/chip:text-green-800",
+                  servicesMenuOpen
+                    ? "rotate-180 text-emerald-600"
+                    : "md:group-hover:rotate-180"
+                )}
+                strokeWidth={2.25}
+              />
+            </button>
+
+            <ul
+              role="menu"
+              aria-label="Serviços imobiliários"
+              className={cn(
+                dropdownMenuClasses,
+                "md:left-auto md:right-0",
+                servicesMenuOpen
+                  ? "visible opacity-100"
+                  : "invisible pointer-events-none opacity-0 md:group-hover:visible md:group-hover:pointer-events-auto md:group-hover:opacity-100"
+              )}
+            >
+              {SERVICE_FILTER_LINKS.map((item) => (
+                <li key={item.href} role="none">
+                  <Link
+                    role="menuitem"
+                    href={item.href}
+                    className={dropdownItemClasses}
+                    onClick={closeServicesMenu}
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
     </section>

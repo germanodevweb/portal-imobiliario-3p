@@ -47,6 +47,15 @@ export function AdminHeader() {
             <Link href="/admin/imoveis" className={navLinkClass}>
               Imóveis
             </Link>
+            <Link href="/admin/bairros" className={navLinkClass}>
+              Bairros
+            </Link>
+            <Link href="/admin/cidades" className={navLinkClass}>
+              Cidades
+            </Link>
+            <Link href="/admin/construtoras" className={navLinkClass}>
+              Construtoras
+            </Link>
             <Link href="/admin/leads" className={navLinkClass}>
               Leads
             </Link>
@@ -104,6 +113,27 @@ export function AdminHeader() {
               onClick={() => setMenuOpen(false)}
             >
               Imóveis
+            </Link>
+            <Link
+              href="/admin/bairros"
+              className={`${navLinkClass} -mx-1`}
+              onClick={() => setMenuOpen(false)}
+            >
+              Bairros
+            </Link>
+            <Link
+              href="/admin/cidades"
+              className={`${navLinkClass} -mx-1`}
+              onClick={() => setMenuOpen(false)}
+            >
+              Cidades
+            </Link>
+            <Link
+              href="/admin/construtoras"
+              className={`${navLinkClass} -mx-1`}
+              onClick={() => setMenuOpen(false)}
+            >
+              Construtoras
             </Link>
             <Link
               href="/admin/leads"

@@ -101,7 +101,7 @@ export function ImoveisFilterPanel(props: ImoveisFilterPanelProps) {
       <div
         className={`${chipRowTop} flex flex-col gap-2 sm:flex sm:flex-row sm:flex-wrap sm:items-center sm:gap-3`}
       >
-        <div className="grid grid-cols-3 gap-2 sm:contents">
+        <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:gap-3">
           <Link
             href={buildBadgeFilterUrl(listPath, baseFilterParams, "oportunidade", rawOportunidade)}
             className={chipClass(rawOportunidade)}
@@ -148,11 +148,10 @@ export function ImoveisFilterPanel(props: ImoveisFilterPanelProps) {
           </svg>
         </summary>
 
-        <form method="GET" action={listPath} className="space-y-4 border-t border-zinc-100 px-5 pb-5 pt-4">
-          {props.rawRenda ? <input type="hidden" name="renda" value={props.rawRenda} /> : null}
+        <div className="space-y-4 border-t border-zinc-100 px-5 pb-5 pt-4">
           <div className="flex flex-col gap-2 sm:flex sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
             <span className="text-xs font-semibold text-zinc-500 max-sm:-mb-1 sm:mr-1">Buscar:</span>
-            <div className="grid grid-cols-3 gap-2 sm:contents">
+            <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:gap-3">
               <Link
                 href={buildBadgeFilterUrl(listPath, baseFilterParams, "oportunidade", rawOportunidade)}
                 className={chipClass(rawOportunidade)}
@@ -181,6 +180,14 @@ export function ImoveisFilterPanel(props: ImoveisFilterPanelProps) {
               </Link>
             )}
           </div>
+
+          <form
+            method="GET"
+            action={listPath}
+            autoComplete="off"
+            className="space-y-4"
+          >
+          {props.rawRenda ? <input type="hidden" name="renda" value={props.rawRenda} /> : null}
 
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-xs font-semibold text-zinc-500">Ou marque para combinar:</span>
@@ -225,6 +232,7 @@ export function ImoveisFilterPanel(props: ImoveisFilterPanelProps) {
                 id="filter-cidade"
                 name="cidade"
                 defaultValue={props.rawCidade}
+                autoComplete="off"
                 className="min-h-[44px] rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
               >
                 <option value="">Todas</option>
@@ -333,7 +341,8 @@ export function ImoveisFilterPanel(props: ImoveisFilterPanelProps) {
               </button>
             </div>
           </div>
-        </form>
+          </form>
+        </div>
       </details>
     </>
   );

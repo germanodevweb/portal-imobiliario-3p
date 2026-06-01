@@ -4,6 +4,7 @@ import {
   type FormEvent,
   startTransition,
   useActionState,
+  useEffect,
   useRef,
   useState,
 } from "react";
@@ -15,18 +16,34 @@ import {
   type CreatePropertyState,
   type UpdatePropertyState,
 } from "@/lib/admin/actions";
-import { CEARA_CITIES, CEARA_STATE } from "@/lib/constants/cities";
+import {
+  PROPERTY_PRICE_ON_REQUEST_LABEL,
+  propertyPriceFormDefaultValue,
+} from "@/lib/utils/property-price";
 import {
   BRAZIL_STATE_OPTIONS,
   DEFAULT_PROPERTY_COUNTRY,
   OTHER_STATE_VALUE,
   resolveStateFormState,
 } from "@/lib/constants/brazil-states";
+import { CEARA_CITIES, CEARA_STATE } from "@/lib/constants/cities";
 import {
   PropertyImageGallery,
   type GalleryImageItem,
 } from "@/app/components/admin/PropertyImageGallery";
 import { PropertyDescriptionEditor } from "@/app/components/admin/PropertyDescriptionEditor";
+import type { RegisteredNeighborhoodOption } from "@/lib/admin/neighborhood-queries";
+import type { RegisteredBuilderOption } from "@/lib/admin/builder-queries";
+import type { RegisteredCityOption } from "@/lib/admin/city-queries";
+import {
+  buildAdminNewNeighborhoodUrl,
+  buildPropertyLocationKey,
+} from "@/lib/admin/property-location-key";
+import {
+  countWordsInPropertyDescription,
+  getDescriptionSeoHint,
+  getTitleSeoHint,
+} from "@/lib/utils/property-seo-editorial";
 
 export type EditFormInitialData = {
   title: string;
@@ -45,13 +62,15 @@ export type EditFormInitialData = {
   bedrooms: number;
   bathrooms: number;
   garage: number;
-  area: string;
+  areaMin: string;
+  areaMax: string;
   status: "DISPONIVEL" | "VENDIDO";
   isFeatured: boolean;
   isLaunch: boolean;
   isOpportunity: boolean;
   ownerName: string;
   ownerPhone: string;
+  builderName: string;
   youtubeVideoId: string;
   images: GalleryImageItem[];
 };
@@ -60,6 +79,9 @@ type AdminImovelFormProps = {
   mode?: "create" | "edit";
   propertyId?: string;
   initialData?: EditFormInitialData;
+  registeredNeighborhoods?: RegisteredNeighborhoodOption[];
+  registeredBuilders?: RegisteredBuilderOption[];
+  registeredCities?: RegisteredCityOption[];
 };
 
 const PROPERTY_TYPES: { value: string; label: string }[] = [
@@ -81,6 +103,20 @@ function FieldError({ message }: { message?: string }) {
   return <p className="mt-1 text-sm text-red-600">{message}</p>;
 }
 
+function TitleSeoCounter({ charCount }: { charCount: number }) {
+  const { status, message } = getTitleSeoHint(charCount);
+  const toneClass =
+    status === "good" ? "text-green-700" : "text-amber-700";
+  return <p className={`mt-1 text-xs ${toneClass}`}>{message}</p>;
+}
+
+function DescriptionSeoCounter({ wordCount }: { wordCount: number }) {
+  const { status, message } = getDescriptionSeoHint(wordCount);
+  const toneClass =
+    status === "adequate" ? "text-green-700" : "text-amber-700";
+  return <p className={`mt-1 text-xs ${toneClass}`}>{message}</p>;
+}
+
 function FormBlock({
   title,
   children,
@@ -100,16 +136,19 @@ export function AdminImovelForm({
   mode = "create",
   propertyId,
   initialData,
+  registeredNeighborhoods = [],
+  registeredBuilders = [],
+  registeredCities = [],
 }: AdminImovelFormProps) {
   const action = mode === "edit" ? updatePropertyAction : createPropertyAction;
   const initialState = mode === "edit" ? updateInitialState : createInitialState;
   const [state, formAction, isPending] = useActionState(action, initialState);
   const errors = state?.errors ?? {};
 
-  const formRef = useRef<HTMLFormElement>(null);
-  const titleRef = useRef<HTMLInputElement>(null);
-
   const d = initialData;
+  const formRef = useRef<HTMLFormElement>(null);
+  const [titleInput, setTitleInput] = useState(d?.title ?? "");
+
   const [descriptionHtml, setDescriptionHtml] = useState(d?.description ?? "");
   const [descriptionEditorKey, setDescriptionEditorKey] = useState(0);
 
@@ -117,7 +156,14 @@ export function AdminImovelForm({
   const [aiError, setAiError] = useState<string | null>(null);
 
   const cityFromData = initialData?.city ?? "";
-  const isCityInList = (CEARA_CITIES as readonly string[]).includes(cityFromData);
+  const cityListOptions = (() => {
+    const names = new Set<string>(CEARA_CITIES);
+    for (const rc of registeredCities) {
+      names.add(rc.name);
+    }
+    return Array.from(names).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  })();
+  const isCityInList = cityListOptions.includes(cityFromData);
   const [cityEntryMode, setCityEntryMode] = useState<"lista" | "manual">(
     initialData ? (isCityInList ? "lista" : "manual") : "lista"
   );
@@ -139,6 +185,46 @@ export function AdminImovelForm({
   const isOtherState = stateSelect === OTHER_STATE_VALUE;
 
   const cityValue = cityEntryMode === "lista" ? citySelect : manualCity;
+  const stateValue = isOtherState ? customState : stateSelect;
+  const locationKey = buildPropertyLocationKey({
+    city: cityValue,
+    state: stateValue,
+    registeredCities,
+  });
+
+  const neighborhoodOptions = registeredNeighborhoods.filter(
+    (n) => `${n.citySlug}::${n.stateSlug}` === locationKey
+  );
+  const hasRegisteredNeighborhoods = neighborhoodOptions.length > 0;
+
+  const [neighborhood, setNeighborhood] = useState(d?.neighborhood ?? "");
+  const prevLocationKeyRef = useRef(locationKey);
+
+  useEffect(() => {
+    if (
+      prevLocationKeyRef.current &&
+      prevLocationKeyRef.current !== locationKey
+    ) {
+      setNeighborhood("");
+    }
+    prevLocationKeyRef.current = locationKey;
+  }, [locationKey]);
+
+  const neighborhoodLegacyOption =
+    neighborhood &&
+    hasRegisteredNeighborhoods &&
+    !neighborhoodOptions.some((n) => n.name === neighborhood);
+  const [builderName, setBuilderName] = useState(d?.builderName ?? "");
+  const [ownerName, setOwnerName] = useState(d?.ownerName ?? "");
+  const [ownerPhone, setOwnerPhone] = useState(d?.ownerPhone ?? "");
+
+  function applyRegisteredBuilder(builderId: string) {
+    const builder = registeredBuilders.find((b) => b.id === builderId);
+    if (!builder) return;
+    setBuilderName(builder.name);
+    setOwnerName(builder.contactName ?? "");
+    setOwnerPhone(builder.contactPhone ?? "");
+  }
 
   function submitPropertyForm(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -165,8 +251,8 @@ export function AdminImovelForm({
       } else if (!result.title?.trim() && !result.description?.trim()) {
         setAiError("A IA não devolveu título nem descrição. Tente de novo ou verifique GEMINI_API_KEY.");
       } else {
-        if (result.title?.trim() && titleRef.current) {
-          titleRef.current.value = result.title.trim();
+        if (result.title?.trim()) {
+          setTitleInput(result.title.trim());
         }
         if (result.description?.trim()) {
           setDescriptionHtml(result.description.trim());
@@ -182,6 +268,7 @@ export function AdminImovelForm({
   }
 
   const formError = errors._form;
+  const descriptionWordCount = countWordsInPropertyDescription(descriptionHtml);
 
   return (
     <form ref={formRef} className="space-y-6" onSubmit={submitPropertyForm}>
@@ -208,15 +295,16 @@ export function AdminImovelForm({
             Título *
           </label>
           <input
-            ref={titleRef}
             id="title"
             name="title"
             type="text"
             required
-            defaultValue={d?.title}
+            value={titleInput}
+            onChange={(e) => setTitleInput(e.target.value)}
             className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
             placeholder="Ex: Apartamento 3 quartos com vista"
           />
+          <TitleSeoCounter charCount={titleInput.length} />
           <FieldError message={errors.title} />
         </div>
 
@@ -250,24 +338,27 @@ export function AdminImovelForm({
               onChange={setDescriptionHtml}
             />
           </div>
+          <DescriptionSeoCounter wordCount={descriptionWordCount} />
           <FieldError message={errors.description} />
         </div>
 
         <div>
           <label htmlFor="price" className="block text-sm font-medium text-zinc-700">
-            Preço (R$) *
+            Preço (R$)
           </label>
           <input
             id="price"
             name="price"
             type="number"
-            required
-            min={1}
+            min={0}
             step="0.01"
-            defaultValue={d?.price}
+            defaultValue={propertyPriceFormDefaultValue(d?.price)}
             className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
-            placeholder="Ex: 450000"
+            placeholder={PROPERTY_PRICE_ON_REQUEST_LABEL}
           />
+          <p className="mt-1 text-xs text-zinc-500">
+            Deixe vazio para exibir &quot;{PROPERTY_PRICE_ON_REQUEST_LABEL}&quot; no site.
+          </p>
           <FieldError message={errors.price} />
         </div>
 
@@ -291,7 +382,7 @@ export function AdminImovelForm({
                   checked={cityEntryMode === "lista"}
                   onChange={() => {
                     setCityEntryMode("lista");
-                    if (manualCity && (CEARA_CITIES as readonly string[]).includes(manualCity)) {
+                    if (manualCity && cityListOptions.includes(manualCity)) {
                       setCitySelect(manualCity);
                     }
                   }}
@@ -318,12 +409,21 @@ export function AdminImovelForm({
                 <select
                   id="citySelect"
                   value={citySelect}
-                  onChange={(e) => setCitySelect(e.target.value)}
+                  onChange={(e) => {
+                    const nextCity = e.target.value;
+                    setCitySelect(nextCity);
+                    const match = registeredCities.find((c) => c.name === nextCity);
+                    if (match) {
+                      const resolved = resolveStateFormState(match.state);
+                      setStateSelect(resolved.selectValue);
+                      setCustomState(resolved.customState);
+                    }
+                  }}
                   required
                   className="block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
                 >
                   <option value="">Selecione a cidade</option>
-                  {CEARA_CITIES.map((c) => (
+                  {cityListOptions.map((c) => (
                     <option key={c} value={c}>
                       {c}
                     </option>
@@ -352,15 +452,63 @@ export function AdminImovelForm({
             <label htmlFor="neighborhood" className="block text-sm font-medium text-zinc-700">
               Bairro
             </label>
-            <input
-              id="neighborhood"
-              name="neighborhood"
-              type="text"
-              defaultValue={d?.neighborhood}
-              className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
-              placeholder="Digite manualmente, ex.: Praia de Iracema"
-            />
-            <p className="mt-1 text-xs text-zinc-500">Campo livre — preenchimento manual.</p>
+            {hasRegisteredNeighborhoods ? (
+              <>
+                <select
+                  id="neighborhood"
+                  name="neighborhood"
+                  value={neighborhood}
+                  onChange={(e) => setNeighborhood(e.target.value)}
+                  className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+                >
+                  <option value="">Selecione o bairro…</option>
+                  {neighborhoodOptions.map((n) => (
+                    <option key={n.id} value={n.name}>
+                      {n.name}
+                    </option>
+                  ))}
+                  {neighborhoodLegacyOption ? (
+                    <option value={neighborhood}>{neighborhood} (atual)</option>
+                  ) : null}
+                </select>
+                <p className="mt-1 text-xs text-zinc-500">
+                  {neighborhoodOptions.length}{" "}
+                  {neighborhoodOptions.length === 1
+                    ? "bairro cadastrado"
+                    : "bairros cadastrados"}{" "}
+                  para {cityValue.trim() || "esta cidade"}.
+                </p>
+              </>
+            ) : (
+              <>
+                <input
+                  id="neighborhood"
+                  name="neighborhood"
+                  type="text"
+                  value={neighborhood}
+                  onChange={(e) => setNeighborhood(e.target.value)}
+                  className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+                  placeholder="Digite manualmente, ex.: Jardim Paraíso"
+                />
+                {cityValue.trim() && stateValue.trim() ? (
+                  <div className="mt-2 space-y-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
+                    <p className="text-xs text-amber-900">
+                      Nenhum bairro cadastrado para esta cidade.
+                    </p>
+                    <Link
+                      href={buildAdminNewNeighborhoodUrl(cityValue, stateValue)}
+                      className="inline-flex min-h-[40px] items-center rounded-md border border-green-700 bg-white px-3 py-1.5 text-xs font-semibold text-green-800 transition-colors hover:bg-green-50"
+                    >
+                      Cadastrar bairro para {cityValue.trim()}
+                    </Link>
+                  </div>
+                ) : (
+                  <p className="mt-1 text-xs text-zinc-500">
+                    Selecione cidade e estado para ver bairros cadastrados ou cadastrar um novo.
+                  </p>
+                )}
+              </>
+            )}
           </div>
           <div>
             <label htmlFor="country" className="block text-sm font-medium text-zinc-700">
@@ -488,7 +636,7 @@ export function AdminImovelForm({
           <FieldError message={errors.type} />
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <label htmlFor="bedrooms" className="block text-sm font-medium text-zinc-700">
               Quartos
@@ -531,23 +679,47 @@ export function AdminImovelForm({
             />
             <FieldError message={errors.garage} />
           </div>
+        </div>
+
+        <p className="text-sm font-medium text-zinc-700">Área privativa</p>
+        <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="area" className="block text-sm font-medium text-zinc-700">
-              Área total
+            <label htmlFor="areaMin" className="block text-sm font-medium text-zinc-700">
+              Área mínima (m²)
             </label>
             <input
-              id="area"
-              name="area"
+              id="areaMin"
+              name="areaMin"
               type="number"
               min={0}
               step="0.01"
-              defaultValue={d?.area}
+              defaultValue={d?.areaMin}
               className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
-              placeholder="Ex: 85"
+              placeholder="Ex: 48,95"
             />
-            <FieldError message={errors.area} />
+            <FieldError message={errors.areaMin} />
+          </div>
+          <div>
+            <label htmlFor="areaMax" className="block text-sm font-medium text-zinc-700">
+              Área máxima (m²)
+            </label>
+            <input
+              id="areaMax"
+              name="areaMax"
+              type="number"
+              min={0}
+              step="0.01"
+              defaultValue={d?.areaMax}
+              className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+              placeholder="Ex: 120"
+            />
+            <FieldError message={errors.areaMax} />
           </div>
         </div>
+        <p className="text-xs text-zinc-500">
+          Área privativa. Para metragem única, preencha só a mínima. Para lançamentos com várias
+          plantas, informe mínima e máxima.
+        </p>
       </FormBlock>
 
       <FormBlock title="Vídeo do imóvel (YouTube)">
@@ -636,32 +808,86 @@ export function AdminImovelForm({
         </div>
       </FormBlock>
 
-      <FormBlock title="Dados do proprietário (uso interno)">
+      <FormBlock title="Construtora e contato (uso interno)">
         <p className="text-sm text-zinc-500">
-          Estes dados não aparecem no portal público.
+          Estes dados não aparecem no portal público. Ao selecionar uma construtora
+          cadastrada, responsável e telefone são preenchidos automaticamente.
         </p>
         <div>
+          <label htmlFor="builderName" className="block text-sm font-medium text-zinc-700">
+            Construtora
+          </label>
+          {registeredBuilders.length > 0 ? (
+            <select
+              id="builderSelect"
+              value=""
+              onChange={(e) => {
+                if (e.target.value) {
+                  applyRegisteredBuilder(e.target.value);
+                }
+              }}
+              className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+            >
+              <option value="">Selecionar construtora cadastrada…</option>
+              {registeredBuilders.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          ) : null}
+          <input
+            id="builderName"
+            name="builderName"
+            type="text"
+            list={
+              registeredBuilders.length > 0
+                ? "property-builder-suggestions"
+                : undefined
+            }
+            value={builderName}
+            onChange={(e) => setBuilderName(e.target.value)}
+            className={`block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600 ${
+              registeredBuilders.length > 0 ? "mt-2" : "mt-1"
+            }`}
+            placeholder="Ex.: Moura Dubeux"
+          />
+          {registeredBuilders.length > 0 ? (
+            <datalist id="property-builder-suggestions">
+              {registeredBuilders.map((b) => (
+                <option key={b.id} value={b.name} />
+              ))}
+            </datalist>
+          ) : null}
+          <p className="mt-1 text-xs text-zinc-500">
+            Cadastre em Admin → Construtoras. Nomes equivalentes (ex.: moura dubeux /
+            MOURA DUBEUX) usam o cadastro canônico ao salvar.
+          </p>
+        </div>
+        <div>
           <label htmlFor="ownerName" className="block text-sm font-medium text-zinc-700">
-            Nome do proprietário
+            Responsável da construtora
           </label>
           <input
             id="ownerName"
             name="ownerName"
             type="text"
-            defaultValue={d?.ownerName}
+            value={ownerName}
+            onChange={(e) => setOwnerName(e.target.value)}
             className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
-            placeholder="Nome completo"
+            placeholder="Nome do responsável"
           />
         </div>
         <div>
           <label htmlFor="ownerPhone" className="block text-sm font-medium text-zinc-700">
-            Telefone do proprietário
+            Telefone da construtora
           </label>
           <input
             id="ownerPhone"
             name="ownerPhone"
             type="tel"
-            defaultValue={d?.ownerPhone}
+            value={ownerPhone}
+            onChange={(e) => setOwnerPhone(e.target.value)}
             className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
             placeholder="(85) 99999-9999"
           />

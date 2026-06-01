@@ -77,7 +77,10 @@ export function ServicesSection() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
+      <div
+        id="servicos"
+        className="mx-auto max-w-7xl scroll-mt-24 px-4 py-12 sm:px-6 sm:py-16 sm:scroll-mt-28 lg:px-8 lg:py-20"
+      >
         <div className="grid grid-cols-1 gap-5 sm:gap-6 lg:auto-rows-fr lg:grid-cols-5 lg:gap-8">
           {services.map((service) => {
             const cardContent = (

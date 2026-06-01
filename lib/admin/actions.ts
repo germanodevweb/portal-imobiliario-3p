@@ -4,12 +4,25 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { parseYouTubeVideoId } from "@/lib/utils/youtube";
-import type { PropertyType } from "@/lib/generated/prisma/client";
+import type { PropertyType, Prisma } from "@/lib/generated/prisma/client";
 import { generatePropertyContent } from "@/lib/ai/property";
+import { formatPropertyTypeLabel } from "@/lib/utils/property-seo-editorial";
 import { uploadPropertyImage } from "@/lib/upload/cloudinary";
 import { revalidateBlogPagesReferencingProperty } from "@/lib/admin/revalidate-blog-for-property";
 import { propertyDetailRevalidateTag } from "@/lib/queries/properties";
 import { PROPERTY_GALLERY_MAX_IMAGES } from "@/lib/constants/property-gallery";
+import { validatePropertyPriceFormInput } from "@/lib/utils/property-price";
+import { parsePropertyAreaFormInput } from "@/lib/utils/property-area";
+import { resolveNeighborhoodForProperty } from "@/lib/admin/neighborhood-resolve";
+import { resolveCityForProperty } from "@/lib/admin/city-resolve";
+import { resolveBuilderForProperty } from "@/lib/admin/builder-resolve";
+import {
+  hasPropertyAreaRangeColumns,
+  hasPropertyBuilderColumns,
+  isPendingSchemaMigrationError,
+  resetSchemaMigrationCache,
+} from "@/lib/admin/schema-migration";
+import { slugifyNeighborhood } from "@/lib/utils/neighborhood-normalize";
 
 /** Next.js 16 exige o 2º argumento em `revalidateTag`; `"max"` alinha à invalidação imediata do cache do detalhe. */
 function revalidatePropertyDetailBySlug(slug: string) {
@@ -40,12 +53,48 @@ const PROPERTY_TYPE_TO_SLUG: Record<PropertyType, string> = {
 };
 
 function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+  return slugifyNeighborhood(text);
+}
+
+function omitBuilderFields<T extends { builderName?: string | null; builderSlug?: string | null }>(
+  data: T
+): Omit<T, "builderName" | "builderSlug"> {
+  const { builderName: _name, builderSlug: _slug, ...rest } = data;
+  return rest;
+}
+
+function omitAreaRangeFields<T extends { areaMin?: number | null; areaMax?: number | null }>(
+  data: T
+): Omit<T, "areaMin" | "areaMax"> {
+  const { areaMin: _min, areaMax: _max, ...rest } = data;
+  return rest;
+}
+
+type PropertyOptionalSchemaFields = {
+  builderName?: string | null;
+  builderSlug?: string | null;
+  areaMin?: number | null;
+  areaMax?: number | null;
+};
+
+async function preparePropertyPersistData<T extends PropertyOptionalSchemaFields>(
+  data: T
+): Promise<T> {
+  const [includeBuilder, includeAreaRange] = await Promise.all([
+    hasPropertyBuilderColumns(),
+    hasPropertyAreaRangeColumns(),
+  ]);
+
+  let result: T = data;
+  if (!includeBuilder) result = omitBuilderFields(result) as T;
+  if (!includeAreaRange) result = omitAreaRangeFields(result) as T;
+  return result;
+}
+
+async function createPropertyWithOptionalSchema(data: Prisma.PropertyCreateInput) {
+  return prisma.property.create({
+    data: await preparePropertyPersistData(data),
+  });
 }
 
 /** CEP brasileiro opcional: normaliza para NNNNN-NNN ou retorna erro. */
@@ -227,6 +276,20 @@ export type GeneratePropertyContentState = {
   error?: string;
 };
 
+function parseOptionalNonNegativeInt(raw: string | undefined): number | undefined {
+  if (!raw?.trim()) return undefined;
+  const parsed = parseInt(raw.trim(), 10);
+  if (Number.isNaN(parsed) || parsed < 0) return undefined;
+  return parsed;
+}
+
+function parseOptionalPositiveFloat(raw: string | undefined): number | undefined {
+  if (!raw?.trim()) return undefined;
+  const parsed = parseFloat(raw.trim());
+  if (Number.isNaN(parsed) || parsed <= 0) return undefined;
+  return parsed;
+}
+
 export async function generatePropertyContentAction(
   _prevState: GeneratePropertyContentState,
   formData: FormData
@@ -234,19 +297,48 @@ export async function generatePropertyContentAction(
   const prompt = (formData.get("aiPrompt") as string)?.trim() ?? "";
   const type = (formData.get("type") as string)?.trim() || undefined;
   const city = (formData.get("city") as string)?.trim() || undefined;
-  const bedroomsStr = (formData.get("bedrooms") as string)?.trim();
+  const state = (formData.get("state") as string)?.trim() || undefined;
+  const neighborhood = (formData.get("neighborhood") as string)?.trim() || undefined;
+  const builderName = (formData.get("builderName") as string)?.trim() || undefined;
+  const bedrooms = parseOptionalNonNegativeInt(
+    (formData.get("bedrooms") as string)?.trim()
+  );
+  const bathrooms = parseOptionalNonNegativeInt(
+    (formData.get("bathrooms") as string)?.trim()
+  );
+  const garage = parseOptionalNonNegativeInt((formData.get("garage") as string)?.trim());
+  const areaMin = parseOptionalPositiveFloat(
+    (formData.get("areaMin") as string)?.trim()
+  );
+  const areaMax = parseOptionalPositiveFloat(
+    (formData.get("areaMax") as string)?.trim()
+  );
   const priceStr = (formData.get("price") as string)?.trim();
-
-  const bedrooms = bedroomsStr ? parseInt(bedroomsStr, 10) : undefined;
   const price = priceStr ? Number(priceStr) : undefined;
+  const area = areaMin ?? areaMax;
 
   try {
     const result = await generatePropertyContent({
       prompt,
-      context: { type, city, bedrooms, price },
+      context: {
+        type,
+        typeLabel: formatPropertyTypeLabel(type),
+        city,
+        state,
+        neighborhood,
+        bedrooms,
+        bathrooms,
+        garage,
+        area,
+        areaMin,
+        areaMax,
+        price:
+          price != null && !Number.isNaN(price) && price > 0 ? price : undefined,
+        builderName,
+      },
     });
     return { title: result.title, description: result.description };
-  } catch (e) {
+  } catch {
     return {
       error: "Não foi possível gerar a sugestão. Tente novamente.",
     };
@@ -268,7 +360,7 @@ export async function createPropertyAction(
   const description = (formData.get("description") as string)?.trim() || null;
   const priceStr = (formData.get("price") as string)?.trim();
   const city = (formData.get("city") as string)?.trim();
-  const neighborhood = (formData.get("neighborhood") as string)?.trim() || null;
+  const neighborhoodRaw = (formData.get("neighborhood") as string)?.trim() || null;
   const street = (formData.get("street") as string)?.trim() || null;
   const streetNumber = (formData.get("streetNumber") as string)?.trim() || null;
   const state = (formData.get("state") as string)?.trim();
@@ -281,12 +373,14 @@ export async function createPropertyAction(
   const bedrooms = parseInt((formData.get("bedrooms") as string) || "0", 10);
   const bathrooms = parseInt((formData.get("bathrooms") as string) || "0", 10);
   const garage = parseInt((formData.get("garage") as string) || "0", 10);
-  const areaStr = (formData.get("area") as string)?.trim();
+  const areaMinStr = (formData.get("areaMin") as string) ?? "";
+  const areaMaxStr = (formData.get("areaMax") as string) ?? "";
   const imagesDataStr = (formData.get("imagesData") as string)?.trim();
   const imagesData = parseImagesData(imagesDataStr);
   const status = (formData.get("status") as string)?.trim();
   const ownerName = (formData.get("ownerName") as string)?.trim() || null;
   const ownerPhone = (formData.get("ownerPhone") as string)?.trim() || null;
+  const builderNameRaw = (formData.get("builderName") as string)?.trim() || null;
   const isFeatured = formData.get("isFeatured") === "on";
   const isLaunch = formData.get("isLaunch") === "on";
   const isOpportunity = formData.get("isOpportunity") === "on";
@@ -296,10 +390,9 @@ export async function createPropertyAction(
   if (slugInput && !/^[a-z0-9-]+$/.test(slugInput)) {
     errors.slug = "Slug deve conter apenas letras minúsculas, números e hífens";
   }
-  if (!priceStr) {
-    errors.price = "Preço é obrigatório";
-  } else if (isNaN(Number(priceStr)) || Number(priceStr) <= 0) {
-    errors.price = "Preço deve ser um número positivo";
+  const priceValidation = validatePropertyPriceFormInput(priceStr ?? "");
+  if (!priceValidation.ok) {
+    errors.price = priceValidation.error;
   }
   if (!city) errors.city = "Cidade é obrigatória";
   if (!state) errors.state = "Estado é obrigatório";
@@ -315,8 +408,9 @@ export async function createPropertyAction(
   if (bedrooms < 0) errors.bedrooms = "Deve ser 0 ou mais";
   if (bathrooms < 0) errors.bathrooms = "Deve ser 0 ou mais";
   if (garage < 0) errors.garage = "Deve ser 0 ou mais";
-  if (areaStr && (isNaN(Number(areaStr)) || Number(areaStr) < 0)) {
-    errors.area = "Área deve ser um número positivo";
+  const areaValidation = parsePropertyAreaFormInput(areaMinStr, areaMaxStr);
+  if (!areaValidation.ok) {
+    Object.assign(errors, areaValidation.errors);
   }
   if (imagesData.length > PROPERTY_GALLERY_MAX_IMAGES) {
     errors.images = `Máximo de ${PROPERTY_GALLERY_MAX_IMAGES} fotos por imóvel. Remova imagens antes de salvar.`;
@@ -326,15 +420,35 @@ export async function createPropertyAction(
     return { errors };
   }
 
-  const price = Number(priceStr);
-  const area = areaStr ? Number(areaStr) : null;
+  if (!priceValidation.ok) {
+    return { errors: { price: priceValidation.error } };
+  }
+
+  const price = priceValidation.price;
+  if (!areaValidation.ok) {
+    return { errors: areaValidation.errors };
+  }
+  const { area, areaMin, areaMax } = areaValidation;
   const propertyType = typeStr as PropertyType;
   const propertyTypeSlug = PROPERTY_TYPE_TO_SLUG[propertyType];
   const isSold = status === "VENDIDO";
   const postalCode = postalParsed.value;
 
-  const citySlug = slugify(city);
-  const neighborhoodSlug = neighborhood ? slugify(neighborhood) : null;
+  const resolvedCity = await resolveCityForProperty({ city, state });
+  const citySlug = resolvedCity.citySlug;
+  const resolvedNeighborhood = await resolveNeighborhoodForProperty({
+    neighborhood: neighborhoodRaw,
+    city: resolvedCity.city,
+    state: resolvedCity.state,
+  });
+  const neighborhood = resolvedNeighborhood.neighborhood;
+  const neighborhoodSlug = resolvedNeighborhood.neighborhoodSlug;
+
+  const resolvedBuilder = await resolveBuilderForProperty({
+    builderName: builderNameRaw,
+  });
+  const builderName = resolvedBuilder.builderName;
+  const builderSlug = resolvedBuilder.builderSlug;
 
   const baseSlug =
     slugInput ||
@@ -351,41 +465,43 @@ export async function createPropertyAction(
   const featuredImageAlt = primaryImage?.alt ?? null;
   const galleryImages = visibleImages.map((i) => i.url);
 
-  const property = await prisma.property.create({
-    data: {
-      slug,
-      title,
-      description,
-      transactionType: "SALE",
-      price,
-      city,
-      neighborhood,
-      street,
-      streetNumber,
-      state,
-      country,
-      postalCode,
-      citySlug,
-      neighborhoodSlug,
-      stateSlug: slugify(state),
-      propertyTypeSlug,
-      type: propertyType,
-      bedrooms: bedrooms || 0,
-      bathrooms: bathrooms || 0,
-      garage: garage || 0,
-      area,
-      featuredImage,
-      featuredImageAlt,
-      galleryImages,
-      isSold,
-      isFeatured,
-      isLaunch,
-      isOpportunity,
-      published: false,
-      ownerName,
-      ownerPhone,
-      youtubeVideoId,
-    },
+  const property = await createPropertyWithOptionalSchema({
+    slug,
+    title,
+    description,
+    transactionType: "SALE",
+    price,
+    city: resolvedCity.city,
+    neighborhood,
+    street,
+    streetNumber,
+    state: resolvedCity.state,
+    country,
+    postalCode,
+    citySlug,
+    neighborhoodSlug,
+    stateSlug: resolvedCity.stateSlug,
+    propertyTypeSlug,
+    type: propertyType,
+    bedrooms: bedrooms || 0,
+    bathrooms: bathrooms || 0,
+    garage: garage || 0,
+    area,
+    areaMin,
+    areaMax,
+    featuredImage,
+    featuredImageAlt,
+    galleryImages,
+    isSold,
+    isFeatured,
+    isLaunch,
+    isOpportunity,
+    published: false,
+    ownerName,
+    ownerPhone,
+    builderName,
+    builderSlug,
+    youtubeVideoId,
   });
 
   for (let i = 0; i < validImages.length; i++) {
@@ -523,7 +639,7 @@ export async function updatePropertyAction(
   const description = (formData.get("description") as string)?.trim() || null;
   const priceStr = (formData.get("price") as string)?.trim();
   const city = (formData.get("city") as string)?.trim();
-  const neighborhood = (formData.get("neighborhood") as string)?.trim() || null;
+  const neighborhoodRaw = (formData.get("neighborhood") as string)?.trim() || null;
   const street = (formData.get("street") as string)?.trim() || null;
   const streetNumber = (formData.get("streetNumber") as string)?.trim() || null;
   const state = (formData.get("state") as string)?.trim();
@@ -536,12 +652,14 @@ export async function updatePropertyAction(
   const bedrooms = parseInt((formData.get("bedrooms") as string) || "0", 10);
   const bathrooms = parseInt((formData.get("bathrooms") as string) || "0", 10);
   const garage = parseInt((formData.get("garage") as string) || "0", 10);
-  const areaStr = (formData.get("area") as string)?.trim();
+  const areaMinStr = (formData.get("areaMin") as string) ?? "";
+  const areaMaxStr = (formData.get("areaMax") as string) ?? "";
   const imagesDataStr = (formData.get("imagesData") as string)?.trim();
   const imagesData = parseImagesData(imagesDataStr);
   const status = (formData.get("status") as string)?.trim();
   const ownerName = (formData.get("ownerName") as string)?.trim() || null;
   const ownerPhone = (formData.get("ownerPhone") as string)?.trim() || null;
+  const builderNameRaw = (formData.get("builderName") as string)?.trim() || null;
   const isFeatured = formData.get("isFeatured") === "on";
   const isLaunch = formData.get("isLaunch") === "on";
   const isOpportunity = formData.get("isOpportunity") === "on";
@@ -551,10 +669,9 @@ export async function updatePropertyAction(
   if (slugInput && !/^[a-z0-9-]+$/.test(slugInput)) {
     errors.slug = "Slug deve conter apenas letras minúsculas, números e hífens";
   }
-  if (!priceStr) {
-    errors.price = "Preço é obrigatório";
-  } else if (isNaN(Number(priceStr)) || Number(priceStr) <= 0) {
-    errors.price = "Preço deve ser um número positivo";
+  const priceValidation = validatePropertyPriceFormInput(priceStr ?? "");
+  if (!priceValidation.ok) {
+    errors.price = priceValidation.error;
   }
   if (!city) errors.city = "Cidade é obrigatória";
   if (!state) errors.state = "Estado é obrigatório";
@@ -570,8 +687,9 @@ export async function updatePropertyAction(
   if (bedrooms < 0) errors.bedrooms = "Deve ser 0 ou mais";
   if (bathrooms < 0) errors.bathrooms = "Deve ser 0 ou mais";
   if (garage < 0) errors.garage = "Deve ser 0 ou mais";
-  if (areaStr && (isNaN(Number(areaStr)) || Number(areaStr) < 0)) {
-    errors.area = "Área deve ser um número positivo";
+  const areaValidation = parsePropertyAreaFormInput(areaMinStr, areaMaxStr);
+  if (!areaValidation.ok) {
+    Object.assign(errors, areaValidation.errors);
   }
   if (imagesData.length > PROPERTY_GALLERY_MAX_IMAGES) {
     errors.images = `Máximo de ${PROPERTY_GALLERY_MAX_IMAGES} fotos por imóvel. Remova imagens antes de salvar.`;
@@ -589,15 +707,35 @@ export async function updatePropertyAction(
     return { errors: { _form: "Imóvel não encontrado" } };
   }
 
-  const price = Number(priceStr);
-  const area = areaStr ? Number(areaStr) : null;
+  if (!priceValidation.ok) {
+    return { errors: { price: priceValidation.error } };
+  }
+
+  const price = priceValidation.price;
+  if (!areaValidation.ok) {
+    return { errors: areaValidation.errors };
+  }
+  const { area, areaMin, areaMax } = areaValidation;
   const propertyType = typeStr as PropertyType;
   const propertyTypeSlug = PROPERTY_TYPE_TO_SLUG[propertyType];
   const isSold = status === "VENDIDO";
   const postalCode = postalParsed.value;
 
-  const citySlug = slugify(city);
-  const neighborhoodSlug = neighborhood ? slugify(neighborhood) : null;
+  const resolvedCity = await resolveCityForProperty({ city, state });
+  const citySlug = resolvedCity.citySlug;
+  const resolvedNeighborhood = await resolveNeighborhoodForProperty({
+    neighborhood: neighborhoodRaw,
+    city: resolvedCity.city,
+    state: resolvedCity.state,
+  });
+  const neighborhood = resolvedNeighborhood.neighborhood;
+  const neighborhoodSlug = resolvedNeighborhood.neighborhoodSlug;
+
+  const resolvedBuilder = await resolveBuilderForProperty({
+    builderName: builderNameRaw,
+  });
+  const builderName = resolvedBuilder.builderName;
+  const builderSlug = resolvedBuilder.builderSlug;
 
   const baseSlug =
     slugInput ||
@@ -617,60 +755,81 @@ export async function updatePropertyAction(
   const featuredImageAlt = primaryImage?.alt ?? null;
   const galleryImages = visibleImages.map((i) => i.url);
 
-  await prisma.$transaction(async (tx) => {
-    await tx.property.update({
-      where: { id: propertyId },
-      data: {
-        slug,
-        title,
-        description,
-        price,
-        city,
-        neighborhood,
-        street,
-        streetNumber,
-        state,
-        country,
-        postalCode,
-        citySlug,
-        neighborhoodSlug,
-        stateSlug: slugify(state),
-        propertyTypeSlug,
-        type: propertyType,
-        bedrooms: bedrooms || 0,
-        bathrooms: bathrooms || 0,
-        garage: garage || 0,
-        area,
-        featuredImage,
-        featuredImageAlt,
-        galleryImages,
-        isSold,
-        isFeatured,
-        isLaunch,
-        isOpportunity,
-        ownerName,
-        ownerPhone,
-        youtubeVideoId,
-      },
-    });
+  const updateData = {
+    slug,
+    title,
+    description,
+    price,
+    city: resolvedCity.city,
+    neighborhood,
+    street,
+    streetNumber,
+    state: resolvedCity.state,
+    country,
+    postalCode,
+    citySlug,
+    neighborhoodSlug,
+    stateSlug: resolvedCity.stateSlug,
+    propertyTypeSlug,
+    type: propertyType,
+    bedrooms: bedrooms || 0,
+    bathrooms: bathrooms || 0,
+    garage: garage || 0,
+    area,
+    areaMin,
+    areaMax,
+    featuredImage,
+    featuredImageAlt,
+    galleryImages,
+    isSold,
+    isFeatured,
+    isLaunch,
+    isOpportunity,
+    ownerName,
+    ownerPhone,
+    builderName,
+    builderSlug,
+    youtubeVideoId,
+  };
 
-    await tx.propertyImage.deleteMany({ where: { propertyId } });
+  const persistedUpdateData = await preparePropertyPersistData(updateData);
 
-    for (let i = 0; i < validImages.length; i++) {
-      const img = validImages[i];
-      await tx.propertyImage.create({
-        data: {
-          propertyId,
-          url: img.url,
-          alt: img.alt,
-          environment: img.environment,
-          isPrimary: img.isPrimary,
-          isHidden: img.isHidden,
-          sortOrder: i,
-        },
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.property.update({
+        where: { id: propertyId },
+        data: persistedUpdateData,
       });
+
+      await tx.propertyImage.deleteMany({ where: { propertyId } });
+
+      for (let i = 0; i < validImages.length; i++) {
+        const img = validImages[i];
+        await tx.propertyImage.create({
+          data: {
+            propertyId,
+            url: img.url,
+            alt: img.alt,
+            environment: img.environment,
+            isPrimary: img.isPrimary,
+            isHidden: img.isHidden,
+            sortOrder: i,
+          },
+        });
+      }
+    });
+  } catch (err) {
+    if (isPendingSchemaMigrationError(err)) {
+      resetSchemaMigrationCache();
+      return {
+        errors: {
+          _form:
+            "O banco de dados está desatualizado (migration de construtoras incompleta). Aplique o SQL no Supabase e reinicie o servidor de desenvolvimento.",
+        },
+      };
     }
-  });
+    throw err;
+  }
 
   revalidatePath("/admin/imoveis");
   revalidatePath(`/admin/imoveis/${propertyId}/editar`);

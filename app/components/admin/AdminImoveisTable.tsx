@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { AdminPropertyListItem } from "@/lib/admin/queries";
 import { PropertyRowActions } from "@/app/components/admin/PropertyRowActions";
 import { AdminPropertyThumbnail } from "@/app/components/admin/AdminPropertyThumbnail";
+import { formatPropertyPriceBrl } from "@/lib/utils/property-price";
 
 /** URL absoluta para miniatura no admin (sem marca d’água — evita URL inválida se overlay não existir). */
 function thumbnailSrc(url: string | null): string | null {
@@ -19,17 +20,6 @@ type Props = {
   /** Quando true, exibe mensagem de "nenhum resultado" em vez de "nenhum imóvel cadastrado" */
   isFiltered?: boolean;
 };
-
-function formatPrice(price: string): string {
-  const n = Number(price);
-  if (isNaN(n)) return price;
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(n);
-}
 
 function formatDate(date: Date): string {
   return new Intl.DateTimeFormat("pt-BR", {
@@ -128,8 +118,11 @@ function AdminImovelCard({ property }: { property: AdminPropertyListItem }) {
             </p>
           )}
           <p className="mt-2 text-sm text-zinc-600">{locationLabel(property)}</p>
+          {property.builderName ? (
+            <p className="mt-1 text-sm text-zinc-500">{property.builderName}</p>
+          ) : null}
           <p className="mt-2 text-lg font-semibold tabular-nums text-zinc-900">
-            {formatPrice(property.price)}
+            {formatPropertyPriceBrl(property.price)}
           </p>
         </div>
 
@@ -210,6 +203,12 @@ export function AdminImoveisTable({ properties, isFiltered }: Props) {
                   scope="col"
                   className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600"
                 >
+                  Construtora
+                </th>
+                <th
+                  scope="col"
+                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600"
+                >
                   Preço
                 </th>
                 <th
@@ -273,9 +272,14 @@ export function AdminImoveisTable({ properties, isFiltered }: Props) {
                       {locationLabel(property)}
                     </td>
                     <td
+                      className={`${adminTableTd(property.published)} text-sm text-zinc-600`}
+                    >
+                      {property.builderName ?? "—"}
+                    </td>
+                    <td
                       className={`${adminTableTd(property.published)} text-sm font-medium tabular-nums text-zinc-900`}
                     >
-                      {formatPrice(property.price)}
+                      {formatPropertyPriceBrl(property.price)}
                     </td>
                     <td className={adminTableTd(property.published)}>
                       <PropertyStatusBadges property={property} />

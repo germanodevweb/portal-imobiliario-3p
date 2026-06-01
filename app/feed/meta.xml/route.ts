@@ -35,6 +35,8 @@ export async function GET() {
           bedrooms: p.bedrooms,
           bathrooms: p.bathrooms,
           area: p.area,
+          areaMin: p.areaMin,
+          areaMax: p.areaMax,
         });
 
       // Meta aceita descricoes de ate 9 999 caracteres; limitamos a 5 000 por seguranca

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getOriginDisplayLabel } from "@/lib/constants/leads";
+import { formatPhoneForDisplay } from "@/lib/utils/phone";
 import { LeadStatusSelect } from "@/app/components/admin/LeadStatusSelect";
 import { LeadPriceRangeEditor } from "@/app/components/admin/LeadPriceRangeEditor";
 import { LeadNotesEditor } from "@/app/components/admin/LeadNotesEditor";
@@ -66,7 +67,7 @@ export default async function AdminLeadDetailPage({
               Telefone
             </dt>
             <dd className="mt-1 text-sm font-medium text-zinc-900">
-              {lead.phone}
+              {formatPhoneForDisplay(lead.phone)}
             </dd>
           </div>
           <div>

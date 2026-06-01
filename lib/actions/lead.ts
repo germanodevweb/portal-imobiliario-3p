@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { validateBrazilianWhatsappField } from "@/lib/utils/phone";
 
 // ---------------------------------------------------------------------------
 // Tipos
@@ -32,11 +33,16 @@ export async function submitLeadFromSiteAction(
   const errors: Record<string, string> = {};
 
   const name = (formData.get("name") as string)?.trim();
-  const phone = (formData.get("phone") as string)?.trim();
+  const phoneRaw = (formData.get("phone") as string)?.trim();
   const desiredPriceRange = (formData.get("desiredPriceRange") as string)?.trim();
 
   if (!name) errors.name = "Nome é obrigatório";
-  if (!phone) errors.phone = "Telefone é obrigatório";
+
+  const phoneValidation = validateBrazilianWhatsappField(phoneRaw ?? "");
+  if (!phoneValidation.ok) {
+    errors.phone = phoneValidation.error;
+  }
+
   if (!desiredPriceRange) {
     errors.desiredPriceRange = "Faixa de valor é obrigatória";
   } else if (
@@ -51,10 +57,14 @@ export async function submitLeadFromSiteAction(
     return { errors };
   }
 
+  if (!phoneValidation.ok) {
+    return { errors: { phone: phoneValidation.error } };
+  }
+
   await prisma.lead.create({
     data: {
       name,
-      phone,
+      phone: phoneValidation.normalized,
       desiredPriceRange,
       notes: "Lead captado pelo site",
       origin: "site",

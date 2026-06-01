@@ -10,6 +10,7 @@ import {
   LEAD_PRICE_RANGE_OPTIONS,
   MANUAL_SOURCE_OPTIONS,
 } from "@/lib/constants/leads";
+import { WHATSAPP_PHONE_ERROR_MESSAGE, WHATSAPP_PHONE_EXAMPLE } from "@/lib/utils/phone";
 
 const initialState: CreateLeadState = {};
 
@@ -58,7 +59,7 @@ export function AdminLeadForm() {
               htmlFor="phone"
               className="block text-sm font-medium text-zinc-700"
             >
-              Telefone <span className="text-red-500">*</span>
+              WhatsApp <span className="text-red-500">*</span>
             </label>
             <input
               id="phone"
@@ -66,9 +67,12 @@ export function AdminLeadForm() {
               type="tel"
               required
               autoComplete="tel"
+              inputMode="tel"
+              maxLength={16}
               disabled={isPending}
               className="mt-1 block w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none focus:ring-2 focus:ring-green-600/20 disabled:opacity-50"
-              placeholder="(85) 99999-9999"
+              placeholder={WHATSAPP_PHONE_EXAMPLE}
+              title={WHATSAPP_PHONE_ERROR_MESSAGE}
             />
             <FieldError message={errors.phone} />
           </div>
