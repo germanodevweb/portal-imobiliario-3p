@@ -1,3 +1,4 @@
+
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
@@ -54,16 +55,32 @@ export default async function RootLayout({
   const lang = getLangFromPath(pathname);
 
   const organizationJsonLd = serializeJsonLd(buildOrganizationJsonLd());
-
   return (
     <html lang={lang} className="overflow-x-clip">
       <body
         className={`${geistSans.variable} ${geistMono.variable} min-h-dvh antialiased`}
       >
         <script
+          async
+          src="https://www.googletagmanager.com/gtag/js?id=G-KYHCRPZ1C4"
+        />
+  
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-KYHCRPZ1C4');
+            `,
+          }}
+        />
+  
+        <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: organizationJsonLd }}
         />
+  
         {children}
       </body>
     </html>
