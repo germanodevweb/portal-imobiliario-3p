@@ -7,6 +7,7 @@ import { parseYouTubeVideoId } from "@/lib/utils/youtube";
 import type { PropertyType, Prisma } from "@/lib/generated/prisma/client";
 import { generatePropertyContent } from "@/lib/ai/property";
 import { formatPropertyTypeLabel } from "@/lib/utils/property-seo-editorial";
+import { fillMissingImageAlts } from "@/lib/utils/featuredImageAlt";
 import { uploadPropertyImage } from "@/lib/upload/cloudinary";
 import { revalidateBlogPagesReferencingProperty } from "@/lib/admin/revalidate-blog-for-property";
 import { propertyDetailRevalidateTag } from "@/lib/queries/properties";
@@ -455,7 +456,15 @@ export async function createPropertyAction(
     (slugify(title) || `imovel-${propertyTypeSlug}-${citySlug}-${Date.now().toString(36)}`);
   const slug = await ensureUniqueSlug(baseSlug);
 
-  const validImages = normalizePropertyImagesForDb(imagesData);
+  const validImages = fillMissingImageAlts(
+    normalizePropertyImagesForDb(imagesData),
+    {
+      type: propertyType,
+      neighborhood,
+      city: resolvedCity.city,
+      transactionType: "SALE",
+    }
+  );
   const visibleImages = validImages
     .filter((i) => !i.isHidden)
     .sort((a, b) => a.sortOrder - b.sortOrder);
@@ -701,7 +710,7 @@ export async function updatePropertyAction(
 
   const existing = await prisma.property.findUnique({
     where: { id: propertyId },
-    select: { id: true, slug: true },
+    select: { id: true, slug: true, transactionType: true },
   });
   if (!existing) {
     return { errors: { _form: "Imóvel não encontrado" } };
@@ -745,7 +754,15 @@ export async function updatePropertyAction(
       ? existing.slug
       : await ensureUniqueSlugForEdit(baseSlug, propertyId);
 
-  const validImages = normalizePropertyImagesForDb(imagesData);
+  const validImages = fillMissingImageAlts(
+    normalizePropertyImagesForDb(imagesData),
+    {
+      type: propertyType,
+      neighborhood,
+      city: resolvedCity.city,
+      transactionType: existing.transactionType,
+    }
+  );
   const visibleImages = validImages
     .filter((i) => !i.isHidden)
     .sort((a, b) => a.sortOrder - b.sortOrder);

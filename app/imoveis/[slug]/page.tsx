@@ -141,6 +141,9 @@ export default async function ImovelPage({ params }: PageProps) {
   const galleryItems = buildPropertyGalleryItems({
     title: property.title,
     city: property.city,
+    neighborhood: property.neighborhood,
+    type: property.type,
+    transactionType: property.transactionType,
     featuredImage: property.featuredImage,
     featuredImageAlt: property.featuredImageAlt,
     galleryImages: property.galleryImages,

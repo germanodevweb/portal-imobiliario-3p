@@ -193,7 +193,9 @@ export function PropertyImageGallery({
       value === OTHER_ENVIRONMENT_VALUE
         ? ""
         : IMAGE_ENVIRONMENTS.find((e) => e.value === value)?.label ?? "";
-    const alt = env ? suggestAlt(env) : "";
+    const suggested = env ? suggestAlt(env) : "";
+    const currentAlt = images[index]?.alt.trim() ?? "";
+    const alt = currentAlt ? currentAlt : suggested;
     updateImage(index, {
       environment: value,
       environmentCustom: value === OTHER_ENVIRONMENT_VALUE ? "" : "",
@@ -202,7 +204,9 @@ export function PropertyImageGallery({
   }
 
   function handleEnvironmentCustomChange(index: number, value: string) {
-    const alt = value.trim() ? suggestAlt(value) : "";
+    const suggested = value.trim() ? suggestAlt(value) : "";
+    const currentAlt = images[index]?.alt.trim() ?? "";
+    const alt = currentAlt ? currentAlt : suggested;
     updateImage(index, { environmentCustom: value, alt });
   }
 
@@ -368,7 +372,7 @@ export function PropertyImageGallery({
                       onChange={(e) => updateImage(index, { alt: e.target.value })}
                       placeholder={
                         img.environment || img.environmentCustom
-                          ? "Preencha tipo e cidade para gerar automaticamente"
+                          ? "Gerado ao salvar se vazio (tipo, bairro, cidade e ambiente)"
                           : "Texto alternativo"
                       }
                       className="block flex-1 rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900 placeholder:text-zinc-500"

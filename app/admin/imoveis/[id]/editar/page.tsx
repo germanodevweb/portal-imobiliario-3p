@@ -1,6 +1,4 @@
 import { notFound } from "next/navigation";
-import { headers } from "next/headers";
-import { connection } from "next/server";
 import Link from "next/link";
 import { propertyPriceFormDefaultValue } from "@/lib/utils/property-price";
 import { propertyAreaFormDefaults } from "@/lib/utils/property-area";
@@ -14,7 +12,6 @@ import { getRegisteredNeighborhoodOptions } from "@/lib/admin/neighborhood-queri
 import { getRegisteredBuilderOptions } from "@/lib/admin/builder-queries";
 import { getRegisteredCityOptions } from "@/lib/admin/city-queries";
 import { getAdminPropertyForEdit } from "@/lib/admin/queries";
-import { resolveAdminPropertyEditId } from "@/lib/admin/route-params";
 import { isPendingSchemaMigrationError } from "@/lib/admin/schema-migration";
 
 export const dynamic = "force-dynamic";
@@ -54,14 +51,8 @@ function mapImagesToGalleryItems(
  * Server Component — busca dados no servidor e renderiza o formulário (Client Component).
  */
 export default async function AdminImoveisEditarPage({ params }: PageProps) {
-  await connection();
-
-  const { id: paramId } = await params;
-  const headerList = await headers();
-  const pathname = headerList.get("x-pathname");
-  const propertyId = resolveAdminPropertyEditId(paramId, pathname);
-
-  if (!propertyId) notFound();
+  const { id: propertyId } = await params;
+  if (!propertyId?.trim()) notFound();
 
   let property: Awaited<ReturnType<typeof getAdminPropertyForEdit>>;
   try {

@@ -18,6 +18,10 @@ import {
   normalizePropertyImagePrimaryBySortOrder,
   syncPropertyGalleryFieldsFromImages,
 } from "../lib/property/sync-gallery-fields";
+import {
+  generateFeaturedImageAlt,
+  inferEnvironmentFromText,
+} from "../lib/utils/featuredImageAlt";
 
 const XML_PATH = path.join(process.cwd(), "data", "banco_de_dados.xml");
 const BATCH_SIZE = 100;
@@ -123,7 +127,14 @@ async function main() {
 
     const properties = await prisma.property.findMany({
       where: { externalId: { in: codigos } },
-      select: { id: true, externalId: true },
+      select: {
+        id: true,
+        externalId: true,
+        type: true,
+        city: true,
+        neighborhood: true,
+        transactionType: true,
+      },
     });
     const propByCodigo = new Map(properties.map((p) => [p.externalId ?? "", p]));
 
@@ -161,10 +172,30 @@ async function main() {
             0,
             item.urls.findIndex((x) => x.url === u.url)
           );
+
+          let alt = u.legenda;
+          let environment: string | null = null;
+
+          if (alt?.trim()) {
+            environment = inferEnvironmentFromText(alt);
+          } else {
+            environment = inferEnvironmentFromText(u.url);
+            if (environment) {
+              alt = generateFeaturedImageAlt({
+                type: property.type,
+                neighborhood: property.neighborhood ?? "",
+                city: property.city,
+                environment,
+                transactionType: property.transactionType,
+              });
+            }
+          }
+
           return {
             propertyId: property.id,
             url: u.url,
-            alt: u.legenda,
+            alt: alt?.trim() ? alt.trim() : null,
+            environment,
             sortOrder,
             isPrimary: u.url === firstUrl,
           };

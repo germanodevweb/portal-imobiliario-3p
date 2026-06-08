@@ -9,6 +9,10 @@
  * 4. Sem PropertyImage: fallback featuredImage + galleryImages (legado)
  */
 
+import {
+  generateFeaturedImageAlt,
+  resolvePropertyImageAlt,
+} from "@/lib/utils/featuredImageAlt";
 import { normalizePublicImageUrl } from "@/lib/utils/normalize-image-url";
 
 export type PropertyGalleryItem = {
@@ -19,11 +23,46 @@ export type PropertyGalleryItem = {
 type PropertyLike = {
   title: string;
   city: string;
+  neighborhood: string | null;
+  type: string;
+  transactionType: "SALE" | "RENT";
   featuredImage: string | null;
   featuredImageAlt: string | null;
   galleryImages: string[];
-  images: readonly { url: string; alt: string | null }[];
+  images: readonly {
+    url: string;
+    alt: string | null;
+    environment: string | null;
+  }[];
 };
+
+function resolveGalleryItemAlt(
+  property: PropertyLike,
+  img: { alt: string | null; environment: string | null },
+  fallback: string
+): string {
+  const generated = img.environment?.trim()
+    ? generateFeaturedImageAlt({
+        type: property.type,
+        neighborhood: property.neighborhood ?? "",
+        city: property.city,
+        environment: img.environment,
+        transactionType: property.transactionType,
+      })
+    : "";
+
+  const resolved = resolvePropertyImageAlt(img.alt, {
+    type: property.type,
+    neighborhood: property.neighborhood ?? "",
+    city: property.city,
+    environment: img.environment ?? "",
+    transactionType: property.transactionType,
+  });
+
+  if (img.alt?.trim()) return resolved;
+  if (generated) return generated;
+  return fallback;
+}
 
 function dedupeByUrl(items: PropertyGalleryItem[]): PropertyGalleryItem[] {
   const seen = new Set<string>();
@@ -47,7 +86,11 @@ export function buildPropertyGalleryItems(property: PropertyLike): PropertyGalle
   if (property.images.length > 0) {
     const fromDb: PropertyGalleryItem[] = property.images.map((img, i) => ({
       url: normalizePublicImageUrl(img.url),
-      alt: img.alt?.trim() || `${baseAlt} — foto ${i + 1}`,
+      alt: resolveGalleryItemAlt(
+        property,
+        img,
+        `${baseAlt} — foto ${i + 1}`
+      ),
     }));
 
     const featured = property.featuredImage?.trim();
@@ -60,7 +103,13 @@ export function buildPropertyGalleryItems(property: PropertyLike): PropertyGalle
     if (idx === -1) {
       const capa: PropertyGalleryItem = {
         url: featuredNorm,
-        alt: property.featuredImageAlt?.trim() || baseAlt,
+        alt: resolvePropertyImageAlt(property.featuredImageAlt, {
+          type: property.type,
+          neighborhood: property.neighborhood ?? "",
+          city: property.city,
+          environment: "",
+          transactionType: property.transactionType,
+        }) || baseAlt,
       };
       return dedupeByUrl([capa, ...fromDb]);
     }
@@ -82,7 +131,13 @@ export function buildPropertyGalleryItems(property: PropertyLike): PropertyGalle
   if (property.featuredImage?.trim()) {
     push(
       property.featuredImage,
-      property.featuredImageAlt?.trim() || baseAlt
+      resolvePropertyImageAlt(property.featuredImageAlt, {
+        type: property.type,
+        neighborhood: property.neighborhood ?? "",
+        city: property.city,
+        environment: "",
+        transactionType: property.transactionType,
+      }) || baseAlt
     );
   }
 

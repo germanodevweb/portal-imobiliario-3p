@@ -408,6 +408,7 @@ export async function getAvailableTypeCityPairs(): Promise<
 export type PropertyImageWithAlt = {
   url: string;
   alt: string | null;
+  environment: string | null;
 };
 
 export type PropertyDetail = {
@@ -415,6 +416,7 @@ export type PropertyDetail = {
   slug: string;
   title: string;
   description: string | null;
+  type: "CASA" | "APARTAMENTO" | "COBERTURA" | "TERRENO" | "LOTE" | "FAZENDA" | "COMERCIAL" | "STUDIO";
   transactionType: "SALE" | "RENT";
   price: string;
   city: string;
@@ -464,6 +466,7 @@ async function fetchPublishedPropertyBySlug(
       slug: true,
       title: true,
       description: true,
+      type: true,
       transactionType: true,
       price: true,
       city: true,
@@ -486,7 +489,7 @@ async function fetchPublishedPropertyBySlug(
       galleryImages: true,
       images: {
         where: { isHidden: false },
-        select: { url: true, alt: true },
+        select: { url: true, alt: true, environment: true },
         orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
       },
       youtubeVideoId: true,
