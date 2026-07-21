@@ -49,6 +49,17 @@ function adminTableTd(published: boolean, align: "top" | "middle" = "middle"): s
     : `px-4 py-3 ${alignCls} bg-zinc-100/60 transition-colors duration-200 group-hover:bg-green-50`;
 }
 
+/** Coluna de ações fixa à direita — botões 2×2 sempre visíveis ao rolar a tabela */
+function adminTableActionsTd(published: boolean): string {
+  const bg = published
+    ? "bg-white group-hover:bg-green-50"
+    : "bg-zinc-100/60 group-hover:bg-green-50";
+  return `sticky right-0 z-10 w-[6.5rem] min-w-[6.5rem] max-w-[6.5rem] px-2 py-3 align-top shadow-[-8px_0_16px_-12px_rgba(0,0,0,0.2)] transition-colors duration-200 ${bg}`;
+}
+
+const adminTableActionsTh =
+  "sticky right-0 z-20 w-[6.5rem] min-w-[6.5rem] max-w-[6.5rem] bg-zinc-50 px-2 py-3 shadow-[-8px_0_16px_-12px_rgba(0,0,0,0.12)]";
+
 function PropertyStatusBadges({ property }: { property: AdminPropertyListItem }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
@@ -148,18 +159,14 @@ function AdminImovelCard({ property }: { property: AdminPropertyListItem }) {
           <PropertyVideoBadge youtubeVideoId={property.youtubeVideoId} />
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-zinc-100 pt-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-          <p className="shrink-0 text-sm text-zinc-500">
-            {formatDate(property.updatedAt)}
-          </p>
-          <div className="min-w-0 w-full sm:max-w-xl sm:flex-1">
-            <PropertyRowActions
-              propertyId={property.id}
-              slug={property.slug}
-              title={property.title}
-              published={property.published}
-            />
-          </div>
+        <div className="space-y-3 border-t border-zinc-100 pt-3">
+          <p className="text-sm text-zinc-500">{formatDate(property.updatedAt)}</p>
+          <PropertyRowActions
+            propertyId={property.id}
+            slug={property.slug}
+            title={property.title}
+            published={property.published}
+          />
         </div>
       </div>
     </article>
@@ -201,10 +208,10 @@ export function AdminImoveisTable({ properties, isFiltered }: Props) {
         ))}
       </div>
 
-      {/* Desktop: tabela */}
-      <div className="hidden overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm lg:block">
+      {/* Desktop: tabela — coluna de ações sticky à direita */}
+      <div className="hidden rounded-xl border border-zinc-200 bg-white shadow-sm lg:block">
         <div className="overflow-x-auto">
-          <table className="min-w-full border-collapse">
+          <table className="w-full min-w-[64rem] border-collapse">
             <thead className="border-b-2 border-zinc-200 bg-zinc-50">
               <tr>
                 <th
@@ -249,10 +256,7 @@ export function AdminImoveisTable({ properties, isFiltered }: Props) {
                 >
                   Atualizado
                 </th>
-                <th
-                  scope="col"
-                  className="relative min-w-[18rem] px-4 py-3 xl:min-w-[20rem]"
-                >
+                <th scope="col" className={adminTableActionsTh}>
                   <span className="sr-only">Ações</span>
                 </th>
               </tr>
@@ -318,9 +322,7 @@ export function AdminImoveisTable({ properties, isFiltered }: Props) {
                     >
                       {formatDate(property.updatedAt)}
                     </td>
-                    <td
-                      className={`${adminTableTd(property.published, "top")} min-w-0 max-w-88 xl:max-w-none`}
-                    >
+                    <td className={adminTableActionsTd(property.published)}>
                       <PropertyRowActions
                         propertyId={property.id}
                         slug={property.slug}

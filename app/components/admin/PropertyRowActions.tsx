@@ -2,7 +2,13 @@
 
 import { useCallback, useRef } from "react";
 import Link from "next/link";
-import { Share2 } from "lucide-react";
+import {
+  Archive,
+  ArchiveRestore,
+  Pencil,
+  Share2,
+  Trash2,
+} from "lucide-react";
 import {
   archivePropertyAction,
   publishPropertyAction,
@@ -19,24 +25,26 @@ type PropertyRowActionsProps = {
 const DELETE_CONFIRM_MESSAGE =
   "Tem certeza que deseja excluir este imóvel permanentemente? Esta ação não pode ser desfeita.";
 
-/** Base: aparência de botão, toque ≥44px, foco visível */
-const btn =
-  "inline-flex w-full min-h-[44px] select-none items-center justify-center rounded-lg border px-2 py-2 text-center text-xs font-semibold shadow-sm transition-colors active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 sm:min-h-[42px] sm:px-3 sm:text-sm";
+/** Botão quadrado só com ícone; legenda no title (hover) e aria-label */
+const btnIcon =
+  "box-border inline-flex h-11 w-full min-w-0 select-none items-center justify-center rounded-lg border shadow-sm transition-colors active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1";
 
 const btnEdit =
-  `${btn} border-green-700 bg-green-700 text-white hover:bg-green-800 focus-visible:ring-green-600`;
+  `${btnIcon} border-green-700 bg-green-700 text-white hover:bg-green-800 focus-visible:ring-green-600`;
 const btnArchive =
-  `${btn} border-amber-400 bg-amber-50 text-amber-900 hover:bg-amber-100 focus-visible:ring-amber-500`;
+  `${btnIcon} border-amber-400 bg-amber-50 text-amber-900 hover:bg-amber-100 focus-visible:ring-amber-500`;
 const btnPublish =
-  `${btn} border-green-600 bg-green-50 text-green-900 hover:bg-green-100 focus-visible:ring-green-600`;
+  `${btnIcon} border-green-600 bg-green-50 text-green-900 hover:bg-green-100 focus-visible:ring-green-600`;
 const btnDelete =
-  `${btn} border-red-300 bg-white text-red-700 hover:bg-red-50 focus-visible:ring-red-500`;
+  `${btnIcon} border-red-300 bg-white text-red-700 hover:bg-red-50 focus-visible:ring-red-500`;
 const btnShare =
-  `${btn} border-sky-500 bg-sky-50 px-1 text-sky-900 hover:bg-sky-100 focus-visible:ring-sky-500 sm:px-2`;
+  `${btnIcon} border-sky-500 bg-sky-50 text-sky-900 hover:bg-sky-100 focus-visible:ring-sky-500`;
+
+const iconClass = "h-5 w-5 shrink-0";
 
 /**
  * Ações por linha da listagem administrativa.
- * Grade 2×2 no mobile; a partir de sm, uma linha com os quatro botões (cards e tabela).
+ * Grade 2×2 com ícones; legenda no hover (title).
  */
 export function PropertyRowActions({
   propertyId,
@@ -79,12 +87,17 @@ export function PropertyRowActions({
 
   return (
     <div
-      className="grid w-full grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-2"
+      className="grid w-full min-w-0 max-w-full grid-cols-2 gap-2"
       role="group"
       aria-label="Ações do imóvel"
     >
-      <Link href={`/admin/imoveis/${propertyId}/editar`} className={btnEdit}>
-        Editar
+      <Link
+        href={`/admin/imoveis/${propertyId}/editar`}
+        className={btnEdit}
+        title="Editar"
+        aria-label="Editar imóvel"
+      >
+        <Pencil className={iconClass} strokeWidth={2} aria-hidden />
       </Link>
 
       {published ? (
@@ -95,8 +108,13 @@ export function PropertyRowActions({
           className="contents"
         >
           <input type="hidden" name="propertyId" value={propertyId} readOnly />
-          <button type="submit" className={btnArchive}>
-            Arquivar
+          <button
+            type="submit"
+            className={btnArchive}
+            title="Arquivar"
+            aria-label="Arquivar imóvel"
+          >
+            <Archive className={iconClass} strokeWidth={2} aria-hidden />
           </button>
         </form>
       ) : (
@@ -107,8 +125,13 @@ export function PropertyRowActions({
           className="contents"
         >
           <input type="hidden" name="propertyId" value={propertyId} readOnly />
-          <button type="submit" className={btnPublish}>
-            Publicar
+          <button
+            type="submit"
+            className={btnPublish}
+            title="Publicar"
+            aria-label="Publicar imóvel"
+          >
+            <ArchiveRestore className={iconClass} strokeWidth={2} aria-hidden />
           </button>
         </form>
       )}
@@ -125,9 +148,10 @@ export function PropertyRowActions({
           type="button"
           onClick={handleDeleteClick}
           className={btnDelete}
-          title={`Excluir ${title}`}
+          title="Excluir"
+          aria-label={`Excluir ${title}`}
         >
-          Excluir
+          <Trash2 className={iconClass} strokeWidth={2} aria-hidden />
         </button>
       </form>
 
@@ -138,12 +162,11 @@ export function PropertyRowActions({
         aria-label="Compartilhar imóvel"
         title={
           published
-            ? "Compartilhar link público do imóvel"
-            : "Copiar link público (publique para a página ficar disponível)"
+            ? "Compartilhar"
+            : "Compartilhar (publique para a página ficar disponível)"
         }
       >
-        <Share2 className="mx-auto h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
-        <span className="sr-only">Compartilhar</span>
+        <Share2 className={iconClass} strokeWidth={2} aria-hidden />
       </button>
     </div>
   );
