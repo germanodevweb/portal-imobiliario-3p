@@ -29,6 +29,7 @@ export type AdminPropertyListItem = {
   isLaunch: boolean;
   isOpportunity: boolean;
   published: boolean;
+  youtubeVideoId: string | null;
   updatedAt: Date;
 };
 
@@ -46,6 +47,7 @@ const adminListSelectBase = {
   isLaunch: true,
   isOpportunity: true,
   published: true,
+  youtubeVideoId: true,
   updatedAt: true,
 } as const;
 
@@ -69,6 +71,7 @@ type AdminPropertyRow = {
   isLaunch: boolean;
   isOpportunity: boolean;
   published: boolean;
+  youtubeVideoId: string | null;
   updatedAt: Date;
   images: { url: string }[];
 };

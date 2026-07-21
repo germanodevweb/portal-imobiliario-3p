@@ -3,6 +3,7 @@ import type { AdminPropertyListItem } from "@/lib/admin/queries";
 import { PropertyRowActions } from "@/app/components/admin/PropertyRowActions";
 import { AdminPropertyThumbnail } from "@/app/components/admin/AdminPropertyThumbnail";
 import { formatPropertyPriceBrl } from "@/lib/utils/property-price";
+import { parseYouTubeVideoId } from "@/lib/utils/youtube";
 
 /** URL absoluta para miniatura no admin (sem marca d’água — evita URL inválida se overlay não existir). */
 function thumbnailSrc(url: string | null): string | null {
@@ -79,6 +80,20 @@ function PropertyStatusBadges({ property }: { property: AdminPropertyListItem })
   );
 }
 
+function PropertyVideoBadge({ youtubeVideoId }: { youtubeVideoId: string | null }) {
+  const hasVideo = parseYouTubeVideoId(youtubeVideoId) !== null;
+
+  return (
+    <span
+      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+        hasVideo ? "bg-green-100 text-green-800" : "bg-zinc-100 text-zinc-600"
+      }`}
+    >
+      {hasVideo ? "Sim" : "Não"}
+    </span>
+  );
+}
+
 function AdminImovelCard({ property }: { property: AdminPropertyListItem }) {
   const thumb = thumbnailSrc(property.listThumbnailUrl);
 
@@ -127,6 +142,11 @@ function AdminImovelCard({ property }: { property: AdminPropertyListItem }) {
         </div>
 
         <PropertyStatusBadges property={property} />
+
+        <div className="flex items-center gap-2 text-sm text-zinc-600">
+          <span className="font-medium text-zinc-700">Vídeo:</span>
+          <PropertyVideoBadge youtubeVideoId={property.youtubeVideoId} />
+        </div>
 
         <div className="flex flex-col gap-3 border-t border-zinc-100 pt-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <p className="shrink-0 text-sm text-zinc-500">
@@ -221,6 +241,12 @@ export function AdminImoveisTable({ properties, isFiltered }: Props) {
                   scope="col"
                   className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600"
                 >
+                  Vídeo
+                </th>
+                <th
+                  scope="col"
+                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600"
+                >
                   Atualizado
                 </th>
                 <th
@@ -283,6 +309,9 @@ export function AdminImoveisTable({ properties, isFiltered }: Props) {
                     </td>
                     <td className={adminTableTd(property.published)}>
                       <PropertyStatusBadges property={property} />
+                    </td>
+                    <td className={adminTableTd(property.published)}>
+                      <PropertyVideoBadge youtubeVideoId={property.youtubeVideoId} />
                     </td>
                     <td
                       className={`${adminTableTd(property.published)} text-sm text-zinc-500`}
