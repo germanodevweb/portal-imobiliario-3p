@@ -4,6 +4,7 @@
  * Aceita:
  * - https://www.youtube.com/watch?v=ABC123XYZ
  * - https://youtu.be/ABC123XYZ
+ * - https://www.youtube.com/shorts/ABC123XYZ
  * - ABC123XYZ (ID puro, 11 caracteres alfanuméricos, hífens e underscores)
  *
  * @returns O ID do vídeo ou null se inválido
@@ -23,6 +24,10 @@ export function parseYouTubeVideoId(input: string | null | undefined): string | 
   // youtu.be/ID
   const shortMatch = trimmed.match(/youtu\.be\/([\w-]{11})/);
   if (shortMatch) return shortMatch[1];
+
+  // youtube.com/shorts/ID (Shorts, com ou sem query string)
+  const shortsMatch = trimmed.match(/(?:youtube\.com\/shorts\/)([\w-]{11})/);
+  if (shortsMatch) return shortsMatch[1];
 
   return null;
 }
