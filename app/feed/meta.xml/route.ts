@@ -1,4 +1,3 @@
-import { getPropertiesForMetaFeed } from "@/lib/queries/properties";
 import { BASE_URL, SITE_NAME } from "@/lib/seo";
 import {
   escapeXml,
@@ -7,23 +6,32 @@ import {
   getFeedTypeName,
   xmlFeedResponse,
 } from "@/lib/feed";
-import { getWatermarkedImageUrl } from "@/lib/cloudinary/watermark";
+import {
+  getPropertiesForMetaCatalogFeed,
+  isValidMetaCatalogPrice,
+  resolveMetaCatalogImageUrl,
+} from "@/lib/feed/meta-catalog";
 
 // ISR: revalida o feed a cada 1 hora
 export const revalidate = 3600;
 
 export async function GET() {
-  const properties = await getPropertiesForMetaFeed();
+  const properties = await getPropertiesForMetaCatalogFeed();
 
   const items = properties
-    // Meta rejeita itens sem image_link — filtra antes de construir o XML
-    .filter((p) => Boolean(p.featuredImage))
-    .map((p) => {
+    .flatMap((p) => {
+      if (!isValidMetaCatalogPrice(p.price)) return [];
+
+      const imageUrl = resolveMetaCatalogImageUrl(p);
+      if (!imageUrl) return [];
+
       const pageUrl = `${BASE_URL}/imoveis/${p.slug}`;
       const typeName = getFeedTypeName(p.propertyTypeSlug);
       const txLabel = p.transactionType === "SALE" ? "a venda" : "para alugar";
       const txCustom = p.transactionType === "SALE" ? "venda" : "aluguel";
       const availability = p.isSold ? "out of stock" : "in stock";
+      const quantityLine =
+        availability === "in stock" ? "\n      <g:quantity>1</g:quantity>" : "";
 
       const rawDescription =
         p.description ??
@@ -42,20 +50,18 @@ export async function GET() {
       // Meta aceita descricoes de ate 9 999 caracteres; limitamos a 5 000 por seguranca
       const description = rawDescription.slice(0, 5000);
 
-      // featuredImage ja foi confirmada como string pelo filtro acima
-      const imageUrl = getWatermarkedImageUrl(p.featuredImage as string);
-
       const bedsLine =
         p.bedrooms > 0
           ? `\n      <g:custom_label_2>${p.bedrooms} quarto${p.bedrooms !== 1 ? "s" : ""}</g:custom_label_2>`
           : "";
 
-      return `
+      return [
+        `
     <item>
       <g:id>${escapeXml(p.id)}</g:id>
       <g:title>${escapeXml(p.title)}</g:title>
       <g:description>${escapeXml(description)}</g:description>
-      <g:availability>${availability}</g:availability>
+      <g:availability>${availability}</g:availability>${quantityLine}
       <g:condition>new</g:condition>
       <g:price>${formatFeedPrice(p.price)}</g:price>
       <g:link>${escapeXml(pageUrl)}</g:link>
@@ -64,7 +70,8 @@ export async function GET() {
       <g:product_type>${escapeXml(typeName)}</g:product_type>
       <g:custom_label_0>${txCustom}</g:custom_label_0>
       <g:custom_label_1>${escapeXml(p.citySlug)}</g:custom_label_1>${bedsLine}
-    </item>`;
+    </item>`,
+      ];
     })
     .join("");
 
