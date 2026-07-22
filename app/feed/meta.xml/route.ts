@@ -31,7 +31,9 @@ export async function GET() {
       const txCustom = p.transactionType === "SALE" ? "venda" : "aluguel";
       const availability = p.isSold ? "out of stock" : "in stock";
       const quantityLine =
-        availability === "in stock" ? "\n      <g:quantity>1</g:quantity>" : "";
+        availability === "in stock"
+          ? "\n      <g:quantity_to_sell_on_facebook>1</g:quantity_to_sell_on_facebook>"
+          : "";
 
       const rawDescription =
         p.description ??
