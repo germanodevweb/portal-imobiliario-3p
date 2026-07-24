@@ -12,9 +12,12 @@ import {
   getInternationalInvestmentProperties,
   countInternationalInvestmentProperties,
   getAvailableCities,
-  getAvailableNeighborhoods,
   getAvailablePropertyTypes,
 } from "@/lib/queries/properties";
+import {
+  applyLocationFilterSanitization,
+  getInvestmentFilterNeighborhoods,
+} from "@/lib/imoveis/filter-location-queries.server";
 import { getEurToBrlRate } from "@/lib/services/exchange-rate";
 import type { InvestContent } from "@/lib/i18n/invest";
 import { parsePropertyListSearchParams } from "@/lib/imoveis/search-params";
@@ -34,6 +37,14 @@ export async function InvestPageContent({
   searchParams,
 }: InvestPageContentProps) {
   const skip = getSkip(page);
+  const parsed = parsePropertyListSearchParams(searchParams);
+  const [neighborhoods, eurToBrlRate, cities, propertyTypes] = await Promise.all([
+    getInvestmentFilterNeighborhoods(),
+    getEurToBrlRate(),
+    getAvailableCities(),
+    getAvailablePropertyTypes(),
+  ]);
+
   const {
     filters,
     rawCidade,
@@ -47,17 +58,12 @@ export async function InvestPageContent({
     rawLancamento,
     rawOportunidade,
     hasFilters,
-  } = parsePropertyListSearchParams(searchParams);
+  } = applyLocationFilterSanitization(parsed, neighborhoods);
 
-  const [properties, count, eurToBrlRate, cities, neighborhoods, propertyTypes] =
-    await Promise.all([
-      getInternationalInvestmentProperties(ITEMS_PER_PAGE, skip, filters),
-      countInternationalInvestmentProperties(filters),
-      getEurToBrlRate(),
-      getAvailableCities(),
-      getAvailableNeighborhoods(),
-      getAvailablePropertyTypes(),
-    ]);
+  const [properties, count] = await Promise.all([
+    getInternationalInvestmentProperties(ITEMS_PER_PAGE, skip, filters),
+    countInternationalInvestmentProperties(filters),
+  ]);
   const totalPages = calculateTotalPages(count);
 
   const paginationParams: Record<string, string> = {};

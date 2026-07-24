@@ -13,9 +13,12 @@ import {
   getFilteredProperties,
   countFilteredProperties,
   getAvailableCities,
-  getAvailableNeighborhoods,
   getAvailablePropertyTypes,
 } from "@/lib/queries/properties";
+import {
+  applyLocationFilterSanitization,
+  getImoveisFilterNeighborhoods,
+} from "@/lib/imoveis/filter-location-queries.server";
 import {
   buildImoveisPageTitle,
   buildImoveisFilteredTitle,
@@ -257,6 +260,16 @@ function buildFilterSummary(params: {
 
 export default async function ImoveisPage({ searchParams }: PageProps) {
   const sp = await searchParams;
+  const parsed = parseSearchParams(sp);
+  const page = parsePage(sp);
+  const skip = getSkip(page);
+
+  const [neighborhoods, cities, propertyTypes] = await Promise.all([
+    getImoveisFilterNeighborhoods(),
+    getAvailableCities(),
+    getAvailablePropertyTypes(),
+  ]);
+
   const {
     filters,
     rawCidade,
@@ -270,17 +283,12 @@ export default async function ImoveisPage({ searchParams }: PageProps) {
     rawLancamento,
     rawOportunidade,
     hasFilters,
-  } = parseSearchParams(sp);
-  const page = parsePage(sp);
-  const skip = getSkip(page);
+  } = applyLocationFilterSanitization(parsed, neighborhoods);
 
-  // Busca em paralelo: imóveis filtrados + contagem + opções de filtro
-  const [properties, count, cities, neighborhoods, propertyTypes] = await Promise.all([
+  // Busca imóveis filtrados + contagem após sanitizar cidade → bairro
+  const [properties, count] = await Promise.all([
     getFilteredProperties(filters, RESULTS_LIMIT, skip),
     countFilteredProperties(filters),
-    getAvailableCities(),
-    getAvailableNeighborhoods(),
-    getAvailablePropertyTypes(),
   ]);
 
   const totalPages = calculateTotalPages(count);

@@ -11,9 +11,12 @@ import {
   getAltoPadraoProperties,
   countAltoPadraoProperties,
   getAvailableCities,
-  getAvailableNeighborhoods,
   getAvailablePropertyTypes,
 } from "@/lib/queries/properties";
+import {
+  applyLocationFilterSanitization,
+  getAltoPadraoFilterNeighborhoods,
+} from "@/lib/imoveis/filter-location-queries.server";
 import {
   buildAltoPadraoPageTitle,
   buildAltoPadraoPageDescription,
@@ -110,6 +113,16 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
 
 export default async function AltoPadraoPage({ searchParams }: PageProps) {
   const sp = await searchParams;
+  const parsed = parsePropertyListSearchParams(sp);
+  const page = parsePage(sp);
+  const skip = getSkip(page);
+
+  const [neighborhoods, cities, propertyTypes] = await Promise.all([
+    getAltoPadraoFilterNeighborhoods(),
+    getAvailableCities(),
+    getAvailablePropertyTypes(),
+  ]);
+
   const {
     filters,
     rawCidade,
@@ -123,16 +136,11 @@ export default async function AltoPadraoPage({ searchParams }: PageProps) {
     rawLancamento,
     rawOportunidade,
     hasFilters,
-  } = parsePropertyListSearchParams(sp);
-  const page = parsePage(sp);
-  const skip = getSkip(page);
+  } = applyLocationFilterSanitization(parsed, neighborhoods);
 
-  const [properties, count, cities, neighborhoods, propertyTypes] = await Promise.all([
+  const [properties, count] = await Promise.all([
     getAltoPadraoProperties(ITEMS_PER_PAGE, skip, filters),
     countAltoPadraoProperties(filters),
-    getAvailableCities(),
-    getAvailableNeighborhoods(),
-    getAvailablePropertyTypes(),
   ]);
 
   const totalPages = calculateTotalPages(count);

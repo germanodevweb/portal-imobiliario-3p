@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { ImoveisFilterLocationFields } from "@/app/components/ImoveisFilterLocationFields";
+import type { FilterLocationNeighborhood } from "@/lib/imoveis/filter-location-types";
 import { PROPERTY_TYPE_LABELS } from "@/lib/seo";
 
 type CityOption = { city: string; citySlug: string };
-type NeighborhoodOption = { neighborhood: string; neighborhoodSlug: string };
 type PropertyTypeOption = { propertyTypeSlug: string };
 
 export type ImoveisFilterPanelProps = {
@@ -21,7 +22,7 @@ export type ImoveisFilterPanelProps = {
   rawLancamento: boolean;
   rawOportunidade: boolean;
   cities: CityOption[];
-  neighborhoods: NeighborhoodOption[];
+  neighborhoods: FilterLocationNeighborhood[];
   propertyTypes: PropertyTypeOption[];
 };
 
@@ -224,44 +225,12 @@ export function ImoveisFilterPanel(props: ImoveisFilterPanelProps) {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-            <div className="flex flex-col gap-1">
-              <label htmlFor="filter-cidade" className="text-xs font-semibold text-zinc-500">
-                Cidade
-              </label>
-              <select
-                id="filter-cidade"
-                name="cidade"
-                defaultValue={props.rawCidade}
-                autoComplete="off"
-                className="min-h-[44px] rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
-              >
-                <option value="">Todas</option>
-                {cities.map((c) => (
-                  <option key={c.citySlug} value={c.citySlug}>
-                    {c.city}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label htmlFor="filter-bairro" className="text-xs font-semibold text-zinc-500">
-                Bairro
-              </label>
-              <select
-                id="filter-bairro"
-                name="bairro"
-                defaultValue={props.rawBairro}
-                className="min-h-[44px] rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
-              >
-                <option value="">Todos</option>
-                {neighborhoods.map((n) => (
-                  <option key={n.neighborhoodSlug} value={n.neighborhoodSlug}>
-                    {n.neighborhood}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <ImoveisFilterLocationFields
+              cities={cities}
+              neighborhoods={neighborhoods}
+              defaultCity={props.rawCidade}
+              defaultNeighborhood={props.rawBairro}
+            />
 
             <div className="flex flex-col gap-1">
               <label htmlFor="filter-tipo" className="text-xs font-semibold text-zinc-500">
