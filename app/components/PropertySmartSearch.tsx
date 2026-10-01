@@ -15,18 +15,34 @@ type Suggestion = {
   href: string;
 };
 
-const QUICK_TYPES = [
-  { label: "Casas", href: "/imoveis?tipo=casa", Icon: Home },
-  { label: "Apartamentos", href: "/imoveis?tipo=apartamento", Icon: Building2 },
-  { label: "Terrenos", href: "/imoveis?tipo=terreno", Icon: LandPlot },
-] as const;
+const QUICK_TYPE_ICONS = {
+  casa: Home,
+  apartamento: Building2,
+  terreno: LandPlot,
+} as const;
+
+export type PropertySmartSearchQuickLink = {
+  slug: string;
+  label: string;
+  href: string;
+};
 
 function suggestionIcon(hint: string) {
   if (hint === "Cidade") return MapPin;
   return Sparkles;
 }
 
-export function PropertySmartSearch() {
+type PropertySmartSearchProps = {
+  quickTypeLinks: PropertySmartSearchQuickLink[];
+  heading?: string;
+  subheading?: string;
+};
+
+export function PropertySmartSearch({
+  quickTypeLinks,
+  heading = "Imóveis à venda em Fortaleza e no litoral do Ceará",
+  subheading = "Encontre seu imóvel em segundos",
+}: PropertySmartSearchProps) {
   const listId = useId();
   const wrapRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState("");
@@ -110,11 +126,11 @@ export function PropertySmartSearch() {
             id="home-smart-search-heading"
             className="text-pretty text-xl font-bold tracking-tight text-white sm:text-2xl lg:text-[1.65rem]"
           >
-            Encontre seu imóvel em segundos
+            {heading}
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-emerald-100/90 sm:text-base">
-            Busque por empreendimento, cidade, bairro ou construtora — sugestões enquanto
-            você digita.
+            {subheading}. Busque por empreendimento, cidade, bairro ou construtora — sugestões
+            enquanto você digita.
           </p>
 
           <form action="/imoveis" method="get" className="relative mt-5 sm:mt-6" role="search">
@@ -223,16 +239,20 @@ export function PropertySmartSearch() {
             <span className="mr-1 text-xs font-medium uppercase tracking-wider text-emerald-200/80">
               Atalhos
             </span>
-            {QUICK_TYPES.map(({ label, href, Icon }) => (
-              <Link
-                key={href}
-                href={href}
-                className="inline-flex min-h-[40px] items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-2 text-sm font-medium text-white backdrop-blur-sm transition-all hover:border-white/35 hover:bg-white/15 active:scale-[0.98] sm:min-h-[44px] sm:px-4"
-              >
-                <Icon className="h-4 w-4 shrink-0 text-emerald-200" aria-hidden />
-                {label}
-              </Link>
-            ))}
+            {quickTypeLinks.map(({ slug, label, href }) => {
+              const Icon =
+                QUICK_TYPE_ICONS[slug as keyof typeof QUICK_TYPE_ICONS] ?? Building2;
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className="inline-flex min-h-[40px] items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-2 text-sm font-medium text-white backdrop-blur-sm transition-all hover:border-white/35 hover:bg-white/15 active:scale-[0.98] sm:min-h-[44px] sm:px-4"
+                >
+                  <Icon className="h-4 w-4 shrink-0 text-emerald-200" aria-hidden />
+                  {label}
+                </Link>
+              );
+            })}
           </div>
         </div>
       </div>

@@ -1,6 +1,12 @@
 import { PropertyCard, type Property } from "./PropertyCard";
 
-export function PropertyList({ properties }: { properties: Property[] }) {
+type PropertyListProps = {
+  properties: Property[];
+  /** Quantos cards do topo recebem `priority` na imagem (padrão: nenhum). */
+  priorityCount?: number;
+};
+
+export function PropertyList({ properties, priorityCount = 0 }: PropertyListProps) {
   if (properties.length === 0) {
     return (
       <div className="py-16 text-center">
@@ -11,8 +17,12 @@ export function PropertyList({ properties }: { properties: Property[] }) {
 
   return (
     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
-      {properties.map((property) => (
-        <PropertyCard key={property.id} property={property} />
+      {properties.map((property, index) => (
+        <PropertyCard
+          key={property.id}
+          property={property}
+          priority={index < priorityCount}
+        />
       ))}
     </div>
   );

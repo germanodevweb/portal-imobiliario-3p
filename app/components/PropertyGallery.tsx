@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, ZoomIn } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -9,7 +10,14 @@ import {
 } from "@/lib/cloudinary/watermark";
 import { publicPropertyImageSrc } from "@/lib/utils/public-property-image-src";
 import type { PropertyGalleryBadge, PropertyGalleryItem } from "@/lib/utils/property-gallery";
-import { PropertyGalleryLightbox } from "@/app/components/PropertyGalleryLightbox";
+
+const PropertyGalleryLightbox = dynamic(
+  () =>
+    import("@/app/components/PropertyGalleryLightbox").then(
+      (mod) => mod.PropertyGalleryLightbox
+    ),
+  { ssr: false }
+);
 
 type PropertyGalleryProps = {
   images: PropertyGalleryItem[];
@@ -166,13 +174,15 @@ export function PropertyGallery({ images, badges = [] }: PropertyGalleryProps) {
         </div>
       )}
 
-      <PropertyGalleryLightbox
-        images={images}
-        index={safeIndex}
-        open={lightboxOpen}
-        onClose={() => setLightboxOpen(false)}
-        onIndexChange={setCurrentIndex}
-      />
+      {lightboxOpen ? (
+        <PropertyGalleryLightbox
+          images={images}
+          index={safeIndex}
+          open={lightboxOpen}
+          onClose={() => setLightboxOpen(false)}
+          onIndexChange={setCurrentIndex}
+        />
+      ) : null}
     </div>
   );
 }

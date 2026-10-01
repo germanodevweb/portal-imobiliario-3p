@@ -21,7 +21,12 @@ import {
 import { getEurToBrlRate } from "@/lib/services/exchange-rate";
 import type { InvestContent } from "@/lib/i18n/invest";
 import { parsePropertyListSearchParams } from "@/lib/imoveis/search-params";
-import { calculateTotalPages, getSkip, ITEMS_PER_PAGE } from "@/lib/pagination";
+import {
+  calculateTotalPages,
+  getSkip,
+  ITEMS_PER_PAGE,
+  notFoundIfPageOutOfRange,
+} from "@/lib/pagination";
 
 type InvestPageContentProps = {
   content: InvestContent;
@@ -65,6 +70,7 @@ export async function InvestPageContent({
     countInternationalInvestmentProperties(filters),
   ]);
   const totalPages = calculateTotalPages(count);
+  notFoundIfPageOutOfRange(page, totalPages);
 
   const paginationParams: Record<string, string> = {};
   if (rawCidade) paginationParams.cidade = rawCidade;

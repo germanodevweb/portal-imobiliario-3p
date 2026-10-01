@@ -44,10 +44,14 @@ export function Footer() {
           <div className="grid grid-cols-1 gap-12 sm:grid-cols-2 lg:grid-cols-3 lg:gap-16">
             {/* Marca */}
             <div className="flex flex-col gap-4">
-              <Link href="/" className="flex items-center gap-3">
+              <Link
+                href="/"
+                className="flex items-center gap-3"
+                aria-label="3Pinheiros Consultoria Imobiliária — Página inicial"
+              >
                 <Image
                   src="/logo.png"
-                  alt="3Pinheiros"
+                  alt=""
                   width={40}
                   height={40}
                   sizes="40px"
