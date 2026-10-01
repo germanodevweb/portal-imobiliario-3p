@@ -49,7 +49,7 @@ export function buildOpenPriceWhere(filters: {
   );
   if (!min && !max) return undefined;
 
-  let gte = min;
+  const gte = min;
   let lte = max;
   if (gte && lte && BigInt(gte) > BigInt(lte)) {
     lte = undefined;

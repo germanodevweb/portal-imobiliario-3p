@@ -1,5 +1,11 @@
 /** Eventos GA4 — usar apenas em Client Components após interação. */
 
+declare global {
+  interface Window {
+    gtag?: (...args: unknown[]) => void;
+  }
+}
+
 export function trackGa4Event(
   eventName: string,
   params?: Record<string, string | number | boolean>

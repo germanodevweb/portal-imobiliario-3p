@@ -42,7 +42,7 @@ function isStateToken(token: string): boolean {
 
 /** Remove sufixo de UF/estado embutido no nome da cidade. */
 export function stripEmbeddedStateFromCity(cityRaw: string): string {
-  let city = collapseWhitespace(cityRaw);
+  const city = collapseWhitespace(cityRaw);
   if (!city) return city;
 
   const splitPattern = /[\s]*(?:[-–—/|,]|\s+-\s+)[\s]*/;

@@ -3,7 +3,7 @@
  * Evita //host, www. sem esquema e strings que não batem na comparação com featuredImage.
  */
 export function normalizePublicImageUrl(input: string): string {
-  let u = input.trim();
+  const u = input.trim();
   if (!u) return u;
   if (u.startsWith("//")) return `https:${u}`;
   if (/^www\./i.test(u)) return `https://${u}`;
