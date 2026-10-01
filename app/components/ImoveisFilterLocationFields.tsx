@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   filterNeighborhoodsByCitySlug,
   resolveNeighborhoodSlugForCity,
@@ -17,7 +17,7 @@ type ImoveisFilterLocationFieldsProps = {
 };
 
 const selectClassName =
-  "min-h-[44px] rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-800 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600";
+  "min-h-11 w-full rounded-xl border border-zinc-200/90 bg-white px-3 py-2 text-sm text-zinc-800 outline-none transition-colors focus:border-green-600 focus:ring-2 focus:ring-green-600/15";
 
 export function ImoveisFilterLocationFields({
   cities,
@@ -34,6 +34,13 @@ export function ImoveisFilterLocationFields({
   const [citySlug, setCitySlug] = useState(defaultCity);
   const [neighborhoodSlug, setNeighborhoodSlug] = useState(initialNeighborhood);
 
+  useEffect(() => {
+    setCitySlug(defaultCity);
+    setNeighborhoodSlug(
+      resolveNeighborhoodSlugForCity(defaultCity, defaultNeighborhood, neighborhoods)
+    );
+  }, [defaultCity, defaultNeighborhood, neighborhoods]);
+
   const visibleNeighborhoods = useMemo(
     () => filterNeighborhoodsByCitySlug(neighborhoods, citySlug),
     [citySlug, neighborhoods]
@@ -41,8 +48,8 @@ export function ImoveisFilterLocationFields({
 
   return (
     <>
-      <div className="flex flex-col gap-1">
-        <label htmlFor="filter-cidade" className="text-xs font-semibold text-zinc-500">
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="filter-cidade" className="text-xs font-semibold text-zinc-600">
           Cidade
         </label>
         <select
@@ -65,8 +72,8 @@ export function ImoveisFilterLocationFields({
         </select>
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label htmlFor="filter-bairro" className="text-xs font-semibold text-zinc-500">
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="filter-bairro" className="text-xs font-semibold text-zinc-600">
           Bairro
         </label>
         <select

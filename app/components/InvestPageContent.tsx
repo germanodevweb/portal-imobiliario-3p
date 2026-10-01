@@ -172,6 +172,7 @@ export async function InvestPageContent({
             <ImoveisFilterPanel
               density="compact"
               listPath={basePath}
+              initialDetailsOpen={hasFilters}
               rawCidade={rawCidade}
               rawBairro={rawBairro}
               rawTipo={rawTipo}

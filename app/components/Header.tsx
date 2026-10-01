@@ -4,10 +4,27 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
+const SERVICOS_HOME_HREF = "/#servicos";
+
 const navLinks = [
+  { label: "Nossos Serviços", href: SERVICOS_HOME_HREF },
   { label: "Quem Somos", href: "/quem-somos" },
-  { label: "Blog Imobiliário", href: "/blog" }
+  { label: "Blog Imobiliário", href: "/blog" },
 ];
+
+function scrollToServicosSection(): void {
+  document.getElementById("servicos")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function handleServicosNavClick(
+  event: React.MouseEvent<HTMLAnchorElement>,
+  href: string
+): void {
+  if (href !== SERVICOS_HOME_HREF) return;
+  if (window.location.pathname !== "/") return;
+  event.preventDefault();
+  scrollToServicosSection();
+}
 
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -43,6 +60,7 @@ export function Header() {
             <Link
               key={link.href}
               href={link.href}
+              onClick={(event) => handleServicosNavClick(event, link.href)}
               className="flex min-h-[44px] items-center rounded-md px-3 py-2 text-sm font-medium text-zinc-600 transition-colors hover:bg-green-50 hover:text-green-700"
             >
               {link.label}
@@ -84,7 +102,10 @@ export function Header() {
               <Link
                 key={link.href}
                 href={link.href}
-                onClick={() => setMenuOpen(false)}
+                onClick={(event) => {
+                  handleServicosNavClick(event, link.href);
+                  setMenuOpen(false);
+                }}
                 className="min-h-[44px] rounded-md px-3 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-green-50 hover:text-green-700 flex items-center"
               >
                 {link.label}

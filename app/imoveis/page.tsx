@@ -74,6 +74,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
     rawDestaque,
     rawLancamento,
     rawOportunidade,
+    rawBusca,
     hasFilters,
   } = parseSearchParams(sp);
   const page = parsePage(sp);
@@ -121,6 +122,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   if (rawDestaque) filterParams.destaque = "1";
   if (rawLancamento) filterParams.lancamento = "1";
   if (rawOportunidade) filterParams.oportunidade = "1";
+  if (rawBusca) filterParams.busca = rawBusca;
 
   const canonical = buildPaginatedCanonical(baseCanonical, page, filterParams);
 
@@ -217,6 +219,7 @@ function formatRendaValorParaTitulo(rendaLabel: string): string {
 }
 
 function buildFilterSummary(params: {
+  rawBusca: string;
   rawCidade: string;
   rawBairro: string;
   rawTipo: string;
@@ -227,9 +230,11 @@ function buildFilterSummary(params: {
   rawLancamento: boolean;
   rawOportunidade: boolean;
   cities: { city: string; citySlug: string }[];
+  neighborhoods: { neighborhood: string; neighborhoodSlug: string }[];
 }): string {
   const parts: string[] = [];
 
+  if (params.rawBusca) parts.push(`Busca: ${params.rawBusca}`);
   if (params.rawDestaque) parts.push("Destaque");
   if (params.rawLancamento) parts.push("Lançamento");
   if (params.rawOportunidade) parts.push("Oportunidade");
@@ -238,7 +243,14 @@ function buildFilterSummary(params: {
     const cityName = params.cities.find((c) => c.citySlug === params.rawCidade)?.city;
     if (cityName) parts.push(`em ${cityName}`);
   }
-  if (params.rawBairro) parts.push(`bairro: ${params.rawBairro}`);
+  if (params.rawBairro) {
+    const neighborhoodName = params.neighborhoods.find(
+      (n) => n.neighborhoodSlug === params.rawBairro
+    )?.neighborhood;
+    parts.push(
+      neighborhoodName ? `bairro ${neighborhoodName}` : `bairro: ${params.rawBairro}`
+    );
+  }
   if (params.rawQuartos) {
     const q = parseInt(params.rawQuartos, 10);
     if (!isNaN(q)) parts.push(`${q >= 4 ? "4+" : q} quarto${q !== 1 ? "s" : ""}`);
@@ -282,6 +294,7 @@ export default async function ImoveisPage({ searchParams }: PageProps) {
     rawDestaque,
     rawLancamento,
     rawOportunidade,
+    rawBusca,
     hasFilters,
   } = applyLocationFilterSanitization(parsed, neighborhoods);
 
@@ -304,8 +317,10 @@ export default async function ImoveisPage({ searchParams }: PageProps) {
   if (rawDestaque) paginationParams.destaque = "1";
   if (rawLancamento) paginationParams.lancamento = "1";
   if (rawOportunidade) paginationParams.oportunidade = "1";
+  if (rawBusca) paginationParams.busca = rawBusca;
 
   const filterSummary = buildFilterSummary({
+    rawBusca,
     rawCidade,
     rawBairro,
     rawTipo,
@@ -316,6 +331,7 @@ export default async function ImoveisPage({ searchParams }: PageProps) {
     rawLancamento,
     rawOportunidade,
     cities,
+    neighborhoods,
   });
 
   const rendaPreset = getRendaPreset(rawPrecoMin, rawPrecoMax, rawRenda);
@@ -432,6 +448,7 @@ export default async function ImoveisPage({ searchParams }: PageProps) {
 
         <ImoveisFilterPanel
           listPath="/imoveis"
+          initialDetailsOpen={hasFilters}
           rawCidade={rawCidade}
           rawBairro={rawBairro}
           rawTipo={rawTipo}
@@ -442,6 +459,7 @@ export default async function ImoveisPage({ searchParams }: PageProps) {
           rawDestaque={rawDestaque}
           rawLancamento={rawLancamento}
           rawOportunidade={rawOportunidade}
+          rawBusca={rawBusca}
           cities={cities}
           neighborhoods={neighborhoods}
           propertyTypes={propertyTypes}

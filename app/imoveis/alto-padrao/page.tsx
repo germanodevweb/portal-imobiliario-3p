@@ -239,6 +239,7 @@ export default async function AltoPadraoPage({ searchParams }: PageProps) {
             <ImoveisFilterPanel
               density="compact"
               listPath="/imoveis/alto-padrao"
+              initialDetailsOpen={hasFilters}
               rawCidade={rawCidade}
               rawBairro={rawBairro}
               rawTipo={rawTipo}

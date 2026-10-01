@@ -82,14 +82,8 @@ function computeHasFilters(
     !Number.isNaN(quartosParsed) && quartosParsed >= 1 && quartosParsed <= 10
       ? quartosParsed
       : undefined;
-  const minPriceFilter =
-    parsed.rawPrecoMin && /^\d+(\.\d+)?$/.test(parsed.rawPrecoMin)
-      ? parsed.rawPrecoMin
-      : undefined;
-  const maxPriceFilter =
-    parsed.rawPrecoMax && /^\d+(\.\d+)?$/.test(parsed.rawPrecoMax)
-      ? parsed.rawPrecoMax
-      : undefined;
+  const minPriceFilter = parsed.rawPrecoMin || undefined;
+  const maxPriceFilter = parsed.rawPrecoMax || undefined;
 
   return Boolean(
     parsed.rawCidade ||
@@ -100,7 +94,8 @@ function computeHasFilters(
       maxPriceFilter ||
       parsed.rawDestaque ||
       parsed.rawLancamento ||
-      parsed.rawOportunidade
+      parsed.rawOportunidade ||
+      parsed.rawBusca
   );
 }
 

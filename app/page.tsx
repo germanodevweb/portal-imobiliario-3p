@@ -3,6 +3,8 @@ import { Header } from "./components/Header";
 import { IncomeFilter } from "./components/IncomeFilter";
 import { PropertyList } from "./components/PropertyList";
 import { GoogleReviewsSection } from "./components/GoogleReviewsSection";
+import { ServicesSection } from "./components/ServicesSection";
+import { HomeServicosHashScroll } from "./components/HomeServicosHashScroll";
 import { WhatsAppButton } from "./components/WhatsAppButton";
 import { Footer } from "./components/Footer";
 import {
@@ -29,6 +31,7 @@ import {
   parsePage,
 } from "@/lib/pagination";
 import { Pagination } from "./components/Pagination";
+import { PropertySmartSearch } from "./components/PropertySmartSearch";
 
 type PageProps = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -73,15 +76,14 @@ export default async function Home({ searchParams }: PageProps) {
       <IncomeFilter />
 
       <main className="mx-auto max-w-7xl px-4 py-8 pb-24 sm:px-6 sm:py-12 sm:pb-12 lg:px-8">
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl">
-            Os melhores lançamentos em Fortaleza
-          </h1>
-        </div>
+        <PropertySmartSearch />
 
         <PropertyList properties={properties} />
         <Pagination currentPage={page} totalPages={totalPages} basePath="/" />
       </main>
+
+      <ServicesSection />
+      <HomeServicosHashScroll />
 
       <GoogleReviewsSection />
 

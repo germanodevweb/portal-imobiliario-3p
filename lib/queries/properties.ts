@@ -3,6 +3,11 @@ import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/lib/generated/prisma/client";
 import { HOME_LISTING_MIN_PRICE } from "@/lib/constants/home-listing";
+import { buildPublishedPropertyTextSearchWhere } from "@/lib/imoveis/property-text-search";
+import {
+  buildCatalogMinPriceWhere,
+  buildOpenPriceWhere,
+} from "@/lib/imoveis/resolve-price-filter";
 
 // ---------------------------------------------------------------------------
 // Tipos derivados das queries — sem `any`, sem duplicação de schema
@@ -1297,12 +1302,36 @@ export type PropertyFilters = {
   isFeatured?: boolean;
   isLaunch?: boolean;
   isOpportunity?: boolean;
+  /** Busca textual (título, cidade, bairro, construtora, slug). */
+  searchQuery?: string;
 };
 
 /**
  * Badges comerciais (Destaque, Lançamento, Oportunidade) combinam com OR:
  * imóvel entra se tiver pelo menos uma flag selecionada.
  */
+function publishedPropertyListWhere(filters: PropertyFilters): Prisma.PropertyWhereInput {
+  const textSearch = filters.searchQuery
+    ? buildPublishedPropertyTextSearchWhere(filters.searchQuery)
+    : undefined;
+  const priceWhere = buildOpenPriceWhere(filters);
+
+  const base: Prisma.PropertyWhereInput = {
+    published: true,
+    ...(filters.citySlug ? { citySlug: filters.citySlug } : {}),
+    ...(filters.neighborhoodSlug ? { neighborhoodSlug: filters.neighborhoodSlug } : {}),
+    ...(filters.propertyTypeSlug ? { propertyTypeSlug: filters.propertyTypeSlug } : {}),
+    ...(filters.bedrooms !== undefined
+      ? { bedrooms: filters.bedrooms >= 4 ? { gte: 4 } : filters.bedrooms }
+      : {}),
+    ...(priceWhere ? { price: priceWhere } : {}),
+    ...propertyBadgeFlagsWhere(filters),
+  };
+
+  if (!textSearch) return base;
+  return { AND: [base, textSearch] };
+}
+
 function propertyBadgeFlagsWhere(
   filters: Pick<PropertyFilters, "isFeatured" | "isLaunch" | "isOpportunity">
 ): Prisma.PropertyWhereInput {
@@ -1329,24 +1358,7 @@ export const getFilteredProperties = cache(async function (
   skip = 0
 ): Promise<PropertyCardData[]> {
   const results = await prisma.property.findMany({
-    where: {
-      published: true,
-      ...(filters.citySlug ? { citySlug: filters.citySlug } : {}),
-      ...(filters.neighborhoodSlug ? { neighborhoodSlug: filters.neighborhoodSlug } : {}),
-      ...(filters.propertyTypeSlug ? { propertyTypeSlug: filters.propertyTypeSlug } : {}),
-      ...(filters.bedrooms !== undefined
-        ? { bedrooms: filters.bedrooms >= 4 ? { gte: 4 } : filters.bedrooms }
-        : {}),
-      ...(filters.minPrice || filters.maxPrice
-        ? {
-            price: {
-              ...(filters.minPrice ? { gte: filters.minPrice } : {}),
-              ...(filters.maxPrice ? { lte: filters.maxPrice } : {}),
-            },
-          }
-        : {}),
-      ...propertyBadgeFlagsWhere(filters),
-    },
+    where: publishedPropertyListWhere(filters),
     select: propertyCardSelect,
     orderBy: [{ publishedAt: { sort: "desc", nulls: "first" } }, { createdAt: "desc" }],
     take: limit,
@@ -1364,24 +1376,7 @@ export const countFilteredProperties = cache(async function (
   filters: PropertyFilters
 ): Promise<number> {
   return prisma.property.count({
-    where: {
-      published: true,
-      ...(filters.citySlug ? { citySlug: filters.citySlug } : {}),
-      ...(filters.neighborhoodSlug ? { neighborhoodSlug: filters.neighborhoodSlug } : {}),
-      ...(filters.propertyTypeSlug ? { propertyTypeSlug: filters.propertyTypeSlug } : {}),
-      ...(filters.bedrooms !== undefined
-        ? { bedrooms: filters.bedrooms >= 4 ? { gte: 4 } : filters.bedrooms }
-        : {}),
-      ...(filters.minPrice || filters.maxPrice
-        ? {
-            price: {
-              ...(filters.minPrice ? { gte: filters.minPrice } : {}),
-              ...(filters.maxPrice ? { lte: filters.maxPrice } : {}),
-            },
-          }
-        : {}),
-      ...propertyBadgeFlagsWhere(filters),
-    },
+    where: publishedPropertyListWhere(filters),
   });
 });
 
@@ -1464,19 +1459,7 @@ export const countHomeListingProperties = cache(async function (): Promise<numbe
 const ALTO_PADRAO_MIN_PRICE = "1500000";
 
 function altoPadraoPriceWhere(filters: PropertyFilters): { gte: string; lte?: string } {
-  const gte =
-    filters.minPrice && /^\d+(\.\d+)?$/.test(filters.minPrice)
-      ? (BigInt(filters.minPrice.replace(/\D/g, "") || "0") >=
-        BigInt(ALTO_PADRAO_MIN_PRICE.replace(/\D/g, "") || "0")
-          ? filters.minPrice.replace(/\..*$/, "")
-          : ALTO_PADRAO_MIN_PRICE)
-      : ALTO_PADRAO_MIN_PRICE;
-  return {
-    gte,
-    ...(filters.maxPrice && /^\d+(\.\d+)?$/.test(filters.maxPrice)
-      ? { lte: filters.maxPrice.replace(/\..*$/, "") }
-      : {}),
-  };
+  return buildCatalogMinPriceWhere(filters, ALTO_PADRAO_MIN_PRICE);
 }
 
 function altoPadraoWhere(filters: PropertyFilters) {
@@ -1527,19 +1510,7 @@ export const countAltoPadraoProperties = cache(async function (
 const INVESTMENT_MIN_PRICE = "350000";
 
 function investmentPriceWhere(filters: PropertyFilters): { gte: string; lte?: string } {
-  const gte =
-    filters.minPrice && /^\d+(\.\d+)?$/.test(filters.minPrice)
-      ? BigInt(filters.minPrice.replace(/\D/g, "") || "0") >=
-        BigInt(INVESTMENT_MIN_PRICE.replace(/\D/g, "") || "0")
-        ? filters.minPrice.replace(/\..*$/, "")
-        : INVESTMENT_MIN_PRICE
-      : INVESTMENT_MIN_PRICE;
-  return {
-    gte,
-    ...(filters.maxPrice && /^\d+(\.\d+)?$/.test(filters.maxPrice)
-      ? { lte: filters.maxPrice.replace(/\..*$/, "") }
-      : {}),
-  };
+  return buildCatalogMinPriceWhere(filters, INVESTMENT_MIN_PRICE);
 }
 
 function internationalInvestmentWhere(filters: PropertyFilters) {

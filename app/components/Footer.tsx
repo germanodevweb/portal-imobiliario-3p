@@ -28,13 +28,11 @@ const socialLinks = [
   },
 ] as const;
 
+/** Mesmos itens do menu principal (Header). */
 const navLinks = [
-  { label: "Comprar imóvel", href: "/imoveis" },
-  { label: "Alto Padrão", href: "/imoveis/alto-padrao" },
-  { label: "Investimento", href: "/investir-no-brasil" },
+  { label: "Nossos Serviços", href: "/#servicos" },
   { label: "Quem Somos", href: "/quem-somos" },
   { label: "Blog Imobiliário", href: "/blog" },
-  { label: "Contato", href: "/contato" },
 ];
 
 export function Footer() {
@@ -82,7 +80,7 @@ export function Footer() {
               </h3>
               <ul className="flex flex-col gap-3">
                 {navLinks.map((link) => (
-                  <li key={link.href}>
+                  <li key={link.label}>
                     <Link
                       href={link.href}
                       className="text-sm font-medium text-green-700 transition-colors hover:text-[#0f5132]"

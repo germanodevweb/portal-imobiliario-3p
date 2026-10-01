@@ -1,10 +1,10 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { INCOME_FILTER_LINKS } from "@/lib/constants/income-filter-links";
-import { SERVICE_FILTER_LINKS } from "@/lib/constants/service-filter-links";
 import { cn } from "@/lib/utils";
 
 const dropdownMenuClasses =
@@ -47,12 +47,9 @@ const chipWhiteDropdown = cn(
 
 export function IncomeFilter() {
   const [incomeMenuOpen, setIncomeMenuOpen] = useState(false);
-  const [servicesMenuOpen, setServicesMenuOpen] = useState(false);
   const incomeWrapRef = useRef<HTMLDivElement>(null);
-  const servicesWrapRef = useRef<HTMLDivElement>(null);
 
   const closeIncomeMenu = useCallback(() => setIncomeMenuOpen(false), []);
-  const closeServicesMenu = useCallback(() => setServicesMenuOpen(false), []);
 
   useEffect(() => {
     if (!incomeMenuOpen) return;
@@ -62,15 +59,6 @@ export function IncomeFilter() {
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
   }, [incomeMenuOpen, closeIncomeMenu]);
-
-  useEffect(() => {
-    if (!servicesMenuOpen) return;
-    const onDoc = (e: MouseEvent) => {
-      if (!servicesWrapRef.current?.contains(e.target as Node)) closeServicesMenu();
-    };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [servicesMenuOpen, closeServicesMenu]);
 
   return (
     <section
@@ -83,8 +71,8 @@ export function IncomeFilter() {
             Alto Padrão
           </Link>
 
-          <Link href="/investir-no-brasil" className={chipOrange}>
-            Investidores
+          <Link href="/investir-no-brasil" className={cn(chipOrange, "text-balance leading-tight")}>
+            Investidores Estrangeiros
           </Link>
 
           <div
@@ -96,10 +84,21 @@ export function IncomeFilter() {
               aria-haspopup="menu"
               aria-expanded={incomeMenuOpen}
               onClick={() => setIncomeMenuOpen((v) => !v)}
-              className={chipWhiteDropdown}
+              className={cn(chipWhiteDropdown, "text-base md:text-lg")}
             >
-              <span className="min-w-0 flex-1 text-balance">
-                Imóvel Compatível Com Sua Renda
+              <span className="flex min-w-0 flex-1 items-center justify-center gap-1.5 sm:gap-2">
+                <Image
+                  src="/images/minha-casa-minha-vida-logo-1.png"
+                  alt=""
+                  width={140}
+                  height={56}
+                  sizes="(max-width: 640px) 72px, 96px"
+                  className="h-8 w-auto max-w-[4.5rem] shrink-0 object-contain object-left sm:h-9 sm:max-w-20 md:h-10 md:max-w-24"
+                  aria-hidden
+                />
+                <span className="min-w-0 text-balance text-[13px] font-bold leading-tight sm:text-[15px] md:text-lg">
+                  Meu Primeiro Imóvel
+                </span>
               </span>
               <ChevronDown
                 aria-hidden
@@ -138,55 +137,9 @@ export function IncomeFilter() {
             </ul>
           </div>
 
-          <div
-            ref={servicesWrapRef}
-            className={cn("group relative h-full", servicesMenuOpen && "z-60")}
-          >
-            <button
-              type="button"
-              aria-haspopup="menu"
-              aria-expanded={servicesMenuOpen}
-              onClick={() => setServicesMenuOpen((v) => !v)}
-              className={chipWhiteDropdown}
-            >
-              <span className="min-w-0 flex-1 text-balance">Serviços Imobiliários</span>
-              <ChevronDown
-                aria-hidden
-                className={cn(
-                  "h-4 w-4 shrink-0 text-zinc-500 transition-all duration-300 ease-out group-hover/chip:text-green-800",
-                  servicesMenuOpen
-                    ? "rotate-180 text-emerald-600"
-                    : "md:group-hover:rotate-180"
-                )}
-                strokeWidth={2.25}
-              />
-            </button>
-
-            <ul
-              role="menu"
-              aria-label="Serviços imobiliários"
-              className={cn(
-                dropdownMenuClasses,
-                "md:left-auto md:right-0",
-                servicesMenuOpen
-                  ? "visible opacity-100"
-                  : "invisible pointer-events-none opacity-0 md:group-hover:visible md:group-hover:pointer-events-auto md:group-hover:opacity-100"
-              )}
-            >
-              {SERVICE_FILTER_LINKS.map((item) => (
-                <li key={item.href} role="none">
-                  <Link
-                    role="menuitem"
-                    href={item.href}
-                    className={dropdownItemClasses}
-                    onClick={closeServicesMenu}
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <Link href="/tipo/terreno" className={chipOrange}>
+            Terrenos
+          </Link>
         </div>
       </div>
     </section>
