@@ -9,13 +9,14 @@
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../lib/generated/prisma/client";
-import { fetchYouTubeVideoDetails } from "../lib/youtube/fetch-video-details";
+import { fetchYouTubeVideoDetailsCore } from "../lib/youtube/fetch-video-details-core";
 
 const dryRun = process.argv.includes("--dry-run");
 const BATCH = 25;
 
 async function main() {
-  if (!process.env.YOUTUBE_API_KEY?.trim()) {
+  const apiKey = process.env.YOUTUBE_API_KEY?.trim();
+  if (!apiKey) {
     throw new Error("Defina YOUTUBE_API_KEY no .env");
   }
 
@@ -66,7 +67,7 @@ async function main() {
         continue;
       }
 
-      const details = await fetchYouTubeVideoDetails(videoId);
+      const details = await fetchYouTubeVideoDetailsCore(videoId, apiKey);
       if (!details) {
         failed += 1;
         console.warn(`Falha API: ${row.slug} (${videoId})`);
