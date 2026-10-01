@@ -1,5 +1,7 @@
+import Link from "next/link";
 import {
   parsePropertyDescription,
+  descriptionSectionDomId,
   type DescriptionSection,
 } from "@/lib/utils/parse-property-description";
 
@@ -17,19 +19,58 @@ const sectionTitleClass =
 
 const paragraphClass = "text-pretty text-zinc-700";
 
+function DescriptionIndex({ sections }: { sections: DescriptionSection[] }) {
+  if (sections.length < 3) return null;
+
+  return (
+    <nav
+      className="mb-8 rounded-xl border border-zinc-100 bg-zinc-50/80 px-4 py-4 sm:px-5"
+      aria-label="Índice da descrição"
+    >
+      <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+        Nesta descrição
+      </p>
+      <ol className="mt-3 flex flex-wrap items-center gap-x-1 gap-y-2 text-sm">
+        {sections.map((section, index) => {
+          const id = descriptionSectionDomId(section.title, index);
+          return (
+            <li key={id} className="inline-flex items-center">
+              {index > 0 && (
+                <span className="mx-1.5 text-zinc-400" aria-hidden>
+                  ·
+                </span>
+              )}
+              <Link
+                href={`#${id}`}
+                className="inline-flex min-h-[44px] items-center rounded-md px-1 font-medium text-green-800 underline-offset-2 hover:underline"
+              >
+                {section.title}
+              </Link>
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}
+
 function renderSections(sections: DescriptionSection[]) {
   if (sections.length === 0) return null;
 
   return (
     <div className="space-y-10">
-      {sections.map((section, index) => (
+      <DescriptionIndex sections={sections} />
+      {sections.map((section, index) => {
+        const sectionId = descriptionSectionDomId(section.title, index);
+        return (
         <section
           key={`${section.title}-${index}`}
-          className="scroll-mt-24 border-b border-zinc-100 pb-10 last:border-b-0 last:pb-0"
-          aria-labelledby={`property-desc-${index}`}
+          id={sectionId}
+          className="scroll-mt-28 border-b border-zinc-100 pb-10 last:border-b-0 last:pb-0"
+          aria-labelledby={`${sectionId}-heading`}
         >
           <h2
-            id={`property-desc-${index}`}
+            id={`${sectionId}-heading`}
             className={sectionTitleClass}
           >
             {section.title}
@@ -51,7 +92,8 @@ function renderSections(sections: DescriptionSection[]) {
             )}
           </div>
         </section>
-      ))}
+      );
+      })}
     </div>
   );
 }

@@ -274,6 +274,17 @@ function parsePlainText(raw: string): ParsedPropertyDescription {
   return { kind: "sections", sections };
 }
 
+/** ID estável para âncoras do índice da descrição (sem alterar slugs públicos). */
+export function descriptionSectionDomId(title: string, index: number): string {
+  const slug = title
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+  return slug ? `desc-${slug}` : `desc-sec-${index}`;
+}
+
 export function parsePropertyDescription(raw: string): ParsedPropertyDescription {
   const trimmed = raw.trim();
   if (!trimmed) {
