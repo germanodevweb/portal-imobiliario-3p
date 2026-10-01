@@ -1,21 +1,18 @@
 
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { headers } from "next/headers";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist } from "next/font/google";
+import { GoogleAnalytics } from "@/app/components/GoogleAnalytics";
 import { SITE_METADATA_BASE } from "@/lib/seo";
 import {
-  buildOrganizationJsonLd,
+  buildSiteEntityGraphJsonLd,
   serializeJsonLd,
 } from "@/lib/seo/site-entity-jsonld";
 import "./globals.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
   subsets: ["latin"],
 });
 
@@ -54,33 +51,19 @@ export default async function RootLayout({
   const pathname = headersList.get("x-pathname") ?? "";
   const lang = getLangFromPath(pathname);
 
-  const organizationJsonLd = serializeJsonLd(buildOrganizationJsonLd());
+  const siteEntityGraphJsonLd = serializeJsonLd(buildSiteEntityGraphJsonLd());
   return (
     <html lang={lang} className="overflow-x-clip">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-dvh antialiased`}
-      >
-        <script
-          async
-          src="https://www.googletagmanager.com/gtag/js?id=G-KYHCRPZ1C4"
-        />
-  
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', 'G-KYHCRPZ1C4');
-            `,
-          }}
-        />
-  
+      <body className={`${geistSans.variable} min-h-dvh antialiased`}>
+        <Suspense fallback={null}>
+          <GoogleAnalytics />
+        </Suspense>
+
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: organizationJsonLd }}
+          dangerouslySetInnerHTML={{ __html: siteEntityGraphJsonLd }}
         />
-  
+
         {children}
       </body>
     </html>

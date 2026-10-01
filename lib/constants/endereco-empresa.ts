@@ -10,6 +10,56 @@ export const EMPRESA_POSTAL_ADDRESS = {
   addressCountry: "BR",
 } as const;
 
+/**
+ * Coordenadas reais do escritório (Google Maps / cadastro).
+ * Preencha quando tiver lat/lng confirmados; null = não emitir geo no JSON-LD.
+ */
+export const EMPRESA_GEO_COORDINATES: {
+  latitude: number;
+  longitude: number;
+} | null = null;
+
+/**
+ * Cidades atendidas pela consultoria (JSON-LD areaServed na home).
+ * Ajuste conforme operação comercial.
+ */
+export const EMPRESA_AREA_SERVED_CITIES = [
+  "Fortaleza",
+  "Caucaia",
+  "Eusébio",
+  "Aquiraz",
+  "Maracanaú",
+  "Jericoacoara",
+  "Beberibe",
+  "Cascavel",
+] as const;
+
+/** Horário de atendimento (Schema.org OpeningHoursSpecification). */
+export type EmpresaOpeningHoursSpec = {
+  "@type": "OpeningHoursSpecification";
+  dayOfWeek: string | string[];
+  opens: string;
+  closes: string;
+};
+
+/** Atendimento 24 horas, todos os dias (confirmado pelo cliente). */
+export const EMPRESA_OPENING_HOURS_SPEC: EmpresaOpeningHoursSpec[] = [
+  {
+    "@type": "OpeningHoursSpecification",
+    dayOfWeek: [
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Sunday",
+    ],
+    opens: "00:00",
+    closes: "23:59",
+  },
+];
+
 export function buildEmpresaPostalAddressJsonLd(): Record<string, string> {
   return {
     "@type": "PostalAddress",
