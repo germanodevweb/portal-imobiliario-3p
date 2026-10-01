@@ -11,6 +11,7 @@ import {
   countPublishedPropertiesByStateAndCity,
   getRelatedNeighborhoodsByCitySlug,
   getPriceRangeByCitySlug,
+  getTransactionTypesByCitySlug,
   getCitiesByStateSlug,
   getAvailableStateCityPairs,
 } from "@/lib/queries/properties";
@@ -32,7 +33,14 @@ import {
   buildPageTitle,
   buildPaginatedCanonical,
   ITEMS_PER_PAGE,
+  notFoundIfPageOutOfRange,
 } from "@/lib/pagination";
+import {
+  serializeJsonLd,
+  buildBreadcrumbListJsonLd,
+  buildCollectionPageJsonLd,
+  buildItemListJsonLd,
+} from "@/lib/seo/site-entity-jsonld";
 
 // ---------------------------------------------------------------------------
 // Tipos
@@ -63,25 +71,36 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   const sp = await searchParams;
   const page = parsePage(sp);
 
-  const [context, count, neighborhoods] = await Promise.all([
-    getCityContext(citySlug),
-    countPublishedPropertiesByStateAndCity(stateSlug, citySlug),
-    getRelatedNeighborhoodsByCitySlug(citySlug),
-  ]);
+  const [context, count, neighborhoods, priceRange, transactionTypes] =
+    await Promise.all([
+      getCityContext(citySlug),
+      countPublishedPropertiesByStateAndCity(stateSlug, citySlug),
+      getRelatedNeighborhoodsByCitySlug(citySlug),
+      getPriceRangeByCitySlug(citySlug),
+      getTransactionTypesByCitySlug(citySlug),
+    ]);
 
   // Valida hierarquia: a cidade deve pertencer ao estado informado na URL
   if (!context || context.stateSlug !== stateSlug) {
     return { title: "Cidade não encontrada" };
   }
 
+  notFoundIfPageOutOfRange(page, calculateTotalPages(count));
+
   const evaluation = evaluateIndexation({ pageType: "stateCity", publishedCount: count });
-  const baseTitle = buildStateCityPageTitle(context.city, context.state);
+  const baseTitle = buildStateCityPageTitle(
+    context.city,
+    context.state,
+    transactionTypes
+  );
   const title = buildPageTitle(baseTitle, page);
   const description = buildStateCityPageDescription(
     context.city,
     context.state,
     count,
-    neighborhoods.filter((n) => n.neighborhoodSlug !== null).length
+    neighborhoods.filter((n) => n.neighborhoodSlug !== null).length,
+    priceRange,
+    transactionTypes
   );
   const canonical = buildPaginatedCanonical(
     buildCanonicalUrl(`/estado/${stateSlug}/cidade/${citySlug}`),
@@ -108,7 +127,7 @@ export default async function EstadoCidadePage({ params, searchParams }: PagePro
   const page = parsePage(sp);
   const skip = getSkip(page);
 
-  const [context, count, neighborhoods, properties, priceRange, otherCities] =
+  const [context, count, neighborhoods, properties, priceRange, otherCities, transactionTypes] =
     await Promise.all([
       getCityContext(citySlug),
       countPublishedPropertiesByStateAndCity(stateSlug, citySlug),
@@ -116,6 +135,7 @@ export default async function EstadoCidadePage({ params, searchParams }: PagePro
       getPublishedPropertiesByStateAndCity(stateSlug, citySlug, PROPERTIES_LIMIT, skip),
       getPriceRangeByCitySlug(citySlug),
       getCitiesByStateSlug(stateSlug),
+      getTransactionTypesByCitySlug(citySlug),
     ]);
 
   // Valida que a cidade pertence ao estado — impede URLs manipuladas
@@ -124,6 +144,7 @@ export default async function EstadoCidadePage({ params, searchParams }: PagePro
 
   const { city, state } = context;
   const totalPages = calculateTotalPages(count);
+  notFoundIfPageOutOfRange(page, totalPages);
   const canonical = buildPaginatedCanonical(
     buildCanonicalUrl(`/estado/${stateSlug}/cidade/${citySlug}`),
     page
@@ -144,55 +165,52 @@ export default async function EstadoCidadePage({ params, searchParams }: PagePro
   }
 
   // JSON-LD
-  const breadcrumbJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Início", item: buildCanonicalUrl("/") },
-      { "@type": "ListItem", position: 2, name: state, item: stateCanonical },
-      { "@type": "ListItem", position: 3, name: city, item: canonical },
-    ],
-  };
+  const breadcrumbJsonLd = buildBreadcrumbListJsonLd([
+    { name: "Início", url: buildCanonicalUrl("/") },
+    { name: state, url: stateCanonical },
+    { name: city, url: canonical },
+  ]);
 
-  const collectionJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
+  const collectionJsonLd = buildCollectionPageJsonLd({
     name: `${city} em ${state}: Imóveis à Venda`,
-    description: buildStateCityPageDescription(city, state, count, validNeighborhoods.length),
+    description: buildStateCityPageDescription(
+      city,
+      state,
+      count,
+      validNeighborhoods.length,
+      priceRange,
+      transactionTypes
+    ),
     url: canonical,
-    isPartOf: { "@type": "WebPage", url: stateCanonical },
     numberOfItems: count,
-  };
+    isPartOfUrl: stateCanonical,
+  });
 
   const itemListJsonLd =
     properties.length > 0
-      ? {
-          "@context": "https://schema.org",
-          "@type": "ItemList",
+      ? buildItemListJsonLd({
           name: `Imóveis em ${city}, ${state}`,
           numberOfItems: properties.length,
-          itemListElement: properties.map((p, i) => ({
-            "@type": "ListItem",
-            position: i + 1,
+          items: properties.map((p) => ({
             url: buildCanonicalUrl(`/imoveis/${p.slug}`),
           })),
-        }
+        })
       : null;
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbJsonLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(collectionJsonLd) }}
       />
       {itemListJsonLd && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(itemListJsonLd) }}
         />
       )}
 
@@ -342,7 +360,7 @@ export default async function EstadoCidadePage({ params, searchParams }: PagePro
           >
             Imóveis disponíveis em {city}
           </h2>
-          <PropertyList properties={properties} />
+          <PropertyList properties={properties} priorityCount={1} />
           <Pagination
             currentPage={page}
             totalPages={totalPages}

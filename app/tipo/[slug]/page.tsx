@@ -11,6 +11,7 @@ import {
   getNeighborhoodsByPropertyTypeSlug,
   getAvailablePropertyTypes,
   getPriceRangeByPropertyTypeSlug,
+  getTransactionTypesByPropertyTypeSlug,
 } from "@/lib/queries/properties";
 import { getPostsByTag } from "@/lib/queries/blog";
 import { BlogSection } from "@/app/components/BlogSection";
@@ -35,7 +36,14 @@ import {
   buildPageTitle,
   buildPaginatedCanonical,
   ITEMS_PER_PAGE,
+  notFoundIfPageOutOfRange,
 } from "@/lib/pagination";
+import {
+  serializeJsonLd,
+  buildBreadcrumbListJsonLd,
+  buildCollectionPageJsonLd,
+  buildItemListJsonLd,
+} from "@/lib/seo/site-entity-jsonld";
 
 const PROPERTIES_LIMIT = ITEMS_PER_PAGE;
 
@@ -62,17 +70,28 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   const sp = await searchParams;
   const page = parsePage(sp);
 
-  const count = await countPublishedPropertiesByPropertyTypeSlug(slug);
+  const [count, priceRange, transactionTypes] = await Promise.all([
+    countPublishedPropertiesByPropertyTypeSlug(slug),
+    getPriceRangeByPropertyTypeSlug(slug),
+    getTransactionTypesByPropertyTypeSlug(slug),
+  ]);
   const evaluation = evaluateIndexation({ pageType: "propertyType", publishedCount: count });
 
   if (!evaluation.shouldExist) {
     return { title: "Tipo de imóvel não encontrado | 3Pinheiros" };
   }
 
+  notFoundIfPageOutOfRange(page, calculateTotalPages(count));
+
   const typeName = getPropertyTypeLabel(slug);
-  const baseTitle = buildPropertyTypeListTitle(typeName);
+  const baseTitle = buildPropertyTypeListTitle(typeName, transactionTypes);
   const title = buildPageTitle(baseTitle, page);
-  const description = buildPropertyTypeListDescription(typeName, count);
+  const description = buildPropertyTypeListDescription(
+    typeName,
+    count,
+    priceRange,
+    transactionTypes
+  );
   const canonical = buildPaginatedCanonical(buildCanonicalUrl(`/tipo/${slug}`), page);
 
   return {
@@ -101,74 +120,52 @@ export default async function TipoPage({ params, searchParams }: PageProps) {
 
   const typeName = getPropertyTypeLabel(slug);
   const totalPages = calculateTotalPages(count);
+  notFoundIfPageOutOfRange(page, totalPages);
 
-  const [properties, cities, neighborhoods, priceRange, blogPosts] = await Promise.all([
+  const [properties, cities, neighborhoods, priceRange, blogPosts, transactionTypes] =
+    await Promise.all([
     getPublishedPropertiesByPropertyTypeSlug(slug, PROPERTIES_LIMIT, skip),
     getCitiesByPropertyTypeSlug(slug),
     getNeighborhoodsByPropertyTypeSlug(slug),
     getPriceRangeByPropertyTypeSlug(slug),
     getPostsByTag(`tipo:${slug}`),
+    getTransactionTypesByPropertyTypeSlug(slug),
   ]);
 
   const canonical = buildPaginatedCanonical(buildCanonicalUrl(`/tipo/${slug}`), page);
-  const description = buildPropertyTypeListDescription(typeName, count);
+  const description = buildPropertyTypeListDescription(
+    typeName,
+    count,
+    priceRange,
+    transactionTypes
+  );
   const cityCount = cities.length;
 
   // -------------------------------------------------------------------------
   // JSON-LD
   // -------------------------------------------------------------------------
 
-  const breadcrumbJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      {
-        "@type": "ListItem",
-        position: 1,
-        name: "Início",
-        item: buildCanonicalUrl("/"),
-      },
-      {
-        "@type": "ListItem",
-        position: 2,
-        name: "Imóveis",
-        item: buildCanonicalUrl("/imoveis"),
-      },
-      {
-        "@type": "ListItem",
-        position: 3,
-        name: typeName,
-        item: canonical,
-      },
-    ],
-  };
+  const breadcrumbJsonLd = buildBreadcrumbListJsonLd([
+    { name: "Início", url: buildCanonicalUrl("/") },
+    { name: "Imóveis", url: buildCanonicalUrl("/imoveis") },
+    { name: typeName, url: canonical },
+  ]);
 
-  const collectionPageJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
+  const collectionPageJsonLd = buildCollectionPageJsonLd({
     name: `${typeName} à Venda`,
     description,
     url: canonical,
     numberOfItems: count,
-    publisher: {
-      "@type": "Organization",
-      name: "3Pinheiros Consultoria Imobiliária",
-      url: buildCanonicalUrl("/"),
-    },
-  };
+  });
 
-  const itemListJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "ItemList",
+  const itemListJsonLd = buildItemListJsonLd({
     name: `${typeName} à Venda`,
     numberOfItems: properties.length,
-    itemListElement: properties.map((p, i) => ({
-      "@type": "ListItem",
-      position: i + 1,
+    items: properties.map((p) => ({
       url: buildCanonicalUrl(`/imoveis/${p.slug}`),
       name: p.title,
     })),
-  };
+  });
 
   return (
     <>
@@ -176,15 +173,15 @@ export default async function TipoPage({ params, searchParams }: PageProps) {
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbJsonLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionPageJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(collectionPageJsonLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(itemListJsonLd) }}
       />
 
       <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
@@ -263,7 +260,7 @@ export default async function TipoPage({ params, searchParams }: PageProps) {
 
         {/* Grid de imóveis */}
         <section className="mt-10" aria-label={`Listagem de ${typeName.toLowerCase()}`}>
-          <PropertyList properties={properties} />
+          <PropertyList properties={properties} priorityCount={1} />
           <Pagination
             currentPage={page}
             totalPages={totalPages}

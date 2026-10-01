@@ -29,9 +29,11 @@ import {
   getSkip,
   ITEMS_PER_PAGE,
   parsePage,
+  notFoundIfPageOutOfRange,
 } from "@/lib/pagination";
 import { Pagination } from "./components/Pagination";
 import { PropertySmartSearch } from "./components/PropertySmartSearch";
+import { getQuickPropertyTypeLinks } from "@/lib/imoveis/quick-type-links.server";
 
 type PageProps = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -40,6 +42,8 @@ type PageProps = {
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
   const sp = await searchParams;
   const page = parsePage(sp);
+  const count = await countHomeListingProperties();
+  notFoundIfPageOutOfRange(page, calculateTotalPages(count));
   const title = buildPageTitle(buildHomePageTitle(), page);
   const description = buildHomePageDescription();
   const canonical = buildCanonicalUrl(buildPaginatedCanonical("/", page));
@@ -50,7 +54,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
     alternates: { canonical },
     openGraph: buildOpenGraph({ title, description, url: canonical }),
     twitter: buildTwitterCard({ title, description }),
-    robots: { index: true, follow: true },
+    robots: page > 1 ? { index: false, follow: true } : { index: true, follow: true },
   };
 }
 
@@ -63,7 +67,9 @@ export default async function Home({ searchParams }: PageProps) {
     countHomeListingProperties(),
   ]);
   const totalPages = calculateTotalPages(count);
+  notFoundIfPageOutOfRange(page, totalPages);
 
+  const quickTypeLinks = await getQuickPropertyTypeLinks();
   const homeLocalJsonLd = serializeJsonLd(buildHomeRealEstateAgentJsonLd());
 
   return (
@@ -76,9 +82,9 @@ export default async function Home({ searchParams }: PageProps) {
       <IncomeFilter />
 
       <main className="mx-auto max-w-7xl px-4 py-8 pb-24 sm:px-6 sm:py-12 sm:pb-12 lg:px-8">
-        <PropertySmartSearch />
+        <PropertySmartSearch quickTypeLinks={quickTypeLinks} />
 
-        <PropertyList properties={properties} />
+        <PropertyList properties={properties} priorityCount={1} />
         <Pagination currentPage={page} totalPages={totalPages} basePath="/" />
       </main>
 

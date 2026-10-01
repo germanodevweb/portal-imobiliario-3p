@@ -10,6 +10,7 @@ import {
   countPublishedPropertiesByNeighborhoodSlug,
   getNeighborhoodContext,
   getPriceRangeByNeighborhoodSlug,
+  getTransactionTypesByNeighborhoodSlug,
   getMostCommonTypeByNeighborhoodSlug,
   getRelatedNeighborhoodsByCitySlug,
   getAvailablePropertyTypesByNeighborhoodSlug,
@@ -35,7 +36,14 @@ import {
   buildPageTitle,
   buildPaginatedCanonical,
   ITEMS_PER_PAGE,
+  notFoundIfPageOutOfRange,
 } from "@/lib/pagination";
+import {
+  serializeJsonLd,
+  buildBreadcrumbListJsonLd,
+  buildCollectionPageJsonLd,
+  buildItemListJsonLd,
+} from "@/lib/seo/site-entity-jsonld";
 
 const PROPERTIES_LIMIT = ITEMS_PER_PAGE;
 
@@ -67,9 +75,11 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   const sp = await searchParams;
   const page = parsePage(sp);
 
-  const [context, count] = await Promise.all([
+  const [context, count, priceRange, transactionTypes] = await Promise.all([
     getNeighborhoodContext(neighborhoodSlug),
     countPublishedPropertiesByNeighborhoodSlug(neighborhoodSlug),
+    getPriceRangeByNeighborhoodSlug(neighborhoodSlug),
+    getTransactionTypesByNeighborhoodSlug(neighborhoodSlug),
   ]);
 
   // Valida que o bairro pertence à cidade informada na URL
@@ -83,17 +93,25 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     return { title: "Página não encontrada | 3Pinheiros" };
   }
 
+  notFoundIfPageOutOfRange(page, calculateTotalPages(count));
+
   const { neighborhood, city } = context;
   const allNeighborhoods = await getRelatedNeighborhoodsByCitySlug(citySlug);
   const neighborhoodCount = allNeighborhoods.length;
 
-  const baseTitle = buildCityNeighborhoodPageTitle(neighborhood, city);
+  const baseTitle = buildCityNeighborhoodPageTitle(
+    neighborhood,
+    city,
+    transactionTypes
+  );
   const title = buildPageTitle(baseTitle, page);
   const description = buildCityNeighborhoodPageDescription(
     neighborhood,
     city,
     count,
-    neighborhoodCount
+    neighborhoodCount,
+    priceRange,
+    transactionTypes
   );
   // Canonical aponta para /bairro/[slug] — URL principal do bairro.
   // Evita duplicate content entre cidade/bairro e bairro (mesma listagem).
@@ -136,6 +154,7 @@ export default async function CidadeBairroPage({ params, searchParams }: PagePro
 
   const { neighborhood, city } = context;
   const totalPages = calculateTotalPages(count);
+  notFoundIfPageOutOfRange(page, totalPages);
 
   // Busca paralela: imóveis, bairros da cidade, tipos no bairro, preço, tipo predominante, blog
   const [
@@ -145,6 +164,7 @@ export default async function CidadeBairroPage({ params, searchParams }: PagePro
     priceRange,
     mostCommonType,
     blogPosts,
+    transactionTypes,
   ] = await Promise.all([
     getPublishedPropertiesByNeighborhoodSlug(neighborhoodSlug, PROPERTIES_LIMIT, skip),
     getRelatedNeighborhoodsByCitySlug(citySlug),
@@ -157,6 +177,7 @@ export default async function CidadeBairroPage({ params, searchParams }: PagePro
         ? posts
         : getPostsByTag(`cidade:${citySlug}`)
     ),
+    getTransactionTypesByNeighborhoodSlug(neighborhoodSlug),
   ]);
 
   // Canonical aponta para /bairro/[slug] — URL principal do bairro (evita duplicate content)
@@ -170,7 +191,9 @@ export default async function CidadeBairroPage({ params, searchParams }: PagePro
     neighborhood,
     city,
     count,
-    allNeighborhoodsInCity.length
+    allNeighborhoodsInCity.length,
+    priceRange,
+    transactionTypes
   );
 
   // Bairros da cidade excluindo o bairro atual
@@ -184,65 +207,29 @@ export default async function CidadeBairroPage({ params, searchParams }: PagePro
   // JSON-LD
   // -------------------------------------------------------------------------
 
-  const breadcrumbJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      {
-        "@type": "ListItem",
-        position: 1,
-        name: "Início",
-        item: buildCanonicalUrl("/"),
-      },
-      {
-        "@type": "ListItem",
-        position: 2,
-        name: "Imóveis",
-        item: buildCanonicalUrl("/imoveis"),
-      },
-      {
-        "@type": "ListItem",
-        position: 3,
-        name: city,
-        item: cityCanonical,
-      },
-      {
-        "@type": "ListItem",
-        position: 4,
-        name: neighborhood,
-        item: canonical,
-      },
-    ],
-  };
+  const breadcrumbJsonLd = buildBreadcrumbListJsonLd([
+    { name: "Início", url: buildCanonicalUrl("/") },
+    { name: "Imóveis", url: buildCanonicalUrl("/imoveis") },
+    { name: city, url: cityCanonical },
+    { name: neighborhood, url: canonical },
+  ]);
 
-  const collectionPageJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
+  const collectionPageJsonLd = buildCollectionPageJsonLd({
     name: `Bairro ${neighborhood} em ${city} — Imóveis à Venda`,
     description,
     url: canonical,
     numberOfItems: count,
-    // Este bairro É PARTE da cidade — silo geográfico explícito
-    isPartOf: { "@type": "WebPage", url: cityCanonical },
-    publisher: {
-      "@type": "Organization",
-      name: SITE_NAME,
-      url: buildCanonicalUrl("/"),
-    },
-  };
+    isPartOfUrl: cityCanonical,
+  });
 
-  const itemListJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "ItemList",
+  const itemListJsonLd = buildItemListJsonLd({
     name: `Imóveis à Venda no ${neighborhood}, ${city}`,
     numberOfItems: properties.length,
-    itemListElement: properties.map((p, i) => ({
-      "@type": "ListItem",
-      position: i + 1,
+    items: properties.map((p) => ({
       url: buildCanonicalUrl(`/imoveis/${p.slug}`),
       name: p.title,
     })),
-  };
+  });
 
   return (
     <>
@@ -250,15 +237,15 @@ export default async function CidadeBairroPage({ params, searchParams }: PagePro
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbJsonLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionPageJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(collectionPageJsonLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(itemListJsonLd) }}
       />
 
       <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
@@ -378,7 +365,7 @@ export default async function CidadeBairroPage({ params, searchParams }: PagePro
 
         {/* Grid de imóveis */}
         <section className="mt-10" aria-label={`Imóveis no ${neighborhood}, ${city}`}>
-          <PropertyList properties={properties} />
+          <PropertyList properties={properties} priorityCount={1} />
           <Pagination
             currentPage={page}
             totalPages={totalPages}

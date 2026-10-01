@@ -36,7 +36,14 @@ import {
   buildPageTitle,
   buildPaginatedCanonical,
   ITEMS_PER_PAGE,
+  notFoundIfPageOutOfRange,
 } from "@/lib/pagination";
+import {
+  serializeJsonLd,
+  buildBreadcrumbListJsonLd,
+  buildCollectionPageJsonLd,
+  buildItemListJsonLd,
+} from "@/lib/seo/site-entity-jsonld";
 
 const PROPERTIES_LIMIT = ITEMS_PER_PAGE;
 
@@ -67,9 +74,14 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   const sp = await searchParams;
   const page = parsePage(sp);
 
-  const [context, count] = await Promise.all([
+  const [context, count, priceRange] = await Promise.all([
     getBuyTypeCityNeighborhoodContext(typeSlug, citySlug, neighborhoodSlug),
-    countPublishedPropertiesByBuyTypeCityAndNeighborhood(typeSlug, citySlug, neighborhoodSlug),
+    countPublishedPropertiesByBuyTypeCityAndNeighborhood(
+      typeSlug,
+      citySlug,
+      neighborhoodSlug
+    ),
+    getPriceRangeByBuyTypeCityAndNeighborhood(typeSlug, citySlug, neighborhoodSlug),
   ]);
 
   const evaluation = evaluateIndexation({
@@ -81,6 +93,8 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     return { title: "Página não encontrada | 3Pinheiros" };
   }
 
+  notFoundIfPageOutOfRange(page, calculateTotalPages(count));
+
   const typeName = getPropertyTypeLabel(typeSlug);
   const { neighborhood, city } = context;
   const baseTitle = buildBuyTypeCityNeighborhoodPageTitle(typeName, neighborhood, city);
@@ -89,7 +103,8 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     typeName,
     neighborhood,
     city,
-    count
+    count,
+    priceRange
   );
   const canonical = buildPaginatedCanonical(
     buildCanonicalUrl(`/comprar/${typeSlug}/${citySlug}/${neighborhoodSlug}`),
@@ -133,6 +148,7 @@ export default async function ComprarTypeCityNeighborhoodPage({
   const typeName = getPropertyTypeLabel(typeSlug);
   const { neighborhood, city } = context;
   const totalPages = calculateTotalPages(count);
+  notFoundIfPageOutOfRange(page, totalPages);
 
   const [
     properties,
@@ -172,7 +188,8 @@ export default async function ComprarTypeCityNeighborhoodPage({
     typeName,
     neighborhood,
     city,
-    count
+    count,
+    priceRange
   );
 
   const relatedTypes = otherTypes.filter((t) => t.propertyTypeSlug !== typeSlug);
@@ -187,54 +204,30 @@ export default async function ComprarTypeCityNeighborhoodPage({
   // JSON-LD
   // -------------------------------------------------------------------------
 
-  const breadcrumbJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Início", item: buildCanonicalUrl("/") },
-      { "@type": "ListItem", position: 2, name: "Imóveis", item: buildCanonicalUrl("/imoveis") },
-      { "@type": "ListItem", position: 3, name: typeName, item: typeCanonical },
-      { "@type": "ListItem", position: 4, name: city, item: parentComprarCanonical },
-      {
-        "@type": "ListItem",
-        position: 5,
-        name: neighborhood,
-        item: canonical,
-      },
-    ],
-  };
+  const breadcrumbJsonLd = buildBreadcrumbListJsonLd([
+    { name: "Início", url: buildCanonicalUrl("/") },
+    { name: "Imóveis", url: buildCanonicalUrl("/imoveis") },
+    { name: typeName, url: typeCanonical },
+    { name: city, url: parentComprarCanonical },
+    { name: neighborhood, url: canonical },
+  ]);
 
-  const collectionPageJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
+  const collectionPageJsonLd = buildCollectionPageJsonLd({
     name: `Comprar ${typeName} no ${neighborhood}, ${city}`,
     description,
     url: canonical,
     numberOfItems: count,
-    isPartOf: [
-      { "@type": "WebPage", url: parentComprarCanonical },
-      { "@type": "WebPage", url: neighborhoodCanonical },
-      { "@type": "WebPage", url: typeCanonical },
-    ],
-    publisher: {
-      "@type": "Organization",
-      name: "3Pinheiros Consultoria Imobiliária",
-      url: buildCanonicalUrl("/"),
-    },
-  };
+    isPartOfUrl: parentComprarCanonical,
+  });
 
-  const itemListJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "ItemList",
+  const itemListJsonLd = buildItemListJsonLd({
     name: `Comprar ${typeName} no ${neighborhood}`,
     numberOfItems: properties.length,
-    itemListElement: properties.map((p, i) => ({
-      "@type": "ListItem",
-      position: i + 1,
+    items: properties.map((p) => ({
       url: buildCanonicalUrl(`/imoveis/${p.slug}`),
       name: p.title,
     })),
-  };
+  });
 
   return (
     <>
@@ -242,15 +235,15 @@ export default async function ComprarTypeCityNeighborhoodPage({
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbJsonLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionPageJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(collectionPageJsonLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(itemListJsonLd) }}
       />
 
       <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
@@ -369,7 +362,7 @@ export default async function ComprarTypeCityNeighborhoodPage({
 
         {/* Grid de imóveis */}
         <section className="mt-10" aria-label={`${typeName} à venda no ${neighborhood}`}>
-          <PropertyList properties={properties} />
+          <PropertyList properties={properties} priorityCount={1} />
           <Pagination
             currentPage={page}
             totalPages={totalPages}

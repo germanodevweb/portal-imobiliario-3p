@@ -14,6 +14,7 @@ import {
   countFilteredProperties,
   getAvailableCities,
   getAvailablePropertyTypes,
+  getTransactionTypesPublished,
 } from "@/lib/queries/properties";
 import {
   applyLocationFilterSanitization,
@@ -38,7 +39,12 @@ import {
   buildPageTitle,
   buildPaginatedCanonical,
   ITEMS_PER_PAGE,
+  notFoundIfPageOutOfRange,
 } from "@/lib/pagination";
+import {
+  serializeJsonLd,
+  buildCollectionPageJsonLd,
+} from "@/lib/seo/site-entity-jsonld";
 
 /** Mensagem do CTA “Simule sua Prestação” (PGMV / faixa de renda) — WhatsApp via `NEXT_PUBLIC_WHATSAPP_PHONE`. */
 const WHATSAPP_SIMULE_PRESTACAO_MESSAGE =
@@ -79,11 +85,15 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   } = parseSearchParams(sp);
   const page = parsePage(sp);
 
+  const countForPage = await countFilteredProperties(filters);
+  notFoundIfPageOutOfRange(page, calculateTotalPages(countForPage));
+
   const baseCanonical = buildCanonicalUrl("/imoveis");
 
   if (!hasFilters) {
-    const count = await countFilteredProperties(filters);
-    const baseTitle = buildImoveisPageTitle();
+    const count = countForPage;
+    const transactionTypes = await getTransactionTypesPublished();
+    const baseTitle = buildImoveisPageTitle(transactionTypes);
     const title = buildPageTitle(baseTitle, page);
     const description = buildImoveisPageDescription(count);
     const canonical = buildPaginatedCanonical(baseCanonical, page);
@@ -130,7 +140,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
     title,
     description,
     alternates: { canonical },
-    robots: { index: false, follow: false },
+    robots: { index: false, follow: true },
   };
 }
 
@@ -305,6 +315,7 @@ export default async function ImoveisPage({ searchParams }: PageProps) {
   ]);
 
   const totalPages = calculateTotalPages(count);
+  notFoundIfPageOutOfRange(page, totalPages);
 
   const paginationParams: Record<string, string> = {};
   if (rawCidade) paginationParams.cidade = rawCidade;
@@ -338,18 +349,12 @@ export default async function ImoveisPage({ searchParams }: PageProps) {
 
   // JSON-LD apenas para a página limpa (sem filtros)
   const collectionPageJsonLd = !hasFilters
-    ? {
-        "@context": "https://schema.org",
-        "@type": "CollectionPage",
+    ? buildCollectionPageJsonLd({
         name: buildImoveisPageTitle(),
         url: buildCanonicalUrl("/imoveis"),
         description: buildImoveisPageDescription(count),
-        publisher: {
-          "@type": "Organization",
-          name: SITE_NAME,
-          url: BASE_URL,
-        },
-      }
+        numberOfItems: count,
+      })
     : null;
 
   return (
@@ -359,7 +364,7 @@ export default async function ImoveisPage({ searchParams }: PageProps) {
       {collectionPageJsonLd && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionPageJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(collectionPageJsonLd) }}
         />
       )}
 
@@ -500,9 +505,9 @@ export default async function ImoveisPage({ searchParams }: PageProps) {
         ) : (
           <>
             <ul className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {properties.map((property) => (
+              {properties.map((property, index) => (
                 <li key={property.id}>
-                  <PropertyCard property={property} />
+                  <PropertyCard property={property} priority={index === 0} />
                 </li>
               ))}
             </ul>

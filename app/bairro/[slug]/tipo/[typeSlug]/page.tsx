@@ -7,6 +7,8 @@ import { PropertyList } from "@/app/components/PropertyList";
 import {
   getPublishedPropertiesByNeighborhoodAndType,
   countPublishedPropertiesByNeighborhoodAndType,
+  getPriceRangeByNeighborhoodAndType,
+  getTransactionTypesByNeighborhoodAndType,
   getNeighborhoodContext,
   getAvailableNeighborhoodTypePairs,
 } from "@/lib/queries/properties";
@@ -27,6 +29,7 @@ import {
   buildPageTitle,
   buildPaginatedCanonical,
   ITEMS_PER_PAGE,
+  notFoundIfPageOutOfRange,
 } from "@/lib/pagination";
 
 const PROPERTIES_LIMIT = ITEMS_PER_PAGE;
@@ -57,9 +60,11 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   const sp = await searchParams;
   const page = parsePage(sp);
 
-  const [context, count] = await Promise.all([
+  const [context, count, priceRange, transactionTypes] = await Promise.all([
     getNeighborhoodContext(neighborhoodSlug),
     countPublishedPropertiesByNeighborhoodAndType(neighborhoodSlug, typeSlug),
+    getPriceRangeByNeighborhoodAndType(neighborhoodSlug, typeSlug),
+    getTransactionTypesByNeighborhoodAndType(neighborhoodSlug, typeSlug),
   ]);
 
   const evaluation = evaluateIndexation({
@@ -71,11 +76,25 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     return { title: "Página não encontrada | 3Pinheiros" };
   }
 
+  notFoundIfPageOutOfRange(page, calculateTotalPages(count));
+
   const typeName = getPropertyTypeLabel(typeSlug);
   const { neighborhood, city } = context;
-  const baseTitle = buildNeighborhoodTypePageTitle(typeName, neighborhood, city);
+  const baseTitle = buildNeighborhoodTypePageTitle(
+    typeName,
+    neighborhood,
+    city,
+    transactionTypes
+  );
   const title = buildPageTitle(baseTitle, page);
-  const description = buildNeighborhoodTypePageDescription(typeName, neighborhood, city, count);
+  const description = buildNeighborhoodTypePageDescription(
+    typeName,
+    neighborhood,
+    city,
+    count,
+    priceRange,
+    transactionTypes
+  );
   const canonical = buildPaginatedCanonical(
     buildCanonicalUrl(`/bairro/${neighborhoodSlug}/tipo/${typeSlug}`),
     page
@@ -116,6 +135,7 @@ export default async function BairroTipoPage({ params, searchParams }: PageProps
   const { neighborhood, city, citySlug } = context;
   const typeName = getPropertyTypeLabel(typeSlug);
   const totalPages = calculateTotalPages(count);
+  notFoundIfPageOutOfRange(page, totalPages);
 
   const properties = await getPublishedPropertiesByNeighborhoodAndType(
     neighborhoodSlug,
@@ -167,7 +187,7 @@ export default async function BairroTipoPage({ params, searchParams }: PageProps
 
         {count > 0 ? (
           <>
-            <PropertyList properties={properties} />
+            <PropertyList properties={properties} priorityCount={1} />
             <Pagination
               currentPage={page}
               totalPages={totalPages}

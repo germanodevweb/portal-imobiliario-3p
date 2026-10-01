@@ -34,6 +34,7 @@ import {
   getSkip,
   ITEMS_PER_PAGE,
   parsePage,
+  notFoundIfPageOutOfRange,
 } from "@/lib/pagination";
 
 type PageProps = {
@@ -58,11 +59,14 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
     hasFilters,
   } = parsePropertyListSearchParams(sp);
 
+  const countForPage = await countAltoPadraoProperties(filters);
+  notFoundIfPageOutOfRange(page, calculateTotalPages(countForPage));
+
   const basePath = "/imoveis/alto-padrao";
   const baseCanonical = buildCanonicalUrl(basePath);
 
   if (!hasFilters) {
-    const count = await countAltoPadraoProperties(filters);
+    const count = countForPage;
     const title = buildPageTitle(buildAltoPadraoPageTitle(), page);
     const description = buildAltoPadraoPageDescription(count);
     const canonical = buildPaginatedCanonical(baseCanonical, page);
@@ -107,7 +111,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
     title,
     description,
     alternates: { canonical },
-    robots: { index: false, follow: false },
+    robots: { index: false, follow: true },
   };
 }
 
@@ -144,6 +148,7 @@ export default async function AltoPadraoPage({ searchParams }: PageProps) {
   ]);
 
   const totalPages = calculateTotalPages(count);
+  notFoundIfPageOutOfRange(page, totalPages);
 
   const paginationParams: Record<string, string> = {};
   if (rawCidade) paginationParams.cidade = rawCidade;
@@ -258,7 +263,7 @@ export default async function AltoPadraoPage({ searchParams }: PageProps) {
 
           {count > 0 ? (
             <>
-              <PropertyList properties={properties} />
+              <PropertyList properties={properties} priorityCount={1} />
               <Pagination
                 currentPage={page}
                 totalPages={totalPages}

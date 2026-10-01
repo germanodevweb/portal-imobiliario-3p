@@ -11,6 +11,7 @@ import {
   getCitiesByStateSlug,
   getPriceRangeByStateSlug,
   getAvailableStates,
+  getTransactionTypesByStateSlug,
 } from "@/lib/queries/properties";
 import { getRecentPosts } from "@/lib/queries/blog";
 import { BlogSection } from "@/app/components/BlogSection";
@@ -34,7 +35,14 @@ import {
   buildPageTitle,
   buildPaginatedCanonical,
   ITEMS_PER_PAGE,
+  notFoundIfPageOutOfRange,
 } from "@/lib/pagination";
+import {
+  serializeJsonLd,
+  buildBreadcrumbListJsonLd,
+  buildCollectionPageJsonLd,
+  buildItemListJsonLd,
+} from "@/lib/seo/site-entity-jsonld";
 
 // ---------------------------------------------------------------------------
 // Tipos
@@ -63,18 +71,28 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   const sp = await searchParams;
   const page = parsePage(sp);
 
-  const [context, count, cities] = await Promise.all([
+  const [context, count, cities, priceRange, transactionTypes] = await Promise.all([
     getStateContext(stateSlug),
     countPublishedPropertiesByStateSlug(stateSlug),
     getCitiesByStateSlug(stateSlug),
+    getPriceRangeByStateSlug(stateSlug),
+    getTransactionTypesByStateSlug(stateSlug),
   ]);
 
   if (!context) return { title: "Estado não encontrado" };
 
+  notFoundIfPageOutOfRange(page, calculateTotalPages(count));
+
   const evaluation = evaluateIndexation({ pageType: "state", publishedCount: count });
-  const baseTitle = buildStatePageTitle(context.state);
+  const baseTitle = buildStatePageTitle(context.state, transactionTypes);
   const title = buildPageTitle(baseTitle, page);
-  const description = buildStatePageDescription(context.state, count, cities.length);
+  const description = buildStatePageDescription(
+    context.state,
+    count,
+    cities.length,
+    priceRange,
+    transactionTypes
+  );
   const canonical = buildPaginatedCanonical(buildCanonicalUrl(`/estado/${stateSlug}`), page);
 
   return {
@@ -97,13 +115,15 @@ export default async function EstadoPage({ params, searchParams }: PageProps) {
   const page = parsePage(sp);
   const skip = getSkip(page);
 
-  const [context, count, cities, properties, priceRange, recentPosts] = await Promise.all([
+  const [context, count, cities, properties, priceRange, recentPosts, transactionTypes] =
+    await Promise.all([
     getStateContext(stateSlug),
     countPublishedPropertiesByStateSlug(stateSlug),
     getCitiesByStateSlug(stateSlug),
     getPublishedPropertiesByStateSlug(stateSlug, ITEMS_PER_PAGE, skip),
     getPriceRangeByStateSlug(stateSlug),
     getRecentPosts(2),
+    getTransactionTypesByStateSlug(stateSlug),
   ]);
 
   const { shouldExist } = evaluateIndexation({ pageType: "state", publishedCount: count });
@@ -111,58 +131,54 @@ export default async function EstadoPage({ params, searchParams }: PageProps) {
 
   const { state } = context;
   const totalPages = calculateTotalPages(count);
+  notFoundIfPageOutOfRange(page, totalPages);
   const canonical = buildPaginatedCanonical(buildCanonicalUrl(`/estado/${stateSlug}`), page);
 
   // JSON-LD
-  const breadcrumbJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Início", item: buildCanonicalUrl("/") },
-      { "@type": "ListItem", position: 2, name: "Imóveis", item: buildCanonicalUrl("/imoveis") },
-      { "@type": "ListItem", position: 3, name: state, item: canonical },
-    ],
-  };
+  const breadcrumbJsonLd = buildBreadcrumbListJsonLd([
+    { name: "Início", url: buildCanonicalUrl("/") },
+    { name: "Imóveis", url: buildCanonicalUrl("/imoveis") },
+    { name: state, url: canonical },
+  ]);
 
-  const collectionJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
+  const collectionJsonLd = buildCollectionPageJsonLd({
     name: `Imóveis à Venda em ${state}`,
-    description: buildStatePageDescription(state, count, cities.length),
+    description: buildStatePageDescription(
+      state,
+      count,
+      cities.length,
+      priceRange,
+      transactionTypes
+    ),
     url: canonical,
-    isPartOf: { "@type": "WebSite", url: buildCanonicalUrl("/") },
     numberOfItems: count,
-  };
+  });
 
   const itemListJsonLd =
     properties.length > 0
-      ? {
-          "@context": "https://schema.org",
-          "@type": "ItemList",
+      ? buildItemListJsonLd({
           name: `Imóveis à Venda em ${state}`,
           numberOfItems: properties.length,
-          itemListElement: properties.map((p, i) => ({
-            "@type": "ListItem",
-            position: i + 1,
+          items: properties.map((p) => ({
             url: buildCanonicalUrl(`/imoveis/${p.slug}`),
           })),
-        }
+        })
       : null;
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbJsonLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(collectionJsonLd) }}
       />
       {itemListJsonLd && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(itemListJsonLd) }}
         />
       )}
 
@@ -277,7 +293,7 @@ export default async function EstadoPage({ params, searchParams }: PageProps) {
           >
             Imóveis em destaque em {state}
           </h2>
-          <PropertyList properties={properties} />
+          <PropertyList properties={properties} priorityCount={1} />
           <Pagination
             currentPage={page}
             totalPages={totalPages}

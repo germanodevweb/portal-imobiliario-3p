@@ -23,6 +23,11 @@ import {
   BASE_URL,
 } from "@/lib/seo";
 import { getBlogCoverImageProps } from "@/lib/utils/blog-image";
+import {
+  serializeJsonLd,
+  buildBreadcrumbListJsonLd,
+  jsonLdOrganizationRef,
+} from "@/lib/seo/site-entity-jsonld";
 import { BlogPostShare } from "@/app/components/BlogPostShare";
 
 type PageProps = { params: Promise<{ slug: string }> };
@@ -164,15 +169,11 @@ export default async function BlogPostPage({ params }: PageProps) {
   // JSON-LD
   // -------------------------------------------------------------------------
 
-  const breadcrumbJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Início", item: buildCanonicalUrl("/") },
-      { "@type": "ListItem", position: 2, name: "Blog", item: buildCanonicalUrl("/blog") },
-      { "@type": "ListItem", position: 3, name: post.title, item: canonical },
-    ],
-  };
+  const breadcrumbJsonLd = buildBreadcrumbListJsonLd([
+    { name: "Início", url: buildCanonicalUrl("/") },
+    { name: "Blog", url: buildCanonicalUrl("/blog") },
+    { name: post.title, url: canonical },
+  ]);
 
   const articleJsonLd = {
     "@context": "https://schema.org",
@@ -183,16 +184,8 @@ export default async function BlogPostPage({ params }: PageProps) {
     datePublished: dateIso,
     dateModified: post.updatedAt.toISOString(),
     ...(post.featuredImage ? { image: post.featuredImage } : {}),
-    author: {
-      "@type": "Organization",
-      name: SITE_NAME,
-      url: BASE_URL,
-    },
-    publisher: {
-      "@type": "Organization",
-      name: SITE_NAME,
-      url: BASE_URL,
-    },
+    author: jsonLdOrganizationRef(),
+    publisher: jsonLdOrganizationRef(),
     mainEntityOfPage: {
       "@type": "WebPage",
       "@id": canonical,
@@ -205,11 +198,11 @@ export default async function BlogPostPage({ params }: PageProps) {
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbJsonLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(articleJsonLd) }}
       />
 
       <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
