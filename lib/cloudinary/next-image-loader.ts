@@ -1,6 +1,7 @@
 /**
  * Loader customizado do next/image:
  * - Cloudinary: entrega direta com w_{width}, c_limit (sem proxy /_next/image na Vercel).
+ *   Largura é sempre um segmento NOVO logo após `/upload/`, antes de marca d'água ou public_id.
  *   A URL `src` já deve incluir f_auto, q_auto e marca d'água (getWatermarkedImageUrl).
  * - Demais hosts: fallback ao otimizador padrão do Next (/_next/image).
  */
@@ -10,37 +11,20 @@ type LoaderParams = {
   quality?: number;
 };
 
-const CLOUDINARY_UPLOAD_PATH =
-  /^https?:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/(.+)$/i;
+const UPLOAD_MARKER = "/upload/";
 
-function appendWidthToCloudinaryUploadPath(pathAfterUpload: string, width: number): string {
-  const widthTx = `w_${width},c_limit`;
-  const slashIdx = pathAfterUpload.indexOf("/");
-  if (slashIdx === -1) {
-    if (pathAfterUpload.includes("_")) {
-      return `${pathAfterUpload},${widthTx}`;
-    }
-    return `${widthTx}/${pathAfterUpload}`;
-  }
-
-  const firstSegment = pathAfterUpload.slice(0, slashIdx);
-  const rest = pathAfterUpload.slice(slashIdx + 1);
-
-  if (firstSegment.includes("_")) {
-    return `${firstSegment},${widthTx}/${rest}`;
-  }
-
-  return `${widthTx}/${pathAfterUpload}`;
-}
-
-function buildCloudinaryLoaderUrl(src: string, width: number): string {
-  const marker = "/upload/";
-  const uploadIdx = src.indexOf(marker);
+/**
+ * Insere `w_{width},c_limit/` imediatamente após `/upload/`, sem mesclar com transformações existentes.
+ * Com `fl_relative` na marca, o overlay escala sobre a imagem já limitada em largura.
+ */
+export function buildCloudinaryImageLoaderUrl(src: string, width: number): string {
+  const uploadIdx = src.indexOf(UPLOAD_MARKER);
   if (uploadIdx === -1) return src;
 
-  const prefix = src.slice(0, uploadIdx + marker.length);
-  const pathAfterUpload = src.slice(uploadIdx + marker.length);
-  return prefix + appendWidthToCloudinaryUploadPath(pathAfterUpload, width);
+  const widthTx = `w_${width},c_limit`;
+  const prefix = src.slice(0, uploadIdx + UPLOAD_MARKER.length);
+  const pathAfterUpload = src.slice(uploadIdx + UPLOAD_MARKER.length);
+  return `${prefix}${widthTx}/${pathAfterUpload}`;
 }
 
 function buildDefaultNextImageOptimizerUrl(
@@ -65,7 +49,7 @@ export default function cloudinaryImageLoader({
   try {
     const parsed = new URL(src);
     if (parsed.hostname.toLowerCase() === "res.cloudinary.com") {
-      return buildCloudinaryLoaderUrl(src, width);
+      return buildCloudinaryImageLoaderUrl(src, width);
     }
   } catch {
     /* fallback */
