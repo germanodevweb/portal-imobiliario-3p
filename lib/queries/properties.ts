@@ -3,6 +3,8 @@ import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/lib/generated/prisma/client";
 import { HOME_LISTING_MIN_PRICE } from "@/lib/constants/home-listing";
+import { soldNoindexCutoffDate } from "@/lib/indexation";
+import { hasPropertyYouTubeMetadataColumns } from "@/lib/admin/schema-migration";
 import { buildPublishedPropertyTextSearchWhere } from "@/lib/imoveis/property-text-search";
 import {
   buildCatalogMinPriceWhere,
@@ -127,6 +129,49 @@ export const getAvailableCities = cache(async function (): Promise<CityEntry[]> 
  * Bairros disponíveis em uma cidade com imóveis publicados.
  * Usado em: faceted navigation, links internos /bairro/[slug].
  */
+export type NeighborhoodWithCount = {
+  neighborhood: string;
+  neighborhoodSlug: string;
+  count: number;
+};
+
+/**
+ * Outros bairros da mesma cidade com contagem de imóveis publicados (SEO / links internos).
+ */
+export const getOtherNeighborhoodsWithCountsByCitySlug = cache(async function (
+  citySlug: string,
+  excludeNeighborhoodSlug: string | null,
+  limit = 8
+): Promise<NeighborhoodWithCount[]> {
+  const grouped = await prisma.property.groupBy({
+    by: ["neighborhoodSlug", "neighborhood"],
+    where: {
+      citySlug,
+      published: true,
+      AND: [
+        { neighborhoodSlug: { not: null } },
+        ...(excludeNeighborhoodSlug
+          ? [{ neighborhoodSlug: { not: excludeNeighborhoodSlug } }]
+          : []),
+      ],
+    },
+    _count: { id: true },
+  });
+
+  return grouped
+    .filter(
+      (row): row is typeof row & { neighborhoodSlug: string; neighborhood: string } =>
+        Boolean(row.neighborhoodSlug && row.neighborhood)
+    )
+    .map((row) => ({
+      neighborhood: row.neighborhood,
+      neighborhoodSlug: row.neighborhoodSlug,
+      count: row._count.id,
+    }))
+    .sort((a, b) => b.count - a.count || a.neighborhood.localeCompare(b.neighborhood, "pt-BR"))
+    .slice(0, limit);
+});
+
 export async function getRelatedNeighborhoodsByCitySlug(
   citySlug: string
 ): Promise<NeighborhoodEntry[]> {
@@ -346,10 +391,16 @@ export const getPublishedPropertiesByTypeAndCity = cache(async function (
   typeSlug: string,
   citySlug: string,
   limit?: number,
-  skip = 0
+  skip = 0,
+  excludeSlug?: string
 ): Promise<PropertyCardData[]> {
   const results = await prisma.property.findMany({
-    where: { propertyTypeSlug: typeSlug, citySlug, published: true },
+    where: {
+      propertyTypeSlug: typeSlug,
+      citySlug,
+      published: true,
+      ...(excludeSlug ? { slug: { not: excludeSlug } } : {}),
+    },
     select: propertyCardSelect,
     orderBy: [{ publishedAt: { sort: "desc", nulls: "first" } }, { createdAt: "desc" }],
     ...(limit !== undefined ? { take: limit } : {}),
@@ -370,6 +421,27 @@ export const countPublishedPropertiesByTypeAndCity = cache(async function (
   return prisma.property.count({
     where: { propertyTypeSlug: typeSlug, citySlug, published: true },
   });
+});
+
+/** Lançamentos publicados na cidade (exceto o imóvel atual). */
+export const getLaunchPropertiesByCitySlug = cache(async function (
+  citySlug: string,
+  limit: number,
+  excludeSlug?: string
+): Promise<PropertyCardData[]> {
+  const results = await prisma.property.findMany({
+    where: {
+      citySlug,
+      published: true,
+      isLaunch: true,
+      ...(excludeSlug ? { slug: { not: excludeSlug } } : {}),
+    },
+    select: propertyCardSelect,
+    orderBy: [{ publishedAt: { sort: "desc", nulls: "first" } }, { createdAt: "desc" }],
+    take: limit,
+  });
+
+  return results.map((p) => ({ ...p, price: String(p.price) }));
 });
 
 /**
@@ -445,6 +517,10 @@ export type PropertyDetail = {
   /** Imagens com alt para SEO (ordem: principal primeiro, depois sortOrder) */
   images: PropertyImageWithAlt[];
   youtubeVideoId: string | null;
+  youtubeTitle: string | null;
+  youtubeDescription: string | null;
+  youtubePublishedAt: Date | null;
+  youtubeDurationIso: string | null;
   metaTitle: string | null;
   metaDescription: string | null;
   ogImage: string | null;
@@ -461,11 +537,44 @@ export function propertyDetailRevalidateTag(slug: string): string {
   return `property-detail:${slug}`;
 }
 
+export type PropertySlugRedirectTarget = {
+  neighborhoodSlug: string | null;
+  citySlug: string;
+};
+
+export type PropertySlugPublicationState =
+  | { status: "missing" }
+  | { status: "unpublished"; redirect: PropertySlugRedirectTarget }
+  | { status: "published" };
+
+/** Slug no banco (publicado ou não) — para redirect 308 de imóveis despublicados. */
+export const getPropertySlugPublicationState = cache(async function (
+  slug: string
+): Promise<PropertySlugPublicationState> {
+  const row = await prisma.property.findUnique({
+    where: { slug },
+    select: { published: true, neighborhoodSlug: true, citySlug: true },
+  });
+  if (!row) return { status: "missing" };
+  if (!row.published) {
+    return {
+      status: "unpublished",
+      redirect: {
+        neighborhoodSlug: row.neighborhoodSlug,
+        citySlug: row.citySlug,
+      },
+    };
+  }
+  return { status: "published" };
+});
+
 async function fetchPublishedPropertyBySlug(
   slug: string
 ): Promise<PropertyDetail | null> {
+  const includeYoutubeMeta = await hasPropertyYouTubeMetadataColumns();
+
   const result = await prisma.property.findUnique({
-    where: { slug, published: true },
+    where: { slug },
     select: {
       id: true,
       slug: true,
@@ -498,6 +607,14 @@ async function fetchPublishedPropertyBySlug(
         orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
       },
       youtubeVideoId: true,
+      ...(includeYoutubeMeta
+        ? {
+            youtubeTitle: true,
+            youtubeDescription: true,
+            youtubePublishedAt: true,
+            youtubeDurationIso: true,
+          }
+        : {}),
       metaTitle: true,
       metaDescription: true,
       ogImage: true,
@@ -507,11 +624,30 @@ async function fetchPublishedPropertyBySlug(
       isSold: true,
       publishedAt: true,
       updatedAt: true,
+      published: true,
     },
   });
 
-  if (!result) return null;
-  return { ...result, price: String(result.price) } as PropertyDetail;
+  if (!result?.published) return null;
+  const { published: _omitPublished, ...rest } = result;
+  void _omitPublished;
+  return {
+    ...rest,
+    price: String(rest.price),
+    youtubeTitle: includeYoutubeMeta && "youtubeTitle" in rest ? rest.youtubeTitle ?? null : null,
+    youtubeDescription:
+      includeYoutubeMeta && "youtubeDescription" in rest
+        ? rest.youtubeDescription ?? null
+        : null,
+    youtubePublishedAt:
+      includeYoutubeMeta && "youtubePublishedAt" in rest
+        ? rest.youtubePublishedAt ?? null
+        : null,
+    youtubeDurationIso:
+      includeYoutubeMeta && "youtubeDurationIso" in rest
+        ? rest.youtubeDurationIso ?? null
+        : null,
+  } as PropertyDetail;
 }
 
 /**
@@ -654,6 +790,70 @@ export async function getPropertiesForMetaFeed(): Promise<MetaFeedProperty[]> {
 
 export type PriceRange = { minPrice: string; maxPrice: string } | null;
 
+export type PublishedTransactionType = "SALE" | "RENT";
+
+const PUBLISHED_WHERE = { published: true } as const;
+
+/** Imóveis publicados com preço listado (> 0) — faixas de preço em SEO. */
+const PUBLISHED_LISTED_PRICE_WHERE = {
+  published: true,
+  price: { gt: 0 },
+} as const;
+
+async function distinctTransactionTypes(
+  where: Record<string, unknown>
+): Promise<PublishedTransactionType[]> {
+  const rows = await prisma.property.groupBy({
+    by: ["transactionType"],
+    where: { ...PUBLISHED_WHERE, ...where },
+  });
+  return rows.map((r) => r.transactionType);
+}
+
+export const getTransactionTypesByCitySlug = cache(async function (
+  citySlug: string
+): Promise<PublishedTransactionType[]> {
+  return distinctTransactionTypes({ citySlug });
+});
+
+export const getTransactionTypesByNeighborhoodSlug = cache(async function (
+  neighborhoodSlug: string
+): Promise<PublishedTransactionType[]> {
+  return distinctTransactionTypes({ neighborhoodSlug });
+});
+
+export const getTransactionTypesByPropertyTypeSlug = cache(async function (
+  propertyTypeSlug: string
+): Promise<PublishedTransactionType[]> {
+  return distinctTransactionTypes({ propertyTypeSlug });
+});
+
+export const getTransactionTypesByStateSlug = cache(async function (
+  stateSlug: string
+): Promise<PublishedTransactionType[]> {
+  return distinctTransactionTypes({ stateSlug });
+});
+
+export const getTransactionTypesPublished = cache(async function (): Promise<
+  PublishedTransactionType[]
+> {
+  return distinctTransactionTypes({});
+});
+
+export const getTransactionTypesByTypeAndCity = cache(async function (
+  typeSlug: string,
+  citySlug: string
+): Promise<PublishedTransactionType[]> {
+  return distinctTransactionTypes({ propertyTypeSlug: typeSlug, citySlug });
+});
+
+export const getTransactionTypesByNeighborhoodAndType = cache(async function (
+  neighborhoodSlug: string,
+  typeSlug: string
+): Promise<PublishedTransactionType[]> {
+  return distinctTransactionTypes({ neighborhoodSlug, propertyTypeSlug: typeSlug });
+});
+
 /**
  * Faixa de preço (mín/máx) para imóveis publicados em uma cidade.
  * Usa aggregate com índice composto — query leve.
@@ -662,7 +862,7 @@ export const getPriceRangeByCitySlug = cache(async function (
   citySlug: string
 ): Promise<PriceRange> {
   const agg = await prisma.property.aggregate({
-    where: { citySlug, published: true },
+    where: { citySlug, ...PUBLISHED_LISTED_PRICE_WHERE },
     _min: { price: true },
     _max: { price: true },
   });
@@ -677,7 +877,7 @@ export const getPriceRangeByNeighborhoodSlug = cache(async function (
   neighborhoodSlug: string
 ): Promise<PriceRange> {
   const agg = await prisma.property.aggregate({
-    where: { neighborhoodSlug, published: true },
+    where: { neighborhoodSlug, ...PUBLISHED_LISTED_PRICE_WHERE },
     _min: { price: true },
     _max: { price: true },
   });
@@ -692,7 +892,7 @@ export const getPriceRangeByPropertyTypeSlug = cache(async function (
   propertyTypeSlug: string
 ): Promise<PriceRange> {
   const agg = await prisma.property.aggregate({
-    where: { propertyTypeSlug, published: true },
+    where: { propertyTypeSlug, ...PUBLISHED_LISTED_PRICE_WHERE },
     _min: { price: true },
     _max: { price: true },
   });
@@ -708,7 +908,11 @@ export const getPriceRangeByTypeAndCity = cache(async function (
   citySlug: string
 ): Promise<PriceRange> {
   const agg = await prisma.property.aggregate({
-    where: { propertyTypeSlug: typeSlug, citySlug, published: true },
+    where: {
+      propertyTypeSlug: typeSlug,
+      citySlug,
+      ...PUBLISHED_LISTED_PRICE_WHERE,
+    },
     _min: { price: true },
     _max: { price: true },
   });
@@ -890,7 +1094,7 @@ export const getPriceRangeByStateSlug = cache(async function (
   stateSlug: string
 ): Promise<PriceRange> {
   const agg = await prisma.property.aggregate({
-    where: { stateSlug, published: true },
+    where: { stateSlug, ...PUBLISHED_LISTED_PRICE_WHERE },
     _min: { price: true },
     _max: { price: true },
   });
@@ -960,7 +1164,11 @@ export const getPriceRangeByNeighborhoodAndType = cache(async function (
   propertyTypeSlug: string
 ): Promise<PriceRange> {
   const agg = await prisma.property.aggregate({
-    where: { neighborhoodSlug, propertyTypeSlug, published: true },
+    where: {
+      neighborhoodSlug,
+      propertyTypeSlug,
+      ...PUBLISHED_LISTED_PRICE_WHERE,
+    },
     _min: { price: true },
     _max: { price: true },
   });
@@ -1392,10 +1600,81 @@ export const countFilteredProperties = cache(async function (
 export async function getPublishedPropertySlugsForSitemap(): Promise<
   { slug: string; updatedAt: Date }[]
 > {
+  return getIndexablePropertySlugsForSitemap();
+}
+
+/**
+ * Imóveis publicados indexáveis no sitemap (exclui vendidos antigos — ver SOLD_NOINDEX_AFTER_DAYS).
+ */
+export async function getIndexablePropertySlugsForSitemap(): Promise<
+  { slug: string; updatedAt: Date }[]
+> {
+  const cutoff = soldNoindexCutoffDate();
+
   return prisma.property.findMany({
-    where: { published: true },
+    where: {
+      published: true,
+      OR: [{ isSold: false }, { isSold: true, updatedAt: { gte: cutoff } }],
+    },
     select: { slug: true, updatedAt: true },
     orderBy: { updatedAt: "desc" },
+  });
+}
+
+export type IndexablePropertyVideoSitemapRow = {
+  slug: string;
+  updatedAt: Date;
+  youtubeVideoId: string;
+  youtubeTitle: string | null;
+  youtubeDescription: string | null;
+  youtubePublishedAt: Date | null;
+  youtubeDurationIso: string | null;
+  title: string;
+  description: string | null;
+};
+
+/** Páginas /imoveis/[slug]/video indexáveis (com vídeo e fora do noindex de vendido antigo). */
+export async function getIndexablePropertyVideoPagesForSitemap(): Promise<
+  IndexablePropertyVideoSitemapRow[]
+> {
+  if (!(await hasPropertyYouTubeMetadataColumns())) {
+    return [];
+  }
+
+  const cutoff = soldNoindexCutoffDate();
+
+  const rows = await prisma.property.findMany({
+    where: {
+      published: true,
+      youtubeVideoId: { not: null },
+      OR: [{ isSold: false }, { isSold: true, updatedAt: { gte: cutoff } }],
+    },
+    select: {
+      slug: true,
+      updatedAt: true,
+      youtubeVideoId: true,
+      youtubeTitle: true,
+      youtubeDescription: true,
+      youtubePublishedAt: true,
+      youtubeDurationIso: true,
+      title: true,
+      description: true,
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  return rows.filter(
+    (r): r is IndexablePropertyVideoSitemapRow => r.youtubeVideoId !== null
+  );
+}
+
+/** Slugs para SSG da rota de exibição de vídeo. */
+export async function getPublishedPropertySlugsWithYouTubeVideo(): Promise<
+  { slug: string }[]
+> {
+  return prisma.property.findMany({
+    where: { published: true, youtubeVideoId: { not: null } },
+    select: { slug: true },
   });
 }
 

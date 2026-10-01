@@ -57,6 +57,9 @@ export type PageType =
 //   - demais: 1 (mantido para não gerar 404 em catálogos pequenos)
 // ---------------------------------------------------------------------------
 
+/** Imóvel vendido: após este prazo desde `updatedAt`, noindex e fora do sitemap. */
+export const SOLD_NOINDEX_AFTER_DAYS = 90;
+
 export const INDEXATION_THRESHOLDS: Record<PageType, number> = {
   state: 1,
   stateCity: 1,
@@ -152,4 +155,36 @@ export function buildRobotsDirective(result: IndexationResult) {
     index: result.shouldIndex,
     follow: true,
   };
+}
+
+export function soldNoindexCutoffDate(now: Date = new Date()): Date {
+  const cutoff = new Date(now);
+  cutoff.setDate(cutoff.getDate() - SOLD_NOINDEX_AFTER_DAYS);
+  return cutoff;
+}
+
+/** Imóvel publicado vendido há mais de SOLD_NOINDEX_AFTER_DAYS → não indexar. */
+export function shouldIndexPublishedPropertyDetail(
+  isSold: boolean,
+  updatedAt: Date,
+  now: Date = new Date()
+): boolean {
+  if (!isSold) return true;
+  return updatedAt >= soldNoindexCutoffDate(now);
+}
+
+export function buildPropertyDetailRobots(isSold: boolean, updatedAt: Date) {
+  return {
+    index: shouldIndexPublishedPropertyDetail(isSold, updatedAt),
+    follow: true,
+  };
+}
+
+export function buildPaginatedListingRobots(page: number) {
+  if (page <= 1) return { index: true, follow: true } as const;
+  return { index: false, follow: true } as const;
+}
+
+export function buildFilteredImoveisListingRobots() {
+  return { index: false, follow: true } as const;
 }

@@ -1,31 +1,22 @@
 import type { MetadataRoute } from "next";
-import {
-  getPublishedPropertySlugsForSitemap,
-  getAvailableCities,
-  getAvailableNeighborhoods,
-  getAvailablePropertyTypes,
-  getAvailableTypeCityPairs,
-  getAvailableNeighborhoodTypePairs,
-  getAvailableCityNeighborhoodPairs,
-  getAvailableStates,
-  getAvailableStateCityPairs,
-  getAvailableBuyTypeCityPairs,
-  getAvailableBuyTypeCityNeighborhoodTriples,
-} from "@/lib/queries/properties";
+import { getIndexablePropertySlugsForSitemap } from "@/lib/queries/properties";
 import { getPublishedPostSlugsForSitemap } from "@/lib/queries/blog";
+import {
+  getIndexableBuyTypeCityNeighborhoodTriplesForSitemap,
+  getIndexableBuyTypeCityPairsForSitemap,
+  getIndexableCityNeighborhoodPairsForSitemap,
+  getIndexableCitySlugsForSitemap,
+  getIndexableNeighborhoodSlugsForSitemap,
+  getIndexableNeighborhoodTypePairsForSitemap,
+  getIndexablePropertyTypeSlugsForSitemap,
+  getIndexableStateCityPairsForSitemap,
+  getIndexableStateSlugsForSitemap,
+  getIndexableTypeCityPairsForSitemap,
+} from "@/lib/sitemap/indexable-programmatic-routes";
 import { BASE_URL } from "@/lib/seo";
 import { INVEST_ROUTES } from "@/lib/i18n/invest";
 
-// Revalida o sitemap a cada hora via ISR.
-// O Googlebot sempre receberá um snapshot recente sem pressionar o banco a cada request.
 export const revalidate = 3600;
-
-// ---------------------------------------------------------------------------
-// Rotas estáticas — lastModified omitido intencionalmente.
-// new Date() em nível de módulo congela no momento da carga do bundle,
-// não reflete a data real de alteração do conteúdo.
-// Omitir lastModified é mais honesto que enviar uma data imprecisa.
-// ---------------------------------------------------------------------------
 
 function buildStaticRoutes(): MetadataRoute.Sitemap {
   return [
@@ -82,16 +73,6 @@ function buildStaticRoutes(): MetadataRoute.Sitemap {
   ];
 }
 
-// ---------------------------------------------------------------------------
-// Sitemap principal — gerado a partir de dados reais do banco.
-// Todas as queries rodam em paralelo em um único Promise.all.
-//
-// Estratégia de lastModified:
-//   - Imóveis individuais → updatedAt real do banco (sinal preciso)
-//   - Cidade, bairro, tipo → omitido (são agregações virtuais sem timestamp
-//     próprio; new Date() seria um sinal falso para o Google)
-// ---------------------------------------------------------------------------
-
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [
     propertySlugs,
@@ -107,17 +88,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     buyTypeCityNeighborhoodTriples,
     postSlugs,
   ] = await Promise.all([
-    getPublishedPropertySlugsForSitemap(),
-    getAvailableStates(),
-    getAvailableStateCityPairs(),
-    getAvailableCities(),
-    getAvailableNeighborhoods(),
-    getAvailablePropertyTypes(),
-    getAvailableTypeCityPairs(),
-    getAvailableNeighborhoodTypePairs(),
-    getAvailableCityNeighborhoodPairs(),
-    getAvailableBuyTypeCityPairs(),
-    getAvailableBuyTypeCityNeighborhoodTriples(),
+    getIndexablePropertySlugsForSitemap(),
+    getIndexableStateSlugsForSitemap(),
+    getIndexableStateCityPairsForSitemap(),
+    getIndexableCitySlugsForSitemap(),
+    getIndexableNeighborhoodSlugsForSitemap(),
+    getIndexablePropertyTypeSlugsForSitemap(),
+    getIndexableTypeCityPairsForSitemap(),
+    getIndexableNeighborhoodTypePairsForSitemap(),
+    getIndexableCityNeighborhoodPairsForSitemap(),
+    getIndexableBuyTypeCityPairsForSitemap(),
+    getIndexableBuyTypeCityNeighborhoodTriplesForSitemap(),
     getPublishedPostSlugsForSitemap(),
   ]);
 
@@ -167,7 +148,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const neighborhoodTypeRoutes: MetadataRoute.Sitemap = neighborhoodTypePairs.map((p) => ({
     url: `${BASE_URL}/bairro/${p.neighborhoodSlug}/tipo/${p.propertyTypeSlug}`,
     changeFrequency: "weekly" as const,
-    priority: 0.70,
+    priority: 0.7,
   }));
 
   const cityNeighborhoodRoutes: MetadataRoute.Sitemap = cityNeighborhoodPairs.map((p) => ({
@@ -186,7 +167,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     buyTypeCityNeighborhoodTriples.map((t) => ({
       url: `${BASE_URL}/comprar/${t.propertyTypeSlug}/${t.citySlug}/${t.neighborhoodSlug}`,
       changeFrequency: "weekly" as const,
-      priority: 0.70,
+      priority: 0.7,
     }));
 
   const blogRoutes: MetadataRoute.Sitemap = postSlugs.map((p) => ({

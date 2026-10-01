@@ -1,3 +1,5 @@
+import { notFound } from "next/navigation";
+
 // ---------------------------------------------------------------------------
 // Utilitários de paginação server-side para o portal imobiliário
 //
@@ -39,6 +41,11 @@ export function parsePage(
 /** Total de páginas necessárias para exibir `count` itens. Mínimo 1. */
 export function calculateTotalPages(count: number): number {
   return Math.max(1, Math.ceil(count / ITEMS_PER_PAGE));
+}
+
+/** Página além do total (ex.: ?page=999) → 404, evita listas vazias e erros em metadata. */
+export function notFoundIfPageOutOfRange(page: number, totalPages: number): void {
+  if (page > totalPages) notFound();
 }
 
 /** Offset (skip) a ser passado ao Prisma para a página informada. */
