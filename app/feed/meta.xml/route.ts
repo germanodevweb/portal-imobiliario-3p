@@ -2,14 +2,14 @@ import { BASE_URL, SITE_NAME } from "@/lib/seo";
 import {
   escapeXml,
   formatFeedPrice,
-  buildFeedDescription,
   getFeedTypeName,
+  resolveFeedPlainDescription,
   xmlFeedResponse,
 } from "@/lib/feed";
 import {
   getPropertiesForMetaCatalogFeed,
   isValidMetaCatalogPrice,
-  resolveMetaCatalogImageUrl,
+  resolveMetaCatalogFeedImages,
 } from "@/lib/feed/meta-catalog";
 
 // ISR: revalida o feed a cada 1 hora
@@ -22,8 +22,8 @@ export async function GET() {
     .flatMap((p) => {
       if (!isValidMetaCatalogPrice(p.price)) return [];
 
-      const imageUrl = resolveMetaCatalogImageUrl(p);
-      if (!imageUrl) return [];
+      const { imageLink, additionalImageLinks } = resolveMetaCatalogFeedImages(p);
+      if (!imageLink) return [];
 
       const pageUrl = `${BASE_URL}/imoveis/${p.slug}`;
       const typeName = getFeedTypeName(p.propertyTypeSlug);
@@ -35,9 +35,9 @@ export async function GET() {
           ? "\n      <g:quantity_to_sell_on_facebook>1</g:quantity_to_sell_on_facebook>"
           : "";
 
-      const rawDescription =
-        p.description ??
-        buildFeedDescription({
+      const description = resolveFeedPlainDescription(
+        p.description,
+        {
           typeName,
           txLabel,
           city: p.city,
@@ -47,10 +47,16 @@ export async function GET() {
           area: p.area,
           areaMin: p.areaMin,
           areaMax: p.areaMax,
-        });
+        },
+        5000
+      );
 
-      // Meta aceita descricoes de ate 9 999 caracteres; limitamos a 5 000 por seguranca
-      const description = rawDescription.slice(0, 5000);
+      const additionalImageXml = additionalImageLinks
+        .map(
+          (url) =>
+            `\n      <g:additional_image_link>${escapeXml(url)}</g:additional_image_link>`
+        )
+        .join("");
 
       const bedsLine =
         p.bedrooms > 0
@@ -67,7 +73,7 @@ export async function GET() {
       <g:condition>new</g:condition>
       <g:price>${formatFeedPrice(p.price)}</g:price>
       <g:link>${escapeXml(pageUrl)}</g:link>
-      <g:image_link>${escapeXml(imageUrl)}</g:image_link>
+      <g:image_link>${escapeXml(imageLink)}</g:image_link>${additionalImageXml}
       <g:brand>${escapeXml(SITE_NAME)}</g:brand>
       <g:product_type>${escapeXml(typeName)}</g:product_type>
       <g:custom_label_0>${txCustom}</g:custom_label_0>

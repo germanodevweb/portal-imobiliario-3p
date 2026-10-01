@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getWatermarkedImageUrl } from "@/lib/cloudinary/watermark";
+import { getFeedImageUrl } from "@/lib/cloudinary/feed-image";
 import { isLegacyCode49PropertyImageUrl } from "@/lib/property/legacy-image-url";
 import { hasPropertyListedPrice } from "@/lib/utils/property-price";
 import { normalizePublicImageUrl } from "@/lib/utils/normalize-image-url";
@@ -22,18 +22,16 @@ export type MetaCatalogFeedProperty = {
   areaMin: number | null;
   areaMax: number | null;
   city: string;
+  state: string;
   neighborhood: string | null;
   citySlug: string;
+  stateSlug: string;
   propertyTypeSlug: string;
   updatedAt: Date;
 };
 
 const DIRECT_IMAGE_EXT = /\.(jpe?g|png|gif|webp|bmp|avif)(\?|#|$)/i;
 const CLOUDINARY_IMAGE_UPLOAD = /res\.cloudinary\.com\/[^/]+\/image\/upload\//i;
-
-function ensureHttps(url: string): string {
-  return url.replace(/^http:\/\//i, "https://");
-}
 
 /**
  * URL pública HTTPS que o crawler da Meta consegue buscar como imagem direta.
@@ -58,16 +56,9 @@ export function isValidMetaCatalogImageUrl(raw: string): boolean {
   }
 }
 
-/** Entrega final para g:image_link — Cloudinary com marca; demais URLs HTTPS diretas. */
+/** Entrega final para g:image_link — sem marca d'água (política Meta). */
 export function toMetaCatalogImageLink(raw: string): string {
-  const normalized = normalizePublicImageUrl(raw.trim());
-  const https = ensureHttps(normalized);
-
-  if (CLOUDINARY_IMAGE_UPLOAD.test(https)) {
-    return ensureHttps(getWatermarkedImageUrl(https));
-  }
-
-  return https;
+  return getFeedImageUrl(raw);
 }
 
 function dedupeImageCandidates(urls: Array<string | null | undefined>): string[] {
@@ -86,6 +77,31 @@ function dedupeImageCandidates(urls: Array<string | null | undefined>): string[]
   return result;
 }
 
+export type MetaCatalogFeedImages = {
+  imageLink: string | null;
+  /** Até 10 URLs adicionais (galeria), excluindo image_link principal. */
+  additionalImageLinks: string[];
+};
+
+function collectMetaCatalogImageLinks(property: {
+  featuredImage: string | null;
+  galleryImages: string[];
+  imageUrls: string[];
+}): string[] {
+  const candidates = dedupeImageCandidates([
+    property.featuredImage,
+    ...property.galleryImages,
+    ...property.imageUrls,
+  ]);
+
+  const links: string[] = [];
+  for (const candidate of candidates) {
+    if (!isValidMetaCatalogImageUrl(candidate)) continue;
+    links.push(toMetaCatalogImageLink(candidate));
+  }
+  return links;
+}
+
 /**
  * featuredImage → galleryImages → PropertyImage (visíveis, ordem da galeria).
  * Retorna null se nenhuma URL for válida para o catálogo Meta.
@@ -95,18 +111,22 @@ export function resolveMetaCatalogImageUrl(property: {
   galleryImages: string[];
   imageUrls: string[];
 }): string | null {
-  const candidates = dedupeImageCandidates([
-    property.featuredImage,
-    ...property.galleryImages,
-    ...property.imageUrls,
-  ]);
+  return collectMetaCatalogImageLinks(property)[0] ?? null;
+}
 
-  for (const candidate of candidates) {
-    if (!isValidMetaCatalogImageUrl(candidate)) continue;
-    return toMetaCatalogImageLink(candidate);
+export function resolveMetaCatalogFeedImages(property: {
+  featuredImage: string | null;
+  galleryImages: string[];
+  imageUrls: string[];
+}): MetaCatalogFeedImages {
+  const links = collectMetaCatalogImageLinks(property);
+  if (links.length === 0) {
+    return { imageLink: null, additionalImageLinks: [] };
   }
-
-  return null;
+  return {
+    imageLink: links[0],
+    additionalImageLinks: links.slice(1, 11),
+  };
 }
 
 export function isValidMetaCatalogPrice(
@@ -137,8 +157,10 @@ export async function getPropertiesForMetaCatalogFeed(): Promise<
       areaMin: true,
       areaMax: true,
       city: true,
+      state: true,
       neighborhood: true,
       citySlug: true,
+      stateSlug: true,
       propertyTypeSlug: true,
       updatedAt: true,
       images: {
@@ -167,8 +189,10 @@ export async function getPropertiesForMetaCatalogFeed(): Promise<
     areaMin: p.areaMin,
     areaMax: p.areaMax,
     city: p.city,
+    state: p.state,
     neighborhood: p.neighborhood,
     citySlug: p.citySlug,
+    stateSlug: p.stateSlug,
     propertyTypeSlug: p.propertyTypeSlug,
     updatedAt: p.updatedAt,
   }));

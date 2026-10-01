@@ -3,11 +3,15 @@ import { BASE_URL, SITE_NAME } from "@/lib/seo";
 import {
   escapeXml,
   formatFeedPrice,
-  buildFeedDescription,
   getFeedTypeName,
+  resolveFeedPlainDescription,
   xmlFeedResponse,
 } from "@/lib/feed";
-import { getWatermarkedImageUrl } from "@/lib/cloudinary/watermark";
+import { getFeedImageUrl } from "@/lib/cloudinary/feed-image";
+import {
+  isValidMetaCatalogImageUrl,
+  isValidMetaCatalogPrice,
+} from "@/lib/feed/meta-catalog";
 
 // ISR: revalida o feed a cada 1 hora
 export const revalidate = 3600;
@@ -16,18 +20,22 @@ export async function GET() {
   const properties = await getPropertiesForMetaFeed();
 
   const items = properties
-    // Google Merchant rejeita itens sem image_link — filtra antes de construir o XML
-    .filter((p) => Boolean(p.featuredImage))
-    .map((p) => {
+    .flatMap((p) => {
+      if (!isValidMetaCatalogPrice(p.price)) return [];
+      if (!p.featuredImage || !isValidMetaCatalogImageUrl(p.featuredImage)) {
+        return [];
+      }
+
+      const imageUrl = getFeedImageUrl(p.featuredImage);
       const pageUrl = `${BASE_URL}/imoveis/${p.slug}`;
       const typeName = getFeedTypeName(p.propertyTypeSlug);
       const txLabel = p.transactionType === "SALE" ? "a venda" : "para alugar";
       const txCustom = p.transactionType === "SALE" ? "venda" : "aluguel";
       const availability = p.isSold ? "out of stock" : "in stock";
 
-      const rawDescription =
-        p.description ??
-        buildFeedDescription({
+      const description = resolveFeedPlainDescription(
+        p.description,
+        {
           typeName,
           txLabel,
           city: p.city,
@@ -37,20 +45,16 @@ export async function GET() {
           area: p.area,
           areaMin: p.areaMin,
           areaMax: p.areaMax,
-        });
-
-      // Google Merchant aceita descricoes de ate 5 000 caracteres
-      const description = rawDescription.slice(0, 5000);
-
-      // featuredImage ja foi confirmada como string pelo filtro acima
-      const imageUrl = getWatermarkedImageUrl(p.featuredImage as string);
+        },
+        5000
+      );
 
       const bedsLine =
         p.bedrooms > 0
           ? `\n      <g:custom_label_2>${p.bedrooms} quarto${p.bedrooms !== 1 ? "s" : ""}</g:custom_label_2>`
           : "";
 
-      return `
+      return [`
     <item>
       <g:id>${escapeXml(p.id)}</g:id>
       <g:title>${escapeXml(p.title)}</g:title>
@@ -65,7 +69,7 @@ export async function GET() {
       <g:identifier_exists>no</g:identifier_exists>
       <g:custom_label_0>${txCustom}</g:custom_label_0>
       <g:custom_label_1>${escapeXml(p.citySlug)}</g:custom_label_1>${bedsLine}
-    </item>`;
+    </item>`];
     })
     .join("");
 

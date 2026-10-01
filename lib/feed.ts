@@ -1,5 +1,6 @@
 import { PROPERTY_TYPE_LABELS } from "@/lib/seo";
 import { formatPropertyAreaDisplay, type PropertyAreaFields } from "@/lib/utils/property-area";
+import { htmlToPlainText } from "@/lib/utils/html-to-plain-text";
 
 // ---------------------------------------------------------------------------
 // Helpers compartilhados entre os feeds Meta e Google Merchant.
@@ -58,6 +59,53 @@ export function buildFeedDescription(opts: {
   return parts.join(" ");
 }
 
+/** Descrição indexável nos feeds: HTML convertido em texto; fallback factual. */
+export function resolveFeedPlainDescription(
+  descriptionHtml: string | null,
+  fallback: {
+    typeName: string;
+    txLabel: string;
+    city: string;
+    neighborhood: string | null;
+    bedrooms: number;
+    bathrooms: number;
+  } & PropertyAreaFields,
+  maxLength = 5000
+): string {
+  if (descriptionHtml?.trim()) {
+    const plain = htmlToPlainText(descriptionHtml, maxLength);
+    if (plain.trim()) return plain;
+  }
+  return buildFeedDescription(fallback).slice(0, maxLength);
+}
+
+/** Resumo curto para anúncios dinâmicos Google Ads Imóveis (limite de exibição ~25 caracteres). */
+export function buildGoogleAdsRealEstateShortDescription(
+  opts: {
+    bedrooms: number;
+    bathrooms: number;
+  } & PropertyAreaFields
+): string {
+  const parts: string[] = [];
+  if (opts.bedrooms > 0) {
+    parts.push(`${opts.bedrooms} quarto${opts.bedrooms !== 1 ? "s" : ""}`);
+  }
+  if (opts.bathrooms > 0) {
+    parts.push(`${opts.bathrooms} banh.`);
+  }
+  const areaDisplay = formatPropertyAreaDisplay(opts);
+  if (areaDisplay.hasArea) parts.push(areaDisplay.compact);
+  const line = parts.join(", ");
+  return line.length > 25 ? `${line.slice(0, 22)}…` : line;
+}
+
+export function escapeCsvField(value: string): string {
+  if (/[",\n\r]/.test(value)) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
 /**
  * Cria a Response padrao para feeds XML com cache publico.
  * Ambos os feeds usam Content-Type e Cache-Control identicos.
@@ -68,6 +116,15 @@ export function xmlFeedResponse(xml: string): Response {
       "Content-Type": "application/xml; charset=utf-8",
       // CDN mantem por 1h; stale-while-revalidate serve cache antigo por ate 24h
       // enquanto o proximo ciclo ISR regenera em background.
+      "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+    },
+  });
+}
+
+export function csvFeedResponse(csv: string): Response {
+  return new Response("\uFEFF" + csv, {
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
       "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
     },
   });
