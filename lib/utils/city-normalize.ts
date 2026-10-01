@@ -4,7 +4,8 @@
  */
 
 import { BRAZIL_STATE_OPTIONS } from "@/lib/constants/brazil-states";
-import { collapseWhitespace } from "@/lib/utils/neighborhood-normalize";
+import { suggestCityDisplayName } from "@/lib/utils/place-display-name";
+import { collapseWhitespace } from "@/lib/utils/collapse-whitespace";
 
 export { collapseWhitespace };
 
@@ -69,17 +70,7 @@ export function parseCityInput(cityRaw: string): {
 }
 
 export function formatCityDisplayName(name: string): string {
-  const collapsed = collapseWhitespace(name);
-  if (!collapsed) return collapsed;
-
-  return collapsed
-    .split(" ")
-    .map((word) => {
-      if (!word) return word;
-      const lower = word.toLocaleLowerCase("pt-BR");
-      return lower.charAt(0).toLocaleUpperCase("pt-BR") + lower.slice(1);
-    })
-    .join(" ");
+  return suggestCityDisplayName(name);
 }
 
 export function slugifyCity(text: string): string {

@@ -3,9 +3,9 @@
  * "  Montése  " => key "montese" (sem acento, lowercase, espaços colapsados).
  */
 
-export function collapseWhitespace(text: string): string {
-  return text.replace(/\s+/g, " ").trim();
-}
+import { collapseWhitespace } from "@/lib/utils/collapse-whitespace";
+
+export { collapseWhitespace };
 
 export function normalizeNeighborhoodKey(name: string): string {
   return collapseWhitespace(name)
@@ -18,22 +18,13 @@ export function neighborhoodKeysMatch(a: string, b: string): boolean {
   return normalizeNeighborhoodKey(a) === normalizeNeighborhoodKey(b);
 }
 
+import { suggestNeighborhoodDisplayName } from "@/lib/utils/place-display-name";
+
 /**
  * Formata nome para exibição ao cadastrar um bairro novo.
- * Preserva acentos digitados; aplica capitalização por palavra.
  */
 export function formatNeighborhoodDisplayName(name: string): string {
-  const collapsed = collapseWhitespace(name);
-  if (!collapsed) return collapsed;
-
-  return collapsed
-    .split(" ")
-    .map((word) => {
-      if (!word) return word;
-      const lower = word.toLocaleLowerCase("pt-BR");
-      return lower.charAt(0).toLocaleUpperCase("pt-BR") + lower.slice(1);
-    })
-    .join(" ");
+  return suggestNeighborhoodDisplayName(name);
 }
 
 export function slugifyNeighborhood(text: string): string {
