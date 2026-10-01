@@ -13,11 +13,13 @@ import { getRegisteredBuilderOptions } from "@/lib/admin/builder-queries";
 import { getRegisteredCityOptions } from "@/lib/admin/city-queries";
 import { getAdminPropertyForEdit } from "@/lib/admin/queries";
 import { isPendingSchemaMigrationError } from "@/lib/admin/schema-migration";
+import { YOUTUBE_SYNC_WARNING_MESSAGE } from "@/lib/admin/youtube-sync";
 
 export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ youtubeWarning?: string }>;
 };
 
 /**
@@ -50,8 +52,12 @@ function mapImagesToGalleryItems(
  * Página de edição de imóvel.
  * Server Component — busca dados no servidor e renderiza o formulário (Client Component).
  */
-export default async function AdminImoveisEditarPage({ params }: PageProps) {
+export default async function AdminImoveisEditarPage({
+  params,
+  searchParams,
+}: PageProps) {
   const { id: propertyId } = await params;
+  const { youtubeWarning } = await searchParams;
   if (!propertyId?.trim()) notFound();
 
   let property: Awaited<ReturnType<typeof getAdminPropertyForEdit>>;
@@ -187,6 +193,14 @@ export default async function AdminImoveisEditarPage({ params }: PageProps) {
       <p className="mb-6 text-sm text-zinc-300">
         {property.title} — <span className="font-mono">{property.slug}</span>
       </p>
+      {youtubeWarning === "1" ? (
+        <div
+          className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+          role="status"
+        >
+          {YOUTUBE_SYNC_WARNING_MESSAGE}
+        </div>
+      ) : null}
       <AdminImovelForm
         key={property.id}
         mode="edit"
