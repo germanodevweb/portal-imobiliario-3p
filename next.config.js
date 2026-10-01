@@ -82,7 +82,7 @@ const nextConfig = {
       },
       {
         source: "/695/imoveis/venda-apartamento-2-dormitorios-fortaleza-ce",
-        destination: "/imoveis/oportunidade-no-coracao-do-meireles-edificio-villa-damasco",
+        destination: "/cidade/fortaleza/bairro/meireles",
         permanent: true,
       },
       {
@@ -97,7 +97,7 @@ const nextConfig = {
       },
       {
         source: "/691/imoveis/venda-apartamento-2-dormitorios-presidente-kennedy-fortaleza-ce",
-        destination: "/imoveis/parque-dos-ipes-mais-que-morar-e-viver-bem-todos-os-dias",
+        destination: "/cidade/fortaleza/bairro/presidente-kennedy",
         permanent: true,
       },
       {
@@ -112,12 +112,12 @@ const nextConfig = {
       },
       {
         source: "/688/imoveis/venda-apartamento-2-dormitorios-fortaleza-ce",
-        destination: "/imoveis/marbello-residence-descubra-o-que-esta-surgindo-a-poucos-passos-do-mar",
+        destination: "/cidade/fortaleza",
         permanent: true,
       },
       {
         source: "/687/imoveis/venda-apartamento-aldeota-fortaleza-ce",
-        destination: "/imoveis/aura-mais-que-localizacao-conexao-com-a-vida",
+        destination: "/cidade/fortaleza/bairro/aldeota",
         permanent: true,
       },
       {
