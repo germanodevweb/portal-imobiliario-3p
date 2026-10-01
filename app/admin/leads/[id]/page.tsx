@@ -32,6 +32,9 @@ export default async function AdminLeadDetailPage({
 
   const lead = await prisma.lead.findUnique({
     where: { id },
+    include: {
+      property: { select: { title: true, slug: true } },
+    },
   });
 
   if (!lead) {
@@ -79,6 +82,25 @@ export default async function AdminLeadDetailPage({
                 leadId={lead.id}
                 initialDesiredPriceRange={lead.desiredPriceRange}
               />
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+              Imóvel de origem
+            </dt>
+            <dd className="mt-1 text-sm text-zinc-900">
+              {lead.propertySlug ? (
+                <Link
+                  href={`/imoveis/${lead.propertySlug}`}
+                  className="font-medium text-green-700 hover:text-green-800"
+                >
+                  {lead.property?.title ?? lead.propertySlug}
+                </Link>
+              ) : lead.sourcePath ? (
+                <span className="text-zinc-600">{lead.sourcePath}</span>
+              ) : (
+                "—"
+              )}
             </dd>
           </div>
           <div>

@@ -17,9 +17,11 @@ import { parsePropertyAreaFormInput } from "@/lib/utils/property-area";
 import { resolveNeighborhoodForProperty } from "@/lib/admin/neighborhood-resolve";
 import { resolveCityForProperty } from "@/lib/admin/city-resolve";
 import { resolveBuilderForProperty } from "@/lib/admin/builder-resolve";
+import { resolvePropertyYouTubePersistFields } from "@/lib/admin/youtube-sync";
 import {
   hasPropertyAreaRangeColumns,
   hasPropertyBuilderColumns,
+  hasPropertyYouTubeMetadataColumns,
   isPendingSchemaMigrationError,
   resetSchemaMigrationCache,
 } from "@/lib/admin/schema-migration";
@@ -71,30 +73,54 @@ function omitAreaRangeFields<T extends { areaMin?: number | null; areaMax?: numb
   return rest;
 }
 
+function omitYouTubeMetadataFields<
+  T extends {
+    youtubeTitle?: string | null;
+    youtubeDescription?: string | null;
+    youtubePublishedAt?: Date | null;
+    youtubeDurationIso?: string | null;
+  },
+>(data: T): Omit<T, "youtubeTitle" | "youtubeDescription" | "youtubePublishedAt" | "youtubeDurationIso"> {
+  const {
+    youtubeTitle: _t,
+    youtubeDescription: _d,
+    youtubePublishedAt: _p,
+    youtubeDurationIso: _dur,
+    ...rest
+  } = data;
+  return rest;
+}
+
 type PropertyOptionalSchemaFields = {
   builderName?: string | null;
   builderSlug?: string | null;
   areaMin?: number | null;
   areaMax?: number | null;
+  youtubeTitle?: string | null;
+  youtubeDescription?: string | null;
+  youtubePublishedAt?: Date | null;
+  youtubeDurationIso?: string | null;
 };
 
-async function preparePropertyPersistData<T extends PropertyOptionalSchemaFields>(
-  data: T
-): Promise<T> {
-  const [includeBuilder, includeAreaRange] = await Promise.all([
+async function preparePropertyPersistData<T>(data: T): Promise<T> {
+  const [includeBuilder, includeAreaRange, includeYoutubeMeta] = await Promise.all([
     hasPropertyBuilderColumns(),
     hasPropertyAreaRangeColumns(),
+    hasPropertyYouTubeMetadataColumns(),
   ]);
 
   let result: T = data;
-  if (!includeBuilder) result = omitBuilderFields(result) as T;
-  if (!includeAreaRange) result = omitAreaRangeFields(result) as T;
+  if (!includeBuilder) result = omitBuilderFields(result as PropertyOptionalSchemaFields) as T;
+  if (!includeAreaRange) result = omitAreaRangeFields(result as PropertyOptionalSchemaFields) as T;
+  if (!includeYoutubeMeta) {
+    result = omitYouTubeMetadataFields(result as PropertyOptionalSchemaFields) as T;
+  }
   return result;
 }
 
 async function createPropertyWithOptionalSchema(data: Prisma.PropertyCreateInput) {
   return prisma.property.create({
-    data: await preparePropertyPersistData(data),
+    data: (await preparePropertyPersistData(data)) as Prisma.PropertyCreateInput,
   });
 }
 
@@ -474,6 +500,14 @@ export async function createPropertyAction(
   const featuredImageAlt = primaryImage?.alt ?? null;
   const galleryImages = visibleImages.map((i) => i.url);
 
+  const { fields: youtubeFields, warning: youtubeWarning } =
+    await resolvePropertyYouTubePersistFields(youtubeVideoId, null, {
+      youtubeTitle: null,
+      youtubeDescription: null,
+      youtubePublishedAt: null,
+      youtubeDurationIso: null,
+    });
+
   const property = await createPropertyWithOptionalSchema({
     slug,
     title,
@@ -511,6 +545,7 @@ export async function createPropertyAction(
     builderName,
     builderSlug,
     youtubeVideoId,
+    ...youtubeFields,
   });
 
   for (let i = 0; i < validImages.length; i++) {
@@ -529,6 +564,9 @@ export async function createPropertyAction(
   }
 
   revalidatePath("/admin/imoveis");
+  if (youtubeWarning) {
+    redirect(`/admin/imoveis/${property.id}/editar?youtubeWarning=1`);
+  }
   redirect("/admin/imoveis");
 }
 
@@ -710,7 +748,16 @@ export async function updatePropertyAction(
 
   const existing = await prisma.property.findUnique({
     where: { id: propertyId },
-    select: { id: true, slug: true, transactionType: true },
+    select: {
+      id: true,
+      slug: true,
+      transactionType: true,
+      youtubeVideoId: true,
+      youtubeTitle: true,
+      youtubeDescription: true,
+      youtubePublishedAt: true,
+      youtubeDurationIso: true,
+    },
   });
   if (!existing) {
     return { errors: { _form: "Imóvel não encontrado" } };
@@ -772,6 +819,18 @@ export async function updatePropertyAction(
   const featuredImageAlt = primaryImage?.alt ?? null;
   const galleryImages = visibleImages.map((i) => i.url);
 
+  const { fields: youtubeFields, warning: youtubeWarning } =
+    await resolvePropertyYouTubePersistFields(
+      youtubeVideoId,
+      existing.youtubeVideoId,
+      {
+        youtubeTitle: existing.youtubeTitle,
+        youtubeDescription: existing.youtubeDescription,
+        youtubePublishedAt: existing.youtubePublishedAt,
+        youtubeDurationIso: existing.youtubeDurationIso,
+      }
+    );
+
   const updateData = {
     slug,
     title,
@@ -807,6 +866,7 @@ export async function updatePropertyAction(
     builderName,
     builderSlug,
     youtubeVideoId,
+    ...youtubeFields,
   };
 
   const persistedUpdateData = await preparePropertyPersistData(updateData);
@@ -852,10 +912,15 @@ export async function updatePropertyAction(
   revalidatePath(`/admin/imoveis/${propertyId}/editar`);
   revalidatePath("/imoveis");
   revalidatePath(`/imoveis/${slug}`);
+  revalidatePath(`/imoveis/${slug}/video`);
   revalidatePropertyDetailBySlug(existing.slug);
   if (slug !== existing.slug) {
     revalidatePropertyDetailBySlug(slug);
+    revalidatePath(`/imoveis/${existing.slug}/video`);
   }
   await revalidateBlogPagesReferencingProperty(propertyId);
+  if (youtubeWarning) {
+    redirect(`/admin/imoveis/${propertyId}/editar?youtubeWarning=1`);
+  }
   redirect("/admin/imoveis");
 }

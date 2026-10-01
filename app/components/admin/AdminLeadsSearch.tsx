@@ -30,6 +30,8 @@ function matchesSearch(lead: AdminLeadListItem, query: string): boolean {
     lead.name,
     lead.phone,
     lead.desiredPriceRange ?? "",
+    lead.propertyTitle ?? "",
+    lead.propertySlug ?? "",
   ];
 
   return fields.some((f) => normalize(String(f)).includes(q));
@@ -77,7 +79,7 @@ export function AdminLeadsSearch({ leads }: Props) {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar por nome, telefone ou faixa de valor..."
+            placeholder="Buscar por nome, telefone, imóvel ou faixa..."
             className="w-full rounded-lg border border-zinc-200 bg-white py-2.5 pl-10 pr-4 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-green-600 focus:outline-none focus:ring-2 focus:ring-green-600/20"
             aria-label="Buscar leads"
           />

@@ -26,6 +26,7 @@ let builderTableCache: boolean | null = null;
 let builderContactColumnsCache: boolean | null = null;
 let neighborhoodTableCache: boolean | null = null;
 let cityTableCache: boolean | null = null;
+let propertyYouTubeMetadataColumnsCache: boolean | null = null;
 
 async function relationExists(
   relation: "columns" | "tables",
@@ -149,6 +150,22 @@ export async function hasNeighborhoodTable(): Promise<boolean> {
   return neighborhoodTableCache;
 }
 
+/** Colunas de metadados YouTube em Property (Data API). */
+export async function hasPropertyYouTubeMetadataColumns(): Promise<boolean> {
+  if (propertyYouTubeMetadataColumnsCache !== null) {
+    return propertyYouTubeMetadataColumnsCache;
+  }
+
+  try {
+    const hasTitle = await relationExists("columns", "Property", "youtubeTitle");
+    propertyYouTubeMetadataColumnsCache = hasTitle;
+  } catch {
+    propertyYouTubeMetadataColumnsCache = false;
+  }
+
+  return propertyYouTubeMetadataColumnsCache;
+}
+
 /** Tabela City (cadastro canônico de cidades). */
 export async function hasCityTable(): Promise<boolean> {
   if (cityTableCache !== null) {
@@ -172,4 +189,5 @@ export function resetSchemaMigrationCache(): void {
   builderContactColumnsCache = null;
   neighborhoodTableCache = null;
   cityTableCache = null;
+  propertyYouTubeMetadataColumnsCache = null;
 }

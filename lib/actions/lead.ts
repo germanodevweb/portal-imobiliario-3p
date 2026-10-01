@@ -75,3 +75,71 @@ export async function submitLeadFromSiteAction(
   revalidatePath("/admin/leads");
   return { success: true };
 }
+
+export type SubmitPropertyInterestLeadState = {
+  success?: boolean;
+  errors?: Record<string, string>;
+};
+
+/**
+ * Captura de lead na página do imóvel (#interesse): nome + WhatsApp + contexto do imóvel.
+ */
+export async function submitPropertyInterestLeadAction(
+  _prevState: SubmitPropertyInterestLeadState,
+  formData: FormData
+): Promise<SubmitPropertyInterestLeadState> {
+  const errors: Record<string, string> = {};
+
+  const name = (formData.get("name") as string)?.trim();
+  const phoneRaw = (formData.get("phone") as string)?.trim();
+  const propertyId = (formData.get("propertyId") as string)?.trim() || null;
+  const propertySlug = (formData.get("propertySlug") as string)?.trim() || null;
+  const sourcePath = (formData.get("sourcePath") as string)?.trim() || null;
+
+  if (!name) errors.name = "Nome é obrigatório";
+
+  const phoneValidation = validateBrazilianWhatsappField(phoneRaw ?? "");
+  if (!phoneValidation.ok) {
+    errors.phone = phoneValidation.error;
+  }
+
+  if (!propertyId && !propertySlug) {
+    errors.form = "Contexto do imóvel inválido. Recarregue a página.";
+  }
+
+  if (Object.keys(errors).length > 0) {
+    return { errors };
+  }
+
+  if (!phoneValidation.ok) {
+    return { errors: { phone: phoneValidation.error } };
+  }
+
+  if (propertyId) {
+    const exists = await prisma.property.findUnique({
+      where: { id: propertyId },
+      select: { id: true, slug: true },
+    });
+    if (!exists) {
+      return { errors: { form: "Imóvel não encontrado." } };
+    }
+  }
+
+  const slugForNotes = propertySlug ?? "—";
+  await prisma.lead.create({
+    data: {
+      name,
+      phone: phoneValidation.normalized,
+      desiredPriceRange: null,
+      notes: `Lead captado na página do imóvel: ${slugForNotes}`,
+      origin: "site",
+      status: "novo",
+      propertyId,
+      propertySlug,
+      sourcePath,
+    },
+  });
+
+  revalidatePath("/admin/leads");
+  return { success: true };
+}

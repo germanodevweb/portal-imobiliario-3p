@@ -38,9 +38,17 @@ export function buildWhatsAppChatHref(text: string): string {
 
 /** `href` para CTAs com a mensagem de introdução padrão do site. */
 export function getWhatsAppContactHref(
-  text: string = WHATSAPP_DEFAULT_INTRO_MESSAGE
+  text?: string
 ): string {
-  return buildWhatsAppChatHref(text);
+  return buildWhatsAppChatHref(text?.trim() || WHATSAPP_DEFAULT_INTRO_MESSAGE);
+}
+
+/** Mensagem de interesse em um imóvel específico (WhatsApp). */
+export function buildPropertyWhatsAppInterestMessage(
+  title: string,
+  canonicalUrl: string
+): string {
+  return `Olá! Tenho interesse no imóvel: ${title} — ${canonicalUrl}`;
 }
 
 export const CONTATO_ASSUNTO_VALUES = [

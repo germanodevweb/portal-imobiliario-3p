@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Header } from "@/app/components/Header";
@@ -7,9 +7,18 @@ import { PropertyGallery } from "@/app/components/PropertyGallery";
 import { PropertyList } from "@/app/components/PropertyList";
 import {
   getPropertyBySlug,
+  getPropertySlugPublicationState,
   getSimilarProperties,
   getPublishedPropertySlugsForSitemap,
+  getOtherNeighborhoodsWithCountsByCitySlug,
+  getPublishedPropertiesByTypeAndCity,
+  countPublishedPropertiesByTypeAndCity,
+  getLaunchPropertiesByCitySlug,
 } from "@/lib/queries/properties";
+import { buildUnpublishedPropertyRedirectPath } from "@/lib/imoveis/property-slug-redirect";
+import { buildPropertyDetailRobots } from "@/lib/indexation";
+import { serializeJsonLd, buildBreadcrumbListJsonLd } from "@/lib/seo/site-entity-jsonld";
+import { buildPropertyJsonLd } from "@/lib/seo/property-jsonld";
 import { hasPropertyListedPrice, formatPropertyPriceBrlCompact } from "@/lib/utils/property-price";
 import {
   buildPropertyPageTitle,
@@ -18,26 +27,27 @@ import {
   buildOpenGraph,
   buildTwitterCard,
   buildRealEstateListingImageUrls,
+  buildPropertyVideoWatchPagePath,
   getPropertyTypeLabel,
-  jsonLdPostalAddressEnhancements,
-  SITE_NAME,
 } from "@/lib/seo";
-import {
-  getWatermarkedImageUrl,
-  shouldUseUnoptimizedNextImage,
-} from "@/lib/cloudinary/watermark";
-import { normalizePublicImageUrl } from "@/lib/utils/normalize-image-url";
+import { getWatermarkedImageUrl } from "@/lib/cloudinary/watermark";
 import {
   buildPropertyGalleryItems,
   type PropertyGalleryBadge,
 } from "@/lib/utils/property-gallery";
 import { buildWhatsAppShareUrl } from "@/lib/utils/whatsapp-share";
-import { getWhatsAppContactHref } from "@/lib/constants/contato";
 import {
-  buildPropertyAreaFloorSizeJsonLd,
-  formatPropertyAreaDisplay,
-} from "@/lib/utils/property-area";
+  buildPropertyWhatsAppInterestMessage,
+  getWhatsAppContactHref,
+} from "@/lib/constants/contato";
+import { PropertyInterestForm } from "@/app/components/PropertyInterestForm";
+import { PropertyWhatsAppLink } from "@/app/components/PropertyWhatsAppLink";
+import { formatPropertyAreaDisplay } from "@/lib/utils/property-area";
 import { PropertyDescription } from "@/app/components/PropertyDescription";
+import { PropertyYouTubeTour } from "@/app/components/PropertyYouTubeTour";
+import { PropertyNeighborhoodMap } from "@/app/components/PropertyNeighborhoodMap";
+import { PropertyMobileActionBar } from "@/app/components/PropertyMobileActionBar";
+import { PropertyDetailInternalLinks } from "@/app/components/PropertyDetailInternalLinks";
 import { Share2 } from "lucide-react";
 
 type PageProps = { params: Promise<{ slug: string }> };
@@ -66,8 +76,20 @@ function transactionLabel(type: "SALE" | "RENT"): string {
 // Metadata programática por imóvel
 // ---------------------------------------------------------------------------
 
+function redirectIfUnpublishedProperty(
+  state: Awaited<ReturnType<typeof getPropertySlugPublicationState>>
+): void {
+  if (state.status === "missing") notFound();
+  if (state.status === "unpublished") {
+    permanentRedirect(buildUnpublishedPropertyRedirectPath(state.redirect));
+  }
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
+  const publication = await getPropertySlugPublicationState(slug);
+  redirectIfUnpublishedProperty(publication);
+
   const property = await getPropertyBySlug(slug);
 
   if (!property) {
@@ -75,15 +97,30 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const title =
-    property.metaTitle ?? buildPropertyPageTitle(property.title, property.city);
+    property.metaTitle ??
+    buildPropertyPageTitle({
+      propertyTypeSlug: property.propertyTypeSlug,
+      transactionType: property.transactionType,
+      bedrooms: property.bedrooms,
+      area: property.area,
+      areaMin: property.areaMin,
+      areaMax: property.areaMax,
+      neighborhood: property.neighborhood,
+      city: property.city,
+    });
   const description =
     property.metaDescription ??
-    buildPropertyPageDescription(
-      property.title,
-      property.city,
-      property.bedrooms,
-      property.price
-    );
+    buildPropertyPageDescription({
+      propertyTypeSlug: property.propertyTypeSlug,
+      transactionType: property.transactionType,
+      bedrooms: property.bedrooms,
+      area: property.area,
+      areaMin: property.areaMin,
+      areaMax: property.areaMax,
+      neighborhood: property.neighborhood,
+      city: property.city,
+      price: property.price,
+    });
   const canonical = buildCanonicalUrl(`/imoveis/${slug}`);
   const image = property.ogImage ?? (property.featuredImage ? getWatermarkedImageUrl(property.featuredImage) : undefined);
 
@@ -93,7 +130,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     alternates: { canonical },
     openGraph: buildOpenGraph({ title, description, url: canonical, image }),
     twitter: buildTwitterCard({ title, description, image }),
-    robots: { index: true, follow: true },
+    robots: buildPropertyDetailRobots(property.isSold, property.updatedAt),
   };
 }
 
@@ -103,16 +140,44 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function ImovelPage({ params }: PageProps) {
   const { slug } = await params;
+  const publication = await getPropertySlugPublicationState(slug);
+  redirectIfUnpublishedProperty(publication);
+
   const property = await getPropertyBySlug(slug);
 
   if (!property) notFound();
 
-  const similarProperties = await getSimilarProperties({
-    currentSlug: slug,
-    neighborhoodSlug: property.neighborhoodSlug,
-    citySlug: property.citySlug,
-    propertyTypeSlug: property.propertyTypeSlug,
-  });
+  const [
+    similarProperties,
+    nearbyNeighborhoods,
+    typeInCityProperties,
+    typeInCityTotal,
+    launchProperties,
+  ] = await Promise.all([
+    getSimilarProperties({
+      currentSlug: slug,
+      neighborhoodSlug: property.neighborhoodSlug,
+      citySlug: property.citySlug,
+      propertyTypeSlug: property.propertyTypeSlug,
+    }),
+    getOtherNeighborhoodsWithCountsByCitySlug(
+      property.citySlug,
+      property.neighborhoodSlug,
+      8
+    ),
+    getPublishedPropertiesByTypeAndCity(
+      property.propertyTypeSlug,
+      property.citySlug,
+      4,
+      0,
+      slug
+    ),
+    countPublishedPropertiesByTypeAndCity(
+      property.propertyTypeSlug,
+      property.citySlug
+    ),
+    getLaunchPropertiesByCitySlug(property.citySlug, 4, slug),
+  ]);
 
   const canonical = buildCanonicalUrl(`/imoveis/${slug}`);
   const formattedPrice = formatPropertyPriceBrlCompact(property.price);
@@ -125,6 +190,10 @@ export default async function ImovelPage({ params }: PageProps) {
     canonical,
   ].join("\n");
   const whatsappShareHref = buildWhatsAppShareUrl(whatsappShareText);
+  const propertyWhatsAppHref = getWhatsAppContactHref(
+    buildPropertyWhatsAppInterestMessage(property.title, canonical)
+  );
+  const sourcePath = `/imoveis/${slug}`;
   const typeName = getPropertyTypeLabel(property.propertyTypeSlug);
   const txLabel = transactionLabel(property.transactionType);
   const areaDisplay = formatPropertyAreaDisplay({
@@ -132,12 +201,6 @@ export default async function ImovelPage({ params }: PageProps) {
     areaMin: property.areaMin,
     areaMax: property.areaMax,
   });
-  const areaFloorSizeJsonLd = buildPropertyAreaFloorSizeJsonLd({
-    area: property.area,
-    areaMin: property.areaMin,
-    areaMax: property.areaMax,
-  });
-
   const galleryItems = buildPropertyGalleryItems({
     title: property.title,
     city: property.city,
@@ -149,35 +212,6 @@ export default async function ImovelPage({ params }: PageProps) {
     galleryImages: property.galleryImages,
     images: property.images,
   });
-
-  if (process.env.NODE_ENV === "development" && slug.includes("trairi")) {
-    console.log(
-      "[GALERIA DEV Trairi] payload objetivo",
-      JSON.stringify(
-        {
-          slug,
-          featuredImage: property.featuredImage,
-          galleryImages: property.galleryImages,
-          imagesFromQuery: property.images.map((img) => ({
-            urlRaw: img.url,
-            urlNormalized: normalizePublicImageUrl(img.url),
-            normalizacaoAlterouUrl:
-              img.url.trim() !== normalizePublicImageUrl(img.url).trim(),
-            alt: img.alt,
-          })),
-          galleryItemsFinalUrls: galleryItems.map((item) => item.url),
-          porIndiceRender: galleryItems.map((item, i) => ({
-            indice: i,
-            urlFinal: item.url,
-            watermarkedSrc: getWatermarkedImageUrl(item.url),
-            unoptimized: shouldUseUnoptimizedNextImage(item.url),
-          })),
-        },
-        null,
-        2
-      )
-    );
-  }
 
   const galleryBadges: PropertyGalleryBadge[] = [];
   if (property.isSold) {
@@ -225,96 +259,49 @@ export default async function ImovelPage({ params }: PageProps) {
       url: buildCanonicalUrl(`/bairro/${property.neighborhoodSlug}`),
     });
   }
-  breadcrumbItems.push({ name: property.title, url: canonical });
+  breadcrumbItems.push({ name: "Imóvel", url: canonical });
 
   // -------------------------------------------------------------------------
   // JSON-LD
   // -------------------------------------------------------------------------
 
-  const breadcrumbJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: breadcrumbItems.map((item, i) => ({
-      "@type": "ListItem",
-      position: i + 1,
-      name: item.name,
-      item: item.url,
-    })),
-  };
+  const breadcrumbJsonLd = buildBreadcrumbListJsonLd(breadcrumbItems);
 
-  // RealEstateListing -> WebContent -> CreativeWork -> Thing (Schema.org).
-  // NAO e subclasse de Offer. Hierarquia de propriedades:
-  //   name, description, url, image  -> Thing
-  //   datePosted, contentLocation,
-  //   publisher                      -> CreativeWork
-  //   offers { Offer }               -> preco, disponibilidade, seller
   const listingImageUrls = buildRealEstateListingImageUrls(property).map((u) =>
     getWatermarkedImageUrl(u)
   );
 
-  const datePostedIso = (
-    property.publishedAt ? new Date(property.publishedAt) : new Date(property.updatedAt)
-  ).toISOString();
-
-  const realEstateJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "RealEstateListing",
-    name: property.title,
-    description:
-      property.description ??
-      `${typeName} para ${txLabel.toLowerCase()} em ${property.city}.`,
-    url: canonical,
-    ...(listingImageUrls.length > 0 ? { image: listingImageUrls } : {}),
-    datePosted: datePostedIso,
-    contentLocation: {
-      "@type": "Place",
-      name: property.neighborhood
-        ? `${property.neighborhood}, ${property.city}`
-        : property.city,
-      address: {
-        "@type": "PostalAddress",
-        addressLocality: property.city,
-        addressRegion: property.state,
-        ...jsonLdPostalAddressEnhancements(property.country, property.postalCode),
-      },
+  const realEstateJsonLd = buildPropertyJsonLd(
+    {
+      title: property.title,
+      description: property.description,
+      type: property.type,
+      propertyTypeSlug: property.propertyTypeSlug,
+      transactionType: property.transactionType,
+      price: property.price,
+      city: property.city,
+      neighborhood: property.neighborhood,
+      state: property.state,
+      country: property.country,
+      postalCode: property.postalCode,
+      bedrooms: property.bedrooms,
+      bathrooms: property.bathrooms,
+      area: property.area,
+      areaMin: property.areaMin,
+      areaMax: property.areaMax,
+      featuredImage: property.featuredImage,
+      galleryImages: property.galleryImages,
+      images: property.images,
+      isSold: property.isSold,
+      publishedAt: property.publishedAt,
+      updatedAt: property.updatedAt,
     },
-    publisher: {
-      "@type": "Organization",
-      name: SITE_NAME,
-      url: buildCanonicalUrl("/"),
-    },
-    ...(areaFloorSizeJsonLd ? { floorSize: areaFloorSizeJsonLd } : {}),
-    ...(hasPropertyListedPrice(property.price)
-      ? {
-          offers: {
-            "@type": "Offer",
-            price: Number(property.price),
-            priceCurrency: "BRL",
-            availability: property.isSold
-              ? "https://schema.org/SoldOut"
-              : "https://schema.org/InStock",
-            url: canonical,
-            seller: {
-              "@type": "Organization",
-              name: SITE_NAME,
-              url: buildCanonicalUrl("/"),
-            },
-          },
-        }
-      : {}),
-  };
+    canonical,
+    { imageUrls: listingImageUrls }
+  );
 
-  const videoJsonLd = property.youtubeVideoId
-    ? {
-        "@context": "https://schema.org",
-        "@type": "VideoObject",
-        name: `Tour Virtual — ${property.title}`,
-        description: `Tour virtual do imóvel ${property.title} em ${property.city}. ${SITE_NAME}.`,
-        thumbnailUrl: `https://img.youtube.com/vi/${property.youtubeVideoId}/hqdefault.jpg`,
-        contentUrl: `https://www.youtube.com/watch?v=${property.youtubeVideoId}`,
-        embedUrl: `https://www.youtube.com/embed/${property.youtubeVideoId}`,
-        uploadDate: datePostedIso,
-      }
+  const videoWatchPath = property.youtubeVideoId
+    ? buildPropertyVideoWatchPagePath(slug)
     : null;
 
   return (
@@ -323,20 +310,13 @@ export default async function ImovelPage({ params }: PageProps) {
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbJsonLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(realEstateJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(realEstateJsonLd) }}
       />
-      {videoJsonLd && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(videoJsonLd) }}
-        />
-      )}
-
-      <main className="mx-auto max-w-7xl px-5 py-10 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-7xl px-5 py-10 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:px-6 lg:px-8 lg:pb-10">
 
         {/* Breadcrumb visível */}
         <nav
@@ -352,13 +332,30 @@ export default async function ImovelPage({ params }: PageProps) {
             </span>
           ))}
           <span aria-hidden="true">/</span>
-          <span className="line-clamp-1 font-medium text-zinc-800">
-            {property.title}
+          <span className="font-medium text-zinc-800" aria-current="page">
+            Imóvel
           </span>
         </nav>
 
         {galleryItems.length > 0 && (
           <PropertyGallery images={galleryItems} badges={galleryBadges} />
+        )}
+
+        {property.youtubeVideoId && videoWatchPath && (
+          <>
+            <p className="mt-4">
+              <Link
+                href={videoWatchPath}
+                className="inline-flex min-h-[44px] items-center text-sm font-semibold text-green-700 underline-offset-2 hover:text-green-800 hover:underline"
+              >
+                Assistir ao tour em vídeo
+              </Link>
+            </p>
+            <PropertyYouTubeTour
+              youtubeVideoId={property.youtubeVideoId}
+              propertyTitle={property.title}
+            />
+          </>
         )}
 
         {/* Grade principal: conteúdo + sidebar — mobile: CTA após características */}
@@ -431,24 +428,25 @@ export default async function ImovelPage({ params }: PageProps) {
           {/* Sidebar — mobile: após características; desktop: coluna direita */}
           <aside className="flex flex-col gap-6 lg:col-span-1 lg:row-span-2 lg:row-start-1">
             {/* CTA de contato */}
-            <div className="rounded-xl border border-green-100 bg-green-50 p-6">
+            <div
+              id="interesse"
+              className="scroll-mt-24 rounded-xl border border-green-100 bg-green-50 p-6"
+            >
               <p className="text-sm font-semibold text-zinc-900">
                 Interesse neste imóvel?
               </p>
               <p className="mt-1 text-xs text-zinc-500">
-                Fale com um consultor especializado da 3Pinheiros.
+                Deixe seu contato ou fale direto pelo WhatsApp.
               </p>
               <div className="mt-4 flex flex-col gap-3">
-                <Link
-                  href="/contato"
-                  className="flex min-h-[44px] items-center justify-center rounded-full bg-green-700 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-green-800"
-                >
-                  Solicitar informações
-                </Link>
-                <a
-                  href={getWhatsAppContactHref()}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <PropertyInterestForm
+                  propertyId={property.id}
+                  propertySlug={property.slug}
+                  sourcePath={sourcePath}
+                />
+                <PropertyWhatsAppLink
+                  href={propertyWhatsAppHref}
+                  propertySlug={property.slug}
                   className="flex min-h-[44px] items-center justify-center gap-2 rounded-full border border-green-600 px-4 py-3 text-sm font-medium text-green-700 transition-colors hover:bg-green-100"
                 >
                   <svg
@@ -460,7 +458,7 @@ export default async function ImovelPage({ params }: PageProps) {
                     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
                   </svg>
                   WhatsApp
-                </a>
+                </PropertyWhatsAppLink>
                 <a
                   href={whatsappShareHref}
                   target="_blank"
@@ -500,7 +498,18 @@ export default async function ImovelPage({ params }: PageProps) {
                       className="flex min-h-[44px] items-center gap-2 rounded-lg px-2 py-2 text-sm text-zinc-700 transition-colors hover:bg-green-50 hover:text-green-700"
                     >
                       <span className="text-green-600">→</span>
-                      Imóveis no {property.neighborhood}
+                      Imóveis em {property.neighborhood}
+                    </Link>
+                  </li>
+                )}
+                {property.neighborhoodSlug && (
+                  <li>
+                    <Link
+                      href={`/bairro/${property.neighborhoodSlug}/tipo/${property.propertyTypeSlug}`}
+                      className="flex min-h-[44px] items-center gap-2 rounded-lg px-2 py-2 text-sm text-zinc-700 transition-colors hover:bg-green-50 hover:text-green-700"
+                    >
+                      <span className="text-green-600">→</span>
+                      {typeName} em {property.neighborhood}
                     </Link>
                   </li>
                 )}
@@ -522,37 +531,43 @@ export default async function ImovelPage({ params }: PageProps) {
                     {typeName} em {property.city}
                   </Link>
                 </li>
+                <li>
+                  <Link
+                    href={`/comprar/${property.propertyTypeSlug}/${property.citySlug}`}
+                    className="flex min-h-[44px] items-center gap-2 rounded-lg px-2 py-2 text-sm text-zinc-700 transition-colors hover:bg-green-50 hover:text-green-700"
+                  >
+                    <span className="text-green-600">→</span>
+                    Comprar {typeName.toLowerCase()} em {property.city}
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href={`/estado/${property.stateSlug}/cidade/${property.citySlug}`}
+                    className="flex min-h-[44px] items-center gap-2 rounded-lg px-2 py-2 text-sm text-zinc-700 transition-colors hover:bg-green-50 hover:text-green-700"
+                  >
+                    <span className="text-green-600">→</span>
+                    {property.city} no {property.state}
+                  </Link>
+                </li>
               </ul>
             </div>
           </aside>
 
-          {/* Coluna esquerda — descrição e vídeo (desktop: abaixo do header) */}
+          {/* Coluna esquerda — mapa e descrição */}
           <div className="lg:col-span-2 lg:row-start-2">
-            {/* Descrição */}
+            {property.neighborhood && property.neighborhoodSlug && (
+              <PropertyNeighborhoodMap
+                neighborhood={property.neighborhood}
+                city={property.city}
+                state={property.state}
+              />
+            )}
+
             {property.description && (
               <PropertyDescription
                 description={property.description}
                 propertyTitle={property.title}
               />
-            )}
-
-            {/* Vídeo YouTube */}
-            {property.youtubeVideoId && (
-              <div className="mt-8">
-                <h2 className="mb-3 text-base font-semibold text-zinc-900">
-                  Tour virtual
-                </h2>
-                <div className="aspect-video w-full overflow-hidden rounded-xl">
-                  <iframe
-                    src={`https://www.youtube.com/embed/${property.youtubeVideoId}`}
-                    title={`Tour virtual — ${property.title}`}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowFullScreen
-                    loading="lazy"
-                    className="h-full w-full border-0"
-                  />
-                </div>
-              </div>
             )}
           </div>
         </div>
@@ -573,6 +588,16 @@ export default async function ImovelPage({ params }: PageProps) {
             </div>
           </section>
         )}
+
+        <PropertyDetailInternalLinks
+          city={property.city}
+          citySlug={property.citySlug}
+          propertyTypeSlug={property.propertyTypeSlug}
+          typeInCityProperties={typeInCityProperties}
+          typeInCityTotal={typeInCityTotal}
+          nearbyNeighborhoods={nearbyNeighborhoods}
+          launchProperties={launchProperties}
+        />
 
         {/* Bloco de contexto semântico */}
         <section
@@ -604,6 +629,16 @@ export default async function ImovelPage({ params }: PageProps) {
           </div>
         </section>
       </main>
+
+      <PropertyMobileActionBar
+        whatsAppHref={propertyWhatsAppHref}
+        propertySlug={property.slug}
+      />
+
+      <div
+        className="h-[calc(4.5rem+env(safe-area-inset-bottom))] shrink-0 lg:hidden"
+        aria-hidden
+      />
 
       <Footer />
     </>

@@ -293,6 +293,10 @@ export type AdminLeadListItem = {
   manualSource: string | null;
   status: "novo" | "em_contato" | "qualificado" | "vendido" | "perdido";
   notes: string | null;
+  propertyId: string | null;
+  propertySlug: string | null;
+  sourcePath: string | null;
+  propertyTitle: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -304,6 +308,24 @@ export type AdminLeadListItem = {
 export async function getAdminLeads(): Promise<AdminLeadListItem[]> {
   const results = await prisma.lead.findMany({
     orderBy: { createdAt: "desc" },
+    include: {
+      property: { select: { title: true } },
+    },
   });
-  return results;
+  return results.map((lead) => ({
+    id: lead.id,
+    name: lead.name,
+    phone: lead.phone,
+    desiredPriceRange: lead.desiredPriceRange,
+    origin: lead.origin,
+    manualSource: lead.manualSource,
+    status: lead.status,
+    notes: lead.notes,
+    propertyId: lead.propertyId,
+    propertySlug: lead.propertySlug,
+    sourcePath: lead.sourcePath,
+    propertyTitle: lead.property?.title ?? null,
+    createdAt: lead.createdAt,
+    updatedAt: lead.updatedAt,
+  }));
 }

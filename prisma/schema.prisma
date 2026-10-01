@@ -98,7 +98,11 @@ model Property {
   featuredImage     String?
   featuredImageAlt String?
   galleryImages    String[]
-  youtubeVideoId   String?
+  youtubeVideoId        String?
+  youtubeTitle          String?
+  youtubeDescription    String?   @db.Text
+  youtubePublishedAt    DateTime?
+  youtubeDurationIso    String?
 
   // — Dados do proprietário (uso interno, nunca expostos no portal)
   ownerName  String?
@@ -139,6 +143,8 @@ model Property {
 
   // — Galeria de imagens (PropertyImage)
   images PropertyImage[]
+
+  leads Lead[]
 }
 
 // ---------------------------------------------------------------------------
@@ -294,6 +300,12 @@ model Lead {
   // — Anotações internas
   notes String? @db.Text
 
+  // — Imóvel de origem (página /imoveis/[slug])
+  propertyId   String?
+  propertySlug String?
+  sourcePath   String?
+  property     Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+
   // — Auditoria
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -301,4 +313,5 @@ model Lead {
   @@index([status])
   @@index([origin])
   @@index([createdAt])
+  @@index([propertyId])
 }

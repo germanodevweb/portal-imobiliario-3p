@@ -168,6 +168,12 @@ export function AdminLeadsTable({ leads, isFiltered }: Props) {
                 scope="col"
                 className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600"
               >
+                Imóvel
+              </th>
+              <th
+                scope="col"
+                className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-600"
+              >
                 Origem
               </th>
               <th
@@ -222,6 +228,19 @@ export function AdminLeadsTable({ leads, isFiltered }: Props) {
                   </td>
                   <td className={`px-4 py-3 text-sm text-zinc-600 ${LEADS_TD_HOVER}`}>
                     {lead.desiredPriceRange ?? "—"}
+                  </td>
+                  <td className={`max-w-[12rem] px-4 py-3 text-sm ${LEADS_TD_HOVER}`}>
+                    {lead.propertySlug ? (
+                      <Link
+                        href={`/imoveis/${lead.propertySlug}`}
+                        className="line-clamp-2 font-medium text-green-700 hover:text-green-800"
+                        title={lead.propertyTitle ?? lead.propertySlug}
+                      >
+                        {lead.propertyTitle ?? lead.propertySlug}
+                      </Link>
+                    ) : (
+                      <span className="text-zinc-400">—</span>
+                    )}
                   </td>
                   <td
                     className={`whitespace-nowrap px-4 py-3 text-sm text-zinc-600 ${LEADS_TD_HOVER}`}
