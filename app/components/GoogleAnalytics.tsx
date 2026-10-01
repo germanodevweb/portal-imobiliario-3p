@@ -1,29 +1,17 @@
 "use client";
 
 import Script from "next/script";
-import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect } from "react";
 
 const GA_MEASUREMENT_ID = "G-KYHCRPZ1C4";
 
-declare global {
-  interface Window {
-    gtag?: (...args: unknown[]) => void;
-  }
-}
-
-/** GA4 via next/script (afterInteractive) + page_view em navegações do App Router. */
+/**
+ * GA4: um único `gtag('config')` no carregamento (page_view inicial).
+ * Navegações no App Router: confiar na medição otimizada do GA4
+ * («Alterações de página com base no histórico do navegador»), sem `useEffect`
+ * extra — evita page_view duplicado no first load e em cada rota.
+ * Admin GA4 → Fluxo de dados → Medição otimizada: ativar o item acima.
+ */
 export function GoogleAnalytics() {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  useEffect(() => {
-    if (!pathname || typeof window.gtag !== "function") return;
-    const query = searchParams.toString();
-    const pagePath = query ? `${pathname}?${query}` : pathname;
-    window.gtag("config", GA_MEASUREMENT_ID, { page_path: pagePath });
-  }, [pathname, searchParams]);
-
   return (
     <>
       <Script
