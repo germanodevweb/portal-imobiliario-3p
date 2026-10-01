@@ -1,7 +1,14 @@
 import type { Metadata } from "next";
+import "./admin-globals.css";
+import { Geist_Mono } from "next/font/google";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { AdminHeader } from "@/app/components/admin/AdminHeader";
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 import {
   ADMIN_AUTH_COOKIE_NAME,
   isAdminSessionCookieValue,
@@ -38,7 +45,9 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-linear-to-b from-emerald-900 via-green-800 to-emerald-950">
+    <div
+      className={`admin-root ${geistMono.variable} [--font-mono:var(--font-geist-mono)] flex min-h-screen flex-col bg-linear-to-b from-emerald-900 via-green-800 to-emerald-950`}
+    >
       <AdminHeader />
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 text-zinc-100 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
         {children}

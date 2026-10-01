@@ -176,5 +176,8 @@ export function shouldUseUnoptimizedNextImage(url: string): boolean {
   const isCloudinary =
     resolved.startsWith("https://res.cloudinary.com/") ||
     resolved.startsWith("http://res.cloudinary.com/");
-  return !isCloudinary;
+  if (isCloudinary) {
+    return false;
+  }
+  return true;
 }

@@ -18,6 +18,9 @@
     "repair:gallery-fields": "tsx scripts/repair-property-gallery-fields.ts",
     "migrate:legacy-images": "tsx scripts/migrate-legacy-images-to-cloudinary.ts",
     "consolidate:cities": "tsx scripts/consolidate-cities.ts",
+    "export:display-names": "tsx scripts/export-display-name-corrections.ts",
+    "apply:display-names": "tsx scripts/apply-display-name-corrections.ts",
+    "backfill:youtube-metadata": "tsx scripts/backfill-youtube-metadata.ts",
     "seed:all": "prisma generate && tsx scripts/seed-properties.ts && tsx scripts/seed-blog.ts"
   },
   "dependencies": {

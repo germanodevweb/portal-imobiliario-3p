@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { PostType, Post } from "@/lib/generated/prisma/client";
+import { PostType, Post, type Prisma } from "@/lib/generated/prisma/client";
 import {
   generateBlogContent,
   type GenerateBlogContentResult,
@@ -98,7 +98,7 @@ export async function savePostAction(input: SavePostInput) {
     const existing = await prisma.post.findUnique({ where: { id } });
     if (!existing) throw new Error("Post não encontrado.");
 
-    const updateData: any = { ...cleanData };
+    const updateData: Prisma.PostUpdateInput = { ...cleanData };
     
     // Controlar publishedAt apenas se o status mudou de não publicado para publicado
     if (cleanData.published && !existing.published) {
