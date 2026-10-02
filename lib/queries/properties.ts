@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import type { CacheableDate } from "@/lib/utils/cacheable-date";
 import type { Prisma } from "@/lib/generated/prisma/client";
 import { HOME_LISTING_MIN_PRICE } from "@/lib/constants/home-listing";
 import { soldNoindexCutoffDate } from "@/lib/indexation";
@@ -519,7 +520,7 @@ export type PropertyDetail = {
   youtubeVideoId: string | null;
   youtubeTitle: string | null;
   youtubeDescription: string | null;
-  youtubePublishedAt: Date | null;
+  youtubePublishedAt: CacheableDate | null;
   youtubeDurationIso: string | null;
   metaTitle: string | null;
   metaDescription: string | null;
@@ -528,8 +529,8 @@ export type PropertyDetail = {
   isLaunch: boolean;
   isOpportunity: boolean;
   isSold: boolean;
-  publishedAt: Date | null;
-  updatedAt: Date;
+  publishedAt: CacheableDate | null;
+  updatedAt: CacheableDate;
 };
 
 /** Usar com `revalidateTag` no admin ao guardar/arquivar/apagar o imóvel. */

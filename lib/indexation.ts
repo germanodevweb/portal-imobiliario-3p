@@ -1,3 +1,5 @@
+import { toValidDate, type CacheableDate } from "@/lib/utils/cacheable-date";
+
 // ---------------------------------------------------------------------------
 // Governança de indexação para páginas programáticas
 //
@@ -166,14 +168,19 @@ export function soldNoindexCutoffDate(now: Date = new Date()): Date {
 /** Imóvel publicado vendido há mais de SOLD_NOINDEX_AFTER_DAYS → não indexar. */
 export function shouldIndexPublishedPropertyDetail(
   isSold: boolean,
-  updatedAt: Date,
+  updatedAt: CacheableDate,
   now: Date = new Date()
 ): boolean {
   if (!isSold) return true;
-  return updatedAt >= soldNoindexCutoffDate(now);
+  const updated = toValidDate(updatedAt);
+  if (!updated) return true;
+  return updated >= soldNoindexCutoffDate(now);
 }
 
-export function buildPropertyDetailRobots(isSold: boolean, updatedAt: Date) {
+export function buildPropertyDetailRobots(
+  isSold: boolean,
+  updatedAt: CacheableDate
+) {
   return {
     index: shouldIndexPublishedPropertyDetail(isSold, updatedAt),
     follow: true,

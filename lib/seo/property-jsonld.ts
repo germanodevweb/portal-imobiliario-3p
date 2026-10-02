@@ -13,6 +13,10 @@ import {
   jsonLdPostalAddressEnhancements,
 } from "@/lib/seo";
 import { jsonLdOrganizationRef } from "@/lib/seo/site-entity-jsonld";
+import {
+  type CacheableDate,
+  toIsoStringFromCacheableDate,
+} from "@/lib/utils/cacheable-date";
 
 export type PropertyJsonLdType =
   | "CASA"
@@ -42,8 +46,8 @@ export type PropertyJsonLdInput = PropertyAreaFields & {
   galleryImages: string[];
   images: readonly { url: string }[];
   isSold: boolean;
-  publishedAt: Date | null;
-  updatedAt: Date;
+  publishedAt: CacheableDate | null;
+  updatedAt: CacheableDate;
 };
 
 function mapPropertyToAboutSchemaType(
@@ -147,9 +151,10 @@ export function buildPropertyJsonLd(
       images: input.images,
     });
 
-  const datePostedIso = (
-    input.publishedAt ? new Date(input.publishedAt) : new Date(input.updatedAt)
-  ).toISOString();
+  const datePostedIso =
+    toIsoStringFromCacheableDate(input.publishedAt) ??
+    toIsoStringFromCacheableDate(input.updatedAt) ??
+    new Date().toISOString();
 
   const fallbackDescription = `${input.title} em ${input.city}.`;
   const description = htmlToPlainText(

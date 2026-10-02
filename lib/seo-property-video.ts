@@ -11,6 +11,10 @@ import {
 } from "@/lib/seo-meta";
 import { buildCanonicalUrl } from "@/lib/seo";
 import { formatPropertyAreaDisplay } from "@/lib/utils/property-area";
+import {
+  type CacheableDate,
+  toIsoStringFromCacheableDate,
+} from "@/lib/utils/cacheable-date";
 
 const AREA_TYPE_SLUGS = new Set(["terreno", "lote", "fazenda"]);
 
@@ -87,7 +91,7 @@ export type PropertyVideoSeoFields = {
   youtubeVideoId: string;
   youtubeTitle: string | null;
   youtubeDescription: string | null;
-  youtubePublishedAt: Date | null;
+  youtubePublishedAt: CacheableDate | null;
   youtubeDurationIso: string | null;
   propertyTitle: string;
   propertyDescription: string | null;
@@ -127,9 +131,9 @@ export function resolvePropertyVideoSeo(
     fallbackDesc ||
     `Tour em vídeo do imóvel ${fields.propertyTitle}.`;
 
-  const uploadDateIso = fields.youtubePublishedAt
-    ? fields.youtubePublishedAt.toISOString()
-    : null;
+  const uploadDateIso = toIsoStringFromCacheableDate(
+    fields.youtubePublishedAt
+  );
 
   const durationIso = fields.youtubeDurationIso?.trim() || null;
 
