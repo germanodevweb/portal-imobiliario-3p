@@ -1,9 +1,6 @@
 /**
- * Loader customizado do next/image:
- * - Cloudinary: entrega direta com w_{width}, c_limit (sem proxy /_next/image na Vercel).
- *   Largura é sempre um segmento NOVO logo após `/upload/`, antes de marca d'água ou public_id.
- *   A URL `src` já deve incluir f_auto, q_auto e marca d'água (getWatermarkedImageUrl).
- * - Demais hosts: fallback ao otimizador padrão do Next (/_next/image).
+ * Loader opt-in para next/image em fotos Cloudinary (imóveis).
+ * Não usar como loader global — imagens locais dependem do otimizador padrão /_next/image.
  */
 type LoaderParams = {
   src: string;
@@ -27,33 +24,25 @@ export function buildCloudinaryImageLoaderUrl(src: string, width: number): strin
   return `${prefix}${widthTx}/${pathAfterUpload}`;
 }
 
-function buildDefaultNextImageOptimizerUrl(
-  src: string,
-  width: number,
-  quality: number
-): string {
-  return `/_next/image?url=${encodeURIComponent(src)}&w=${width}&q=${quality}`;
+/** URL entregue pelo next/image em res.cloudinary.com (com ou sem marca d'água). */
+export function isCloudinaryImageUrl(src: string): boolean {
+  if (src.startsWith("/") && !src.startsWith("//")) return false;
+  try {
+    const normalized = src.startsWith("//") ? `https:${src}` : src;
+    const parsed = new URL(normalized);
+    return parsed.hostname.toLowerCase() === "res.cloudinary.com";
+  } catch {
+    return false;
+  }
 }
 
-export default function cloudinaryImageLoader({
-  src,
-  width,
-  quality,
-}: LoaderParams): string {
-  const q = quality ?? 75;
+export function cloudinaryImageLoader({ src, width }: LoaderParams): string {
+  return buildCloudinaryImageLoaderUrl(src, width);
+}
 
-  if (src.startsWith("/") && !src.startsWith("//")) {
-    return buildDefaultNextImageOptimizerUrl(src, width, q);
-  }
-
-  try {
-    const parsed = new URL(src);
-    if (parsed.hostname.toLowerCase() === "res.cloudinary.com") {
-      return buildCloudinaryImageLoaderUrl(src, width);
-    }
-  } catch {
-    /* fallback */
-  }
-
-  return buildDefaultNextImageOptimizerUrl(src, width, q);
+/** Props do next/image: loader só quando `src` é Cloudinary. */
+export function cloudinaryImageLoaderProps(src: string): {
+  loader?: typeof cloudinaryImageLoader;
+} {
+  return isCloudinaryImageUrl(src) ? { loader: cloudinaryImageLoader } : {};
 }

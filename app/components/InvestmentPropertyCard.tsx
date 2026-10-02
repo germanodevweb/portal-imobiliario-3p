@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { cloudinaryImageLoaderProps } from "@/lib/cloudinary/next-image-loader";
 import {
   getWatermarkedImageUrl,
   shouldUseUnoptimizedNextImage,
@@ -39,6 +40,12 @@ export function InvestmentPropertyCard({ property, eurToBrlRate }: InvestmentPro
     ? `${property.neighborhood}, ${property.city}`
     : property.city;
 
+  const cardImageSrc = property.featuredImage
+    ? publicPropertyImageSrc(
+        getWatermarkedImageUrl(property.featuredImage, "compact")
+      )
+    : null;
+
   return (
     <Link
       href={`/imoveis/${property.slug}`}
@@ -46,14 +53,13 @@ export function InvestmentPropertyCard({ property, eurToBrlRate }: InvestmentPro
     >
       {/* Imagem */}
       <div className="relative aspect-video w-full overflow-hidden bg-zinc-100">
-        {property.featuredImage ? (
+        {cardImageSrc ? (
           <Image
-            src={publicPropertyImageSrc(
-              getWatermarkedImageUrl(property.featuredImage, "compact")
-            )}
+            src={cardImageSrc}
             alt={property.title}
             fill
-            unoptimized={shouldUseUnoptimizedNextImage(property.featuredImage)}
+            {...cloudinaryImageLoaderProps(cardImageSrc)}
+            unoptimized={shouldUseUnoptimizedNextImage(property.featuredImage!)}
             className="object-cover transition-transform duration-300 group-hover:scale-105"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1536px) 33vw, 400px"
           />

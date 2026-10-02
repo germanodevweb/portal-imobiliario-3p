@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, ZoomIn } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { cloudinaryImageLoaderProps } from "@/lib/cloudinary/next-image-loader";
 import {
   getWatermarkedImageUrl,
   shouldUseUnoptimizedNextImage,
@@ -59,6 +60,8 @@ export function PropertyGallery({ images, badges = [] }: PropertyGalleryProps) {
 
   if (!current) return null;
 
+  const heroSrc = resolveInlineImageSrc(current.url);
+
   return (
     <div className="w-full">
       <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-zinc-100 sm:aspect-video">
@@ -70,10 +73,11 @@ export function PropertyGallery({ images, badges = [] }: PropertyGalleryProps) {
         >
           <Image
             key={current.url}
-            src={resolveInlineImageSrc(current.url)}
+            src={heroSrc}
             alt={current.alt}
             fill
             priority={safeIndex === 0}
+            {...cloudinaryImageLoaderProps(heroSrc)}
             unoptimized={shouldUseUnoptimizedNextImage(current.url)}
             sizes="(max-width: 768px) 100vw, (max-width: 1280px) 90vw, 1152px"
             className="object-cover transition-transform duration-200 group-active:scale-[1.01]"
@@ -141,6 +145,9 @@ export function PropertyGallery({ images, badges = [] }: PropertyGalleryProps) {
         >
           {images.map((img, i) => {
             const active = i === safeIndex;
+            const thumbSrc = publicPropertyImageSrc(
+              getWatermarkedImageUrl(img.url, "compact")
+            );
             return (
               <button
                 key={img.url}
@@ -159,12 +166,13 @@ export function PropertyGallery({ images, badges = [] }: PropertyGalleryProps) {
                 }`}
               >
                 <Image
-                  src={publicPropertyImageSrc(getWatermarkedImageUrl(img.url, "compact"))}
+                  src={thumbSrc}
                   alt=""
                   width={128}
                   height={72}
                   sizes="(max-width: 640px) 112px, 128px"
                   loading={i === safeIndex ? "eager" : "lazy"}
+                  {...cloudinaryImageLoaderProps(thumbSrc)}
                   unoptimized={shouldUseUnoptimizedNextImage(img.url)}
                   className="h-full w-full object-cover"
                 />

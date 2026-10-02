@@ -11,6 +11,7 @@ import {
   type TouchEvent as ReactTouchEvent,
 } from "react";
 import { createPortal } from "react-dom";
+import { cloudinaryImageLoaderProps } from "@/lib/cloudinary/next-image-loader";
 import {
   getWatermarkedImageUrl,
   shouldUseUnoptimizedNextImage,
@@ -181,6 +182,8 @@ export function PropertyGalleryLightbox({
 
   if (!mounted || !open || !current) return null;
 
+  const lightboxSrc = resolveImageSrc(current.url);
+
   return createPortal(
     <div
       ref={dialogRef}
@@ -241,9 +244,10 @@ export function PropertyGalleryLightbox({
           >
             <Image
               key={current.url}
-              src={resolveImageSrc(current.url)}
+              src={lightboxSrc}
               alt={current.alt}
               fill
+              {...cloudinaryImageLoaderProps(lightboxSrc)}
               unoptimized={shouldUseUnoptimizedNextImage(current.url)}
               sizes="100vw"
               priority

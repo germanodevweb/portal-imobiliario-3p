@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { cloudinaryImageLoaderProps } from "@/lib/cloudinary/next-image-loader";
 import {
   getWatermarkedImageUrl,
   shouldUseUnoptimizedNextImage,
@@ -69,6 +70,12 @@ export function PropertyCard({ property, priority = false }: PropertyCardProps) 
     )
   );
 
+  const cardImageSrc = property.featuredImage
+    ? publicPropertyImageSrc(
+        getWatermarkedImageUrl(property.featuredImage, "compact")
+      )
+    : null;
+
   return (
     <article className={cardShellClass}>
       <Link
@@ -76,15 +83,14 @@ export function PropertyCard({ property, priority = false }: PropertyCardProps) 
         className="group flex flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-green-700"
       >
         <div className="relative aspect-video w-full overflow-hidden bg-zinc-100">
-          {property.featuredImage ? (
+          {cardImageSrc ? (
             <Image
-              src={publicPropertyImageSrc(
-                getWatermarkedImageUrl(property.featuredImage, "compact")
-              )}
+              src={cardImageSrc}
               alt={property.title}
               fill
               priority={priority}
-              unoptimized={shouldUseUnoptimizedNextImage(property.featuredImage)}
+              {...cloudinaryImageLoaderProps(cardImageSrc)}
+              unoptimized={shouldUseUnoptimizedNextImage(property.featuredImage!)}
               className="object-cover transition-transform duration-300 group-hover:scale-105"
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1536px) 33vw, 400px"
             />

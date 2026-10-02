@@ -147,8 +147,6 @@ const nextConfig = {
     ];
   },
   images: {
-    loader: "custom",
-    loaderFile: "./lib/cloudinary/next-image-loader.ts",
     remotePatterns: [
       {
         protocol: "https",
