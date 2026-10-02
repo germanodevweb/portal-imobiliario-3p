@@ -1,10 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import Image from "next/image";
 import { ChevronLeft, ChevronRight, ZoomIn } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { cloudinaryImageLoaderProps } from "@/lib/cloudinary/next-image-loader";
+import { PropertyPhoto } from "@/app/components/PropertyPhoto";
 import {
   getWatermarkedImageUrl,
   shouldUseUnoptimizedNextImage,
@@ -71,13 +70,12 @@ export function PropertyGallery({ images, badges = [] }: PropertyGalleryProps) {
           aria-label={`Ampliar foto ${safeIndex + 1} de ${count}: ${current.alt}`}
           className="group absolute inset-0 z-[1] cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-2"
         >
-          <Image
+          <PropertyPhoto
             key={current.url}
             src={heroSrc}
             alt={current.alt}
             fill
             priority={safeIndex === 0}
-            {...cloudinaryImageLoaderProps(heroSrc)}
             unoptimized={shouldUseUnoptimizedNextImage(current.url)}
             sizes="(max-width: 768px) 100vw, (max-width: 1280px) 90vw, 1152px"
             className="object-cover transition-transform duration-200 group-active:scale-[1.01]"
@@ -165,14 +163,13 @@ export function PropertyGallery({ images, badges = [] }: PropertyGalleryProps) {
                     : "opacity-75 ring-1 ring-zinc-200 hover:opacity-100"
                 }`}
               >
-                <Image
+                <PropertyPhoto
                   src={thumbSrc}
                   alt=""
                   width={128}
                   height={72}
                   sizes="(max-width: 640px) 112px, 128px"
                   loading={i === safeIndex ? "eager" : "lazy"}
-                  {...cloudinaryImageLoaderProps(thumbSrc)}
                   unoptimized={shouldUseUnoptimizedNextImage(img.url)}
                   className="h-full w-full object-cover"
                 />

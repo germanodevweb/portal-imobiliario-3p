@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { PropertyPhoto } from "@/app/components/PropertyPhoto";
 import {
   useCallback,
   useEffect,
@@ -11,7 +11,6 @@ import {
   type TouchEvent as ReactTouchEvent,
 } from "react";
 import { createPortal } from "react-dom";
-import { cloudinaryImageLoaderProps } from "@/lib/cloudinary/next-image-loader";
 import {
   getWatermarkedImageUrl,
   shouldUseUnoptimizedNextImage,
@@ -242,12 +241,11 @@ export function PropertyGalleryLightbox({
               transition: panZoom.scale === 1 ? "transform 0.2s ease-out" : undefined,
             }}
           >
-            <Image
+            <PropertyPhoto
               key={current.url}
               src={lightboxSrc}
               alt={current.alt}
               fill
-              {...cloudinaryImageLoaderProps(lightboxSrc)}
               unoptimized={shouldUseUnoptimizedNextImage(current.url)}
               sizes="100vw"
               priority
