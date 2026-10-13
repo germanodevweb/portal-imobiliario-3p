@@ -74,6 +74,18 @@ const nextConfig = {
         destination: "/imoveis/alto-padrao",
         permanent: true,
       },
+      {
+        source:
+          "/imoveis/oportunidade-de-repasse-no-mood-kennedy-74m-coluna-mais-ventilada",
+        destination:
+          "/imoveis/oportunidade-de-repasse-no-mood-kennedy-94m-coluna-mais-ventilada",
+        permanent: true,
+      },
+      {
+        source: "/blog/como-saber-se-o-imovel-e-nascente-ou-poente-guia-completo",
+        destination: "/blog/imovel-nascente-ou-poente-saiba-como-identificar-agora",
+        permanent: true,
+      },
       // Migração Code 49 → novo portal (SEO 301)
       {
         source: "/696/imoveis/venda-chacara-trairi-ce",
