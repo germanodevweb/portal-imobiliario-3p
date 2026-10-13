@@ -21,7 +21,7 @@ import { serializeJsonLd, buildBreadcrumbListJsonLd } from "@/lib/seo/site-entit
 import { buildPropertyJsonLd } from "@/lib/seo/property-jsonld";
 import { hasPropertyListedPrice, formatPropertyPriceBrlCompact } from "@/lib/utils/property-price";
 import {
-  buildPropertyPageTitle,
+  buildPropertyPageTitleFromListingTitle,
   buildPropertyPageDescription,
   buildCanonicalUrl,
   buildOpenGraph,
@@ -98,13 +98,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const title =
     property.metaTitle ??
-    buildPropertyPageTitle({
-      propertyTypeSlug: property.propertyTypeSlug,
-      transactionType: property.transactionType,
-      bedrooms: property.bedrooms,
-      area: property.area,
-      areaMin: property.areaMin,
-      areaMax: property.areaMax,
+    buildPropertyPageTitleFromListingTitle({
+      listingTitle: property.title,
       neighborhood: property.neighborhood,
       city: property.city,
     });

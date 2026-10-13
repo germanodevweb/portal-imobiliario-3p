@@ -12,6 +12,8 @@ export {
   formatListingTransactionPhrase,
   getPropertyTypeSingular,
   buildPropertyPageTitle,
+  buildPropertyPageTitleFromListingTitle,
+  buildPropertyVideoWatchPageTitleFromListingTitle,
   buildPropertyPageDescription,
   buildHomePageTitle,
   buildImoveisPageTitle,

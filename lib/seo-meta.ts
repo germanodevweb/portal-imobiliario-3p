@@ -108,6 +108,64 @@ export type PropertyMetaTitleInput = PropertyAreaFields & {
   city: string;
 };
 
+/** Título meta a partir do nome do empreendimento (H1 / property.title). */
+export type PropertyListingMetaTitleInput = {
+  listingTitle: string;
+  neighborhood: string | null;
+  city: string;
+};
+
+const LISTING_META_TITLE_MAX_LEN = 65;
+
+function containsInsensitive(haystack: string, needle: string): boolean {
+  return haystack.toLowerCase().includes(needle.toLowerCase());
+}
+
+/** Encurta pelo fim, na última palavra inteira; preserva o início (nome do empreendimento). */
+function truncateListingTitleCore(core: string, maxCoreLen: number): string {
+  if (core.length <= maxCoreLen) return core;
+  const slice = core.slice(0, maxCoreLen);
+  const lastSpace = slice.lastIndexOf(" ");
+  const trimmed =
+    lastSpace > 0 ? slice.slice(0, lastSpace).trimEnd() : slice.trimEnd();
+  return trimmed.replace(/[\s|–—,-]+$/u, "").trimEnd();
+}
+
+/**
+ * Fallback quando metaTitle está vazio: property.title + opcional " em {Bairro}" + marca.
+ */
+export function buildPropertyPageTitleFromListingTitle(
+  input: PropertyListingMetaTitleInput
+): string {
+  const suffix = TITLE_BRAND_SUFFIX;
+  const maxCore = LISTING_META_TITLE_MAX_LEN - suffix.length;
+  let core = collapseWhitespace(input.listingTitle.trim());
+
+  const bairro = input.neighborhood?.trim();
+  if (bairro && !containsInsensitive(core, bairro)) {
+    const withBairro = `${core} em ${bairro}`;
+    if (`${withBairro}${suffix}`.length <= LISTING_META_TITLE_MAX_LEN) {
+      core = withBairro;
+    }
+  }
+
+  return `${truncateListingTitleCore(core, maxCore)}${suffix}`;
+}
+
+/** Meta da página /imoveis/[slug]/video quando metaTitle está vazio. */
+export function buildPropertyVideoWatchPageTitleFromListingTitle(
+  input: Pick<PropertyListingMetaTitleInput, "listingTitle">
+): string {
+  const prefix = "Vídeo: ";
+  const suffix = TITLE_BRAND_SUFFIX;
+  const maxPart = LISTING_META_TITLE_MAX_LEN - prefix.length - suffix.length;
+  const part = truncateListingTitleCore(
+    collapseWhitespace(input.listingTitle.trim()),
+    maxPart
+  );
+  return `${prefix}${part}${suffix}`;
+}
+
 export function buildPropertyPageTitle(input: PropertyMetaTitleInput): string {
   const tipo = getPropertyTypeSingular(input.propertyTypeSlug);
   const verb = transactionVerb(input.transactionType);

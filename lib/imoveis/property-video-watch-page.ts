@@ -8,10 +8,10 @@ import {
 import {
   buildPropertyVideoWatchCanonical,
   buildPropertyVideoWatchPagePlainDescription,
-  buildPropertyVideoWatchPageTitle,
   resolvePropertyVideoSeo,
   type ResolvedPropertyVideoSeo,
 } from "@/lib/seo-property-video";
+import { buildPropertyVideoWatchPageTitleFromListingTitle } from "@/lib/seo-meta";
 import { resolveYouTubeThumbnailUrl } from "@/lib/youtube/thumbnail";
 
 export type PropertyVideoWatchPageData = {
@@ -52,15 +52,8 @@ export async function loadPropertyVideoWatchPageData(
   const canonical = buildPropertyVideoWatchCanonical(slug);
   const detailPath = `/imoveis/${slug}`;
 
-  const metaTitle = buildPropertyVideoWatchPageTitle({
-    propertyTypeSlug: property.propertyTypeSlug,
-    transactionType: property.transactionType,
-    bedrooms: property.bedrooms,
-    area: property.area,
-    areaMin: property.areaMin,
-    areaMax: property.areaMax,
-    neighborhood: property.neighborhood,
-    city: property.city,
+  const metaTitle = buildPropertyVideoWatchPageTitleFromListingTitle({
+    listingTitle: property.title,
   });
 
   const metaDescription = seo.description.slice(0, 160);
