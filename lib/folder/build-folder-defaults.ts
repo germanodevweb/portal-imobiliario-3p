@@ -2,6 +2,7 @@ import { IMAGE_ENVIRONMENTS } from "@/lib/constants/image-environments";
 import type { FolderPropertyDefaults, FolderGalleryImage } from "@/lib/folder/types";
 import { parseListingDevelopmentName } from "@/lib/folder/parse-listing-name";
 import { pickDefaultFolderPhotos } from "@/lib/folder/pick-default-photos";
+import { sanitizeNeighborhoodLabel } from "@/lib/folder/sanitize-neighborhood";
 import { suggestFolderSeal } from "@/lib/folder/suggest-seal";
 
 type PropertyRow = {
@@ -87,7 +88,7 @@ export function buildFolderPropertyDefaults(
     property.featuredImage
   );
 
-  const neighborhood = property.neighborhood?.trim() ?? "";
+  const neighborhood = sanitizeNeighborhoodLabel(property.neighborhood ?? "");
 
   return {
     propertyId: property.id,
@@ -97,15 +98,12 @@ export function buildFolderPropertyDefaults(
     subtitle: "",
     neighborhood,
     bedrooms: property.bedrooms,
-    locationText: neighborhood
-      ? `Localizado no ${neighborhood}, com fácil acesso aos principais serviços da região.`
-      : "",
+    locationText: "",
+    nearbyPoints: [],
     seal: suggestFolderSeal({
       isLaunch: property.isLaunch,
       isOpportunity: property.isOpportunity,
       isFeatured: property.isFeatured,
-      title: property.title,
-      description: property.description ?? "",
     }),
     footerPhrase: "Seu novo capítulo começa aqui!",
     showWhatsApp: true,

@@ -1,3 +1,4 @@
+import { sanitizeNeighborhoodLabel } from "@/lib/folder/sanitize-neighborhood";
 import {
   FOLDER_HIGHLIGHT_ICON_IDS,
   FOLDER_NEARBY_ICON_IDS,
@@ -96,12 +97,16 @@ export function validatePropertyFolderVerticalPayload(
     return { ok: false, error: "Nome do empreendimento é obrigatório." };
   }
 
-  const neighborhood = readString(body.neighborhood, 32);
+  const neighborhoodRaw = readString(body.neighborhood, 32);
+  if (!neighborhoodRaw) {
+    return { ok: false, error: "Bairro é obrigatório." };
+  }
+  const neighborhood = sanitizeNeighborhoodLabel(neighborhoodRaw);
   if (!neighborhood) {
     return { ok: false, error: "Bairro é obrigatório." };
   }
 
-  const locationText = readString(body.locationText, 160);
+  const locationText = readString(body.locationText, 320);
   if (!locationText) {
     return { ok: false, error: "Texto de localização é obrigatório." };
   }

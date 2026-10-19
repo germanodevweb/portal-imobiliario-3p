@@ -37,6 +37,7 @@ const watermarkPublicIdForClientBundle =
   "";
 
 const nextConfig = {
+  serverExternalPackages: ["sharp"],
   allowedDevOrigins: DEV_LAN_ORIGIN_URLS,
 
   /**

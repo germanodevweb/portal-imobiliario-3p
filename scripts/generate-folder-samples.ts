@@ -1,13 +1,14 @@
 /**
- * Gera PNGs de exemplo em scripts/output/ (gitignored).
+ * Gera PNG/JPG de exemplo em scripts/output/ (gitignored).
  * Uso: pnpm exec tsx scripts/generate-folder-samples.ts
  */
 import "dotenv/config";
 import { writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { prisma } from "@/lib/prisma";
+import { suggestFolderAiPrefill } from "@/lib/ai/folder";
 import { buildFolderPropertyDefaults } from "@/lib/folder/build-folder-defaults";
-import { generatePropertyFolderVerticalPng } from "@/lib/folder/generate-vertical-image";
+import { generatePropertyFolderVerticalImage } from "@/lib/folder/generate-vertical-image";
 import type { PropertyFolderVerticalPayload } from "@/lib/folder/types";
 
 const TARGET_SLUGS = ["viver-club-mais-que-morar-e-pertencer"];
@@ -22,28 +23,6 @@ async function resolveBeachClassEssenceSlug(): Promise<string | null> {
     orderBy: { updatedAt: "desc" },
   });
   return row?.slug ?? null;
-}
-
-function defaultsToPayload(
-  d: ReturnType<typeof buildFolderPropertyDefaults>
-): PropertyFolderVerticalPayload {
-  return {
-    developmentName: d.developmentName,
-    subtitle: d.subtitle,
-    neighborhood: d.neighborhood,
-    locationText: d.locationText,
-    bedrooms: d.bedrooms,
-    nearbyPoints: [],
-    highlights: [
-      { iconId: "leisure", text: "Área de lazer completa" },
-      { iconId: "parking", text: "Vaga de garagem" },
-      { iconId: "security", text: "Segurança e conforto" },
-    ],
-    seal: d.seal,
-    footerPhrase: d.footerPhrase,
-    showWhatsApp: d.showWhatsApp,
-    photoUrls: d.photoUrls,
-  };
 }
 
 async function main() {
@@ -62,6 +41,7 @@ async function main() {
         title: true,
         description: true,
         neighborhood: true,
+        city: true,
         bedrooms: true,
         isLaunch: true,
         isOpportunity: true,
@@ -85,12 +65,51 @@ async function main() {
       continue;
     }
 
-    const defaults = buildFolderPropertyDefaults(property);
-    const payload = defaultsToPayload(defaults);
-    const buffer = await generatePropertyFolderVerticalPng(payload);
-    const filePath = path.join(outDir, `${slug}-vertical.png`);
-    await writeFile(filePath, Buffer.from(buffer));
-    console.log("OK", filePath);
+    const base = buildFolderPropertyDefaults(property);
+    const ai = await suggestFolderAiPrefill({
+      description: property.description ?? "",
+      neighborhood: base.neighborhood,
+      city: property.city,
+    });
+
+    const payload: PropertyFolderVerticalPayload = {
+      developmentName: base.developmentName,
+      subtitle: base.subtitle,
+      neighborhood: base.neighborhood,
+      locationText:
+        ai.locationText ||
+        (base.neighborhood
+          ? `Localização privilegiada no ${base.neighborhood}, com infraestrutura completa na região.`
+          : "Localização estratégica com fácil acesso a serviços e comércio."),
+      bedrooms: base.bedrooms,
+      nearbyPoints: ai.nearbyPoints,
+      highlights: [
+        { iconId: "leisure", text: "Área de lazer completa" },
+        { iconId: "parking", text: "Vaga de garagem" },
+        { iconId: "security", text: "Segurança e conforto" },
+      ],
+      seal: base.seal,
+      footerPhrase: base.footerPhrase,
+      showWhatsApp: base.showWhatsApp,
+      photoUrls: base.photoUrls,
+    };
+
+    const png = await generatePropertyFolderVerticalImage(payload, "png");
+    const pngPath = path.join(outDir, `${slug}-vertical.png`);
+    await writeFile(pngPath, Buffer.from(png));
+    console.log("OK PNG", pngPath);
+
+    try {
+      const jpg = await generatePropertyFolderVerticalImage(payload, "jpeg");
+      const jpgPath = path.join(outDir, `${slug}-vertical.jpg`);
+      await writeFile(jpgPath, Buffer.from(jpg));
+      console.log("OK JPG", jpgPath);
+    } catch (e) {
+      console.warn(
+        "JPG omitido (instale sharp com pnpm install):",
+        e instanceof Error ? e.message : e
+      );
+    }
   }
 
   await prisma.$disconnect();

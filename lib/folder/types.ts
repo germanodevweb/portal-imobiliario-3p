@@ -33,6 +33,7 @@ export const FOLDER_SEAL_PRESETS = [
   "pronto",
   "lancamento",
   "oportunidade",
+  "destaque",
   "planta",
 ] as const;
 
@@ -79,6 +80,7 @@ export type FolderPropertyDefaults = {
   neighborhood: string;
   bedrooms: number;
   locationText: string;
+  nearbyPoints: FolderNearbyPoint[];
   seal: FolderSealPreset;
   footerPhrase: string;
   showWhatsApp: boolean;

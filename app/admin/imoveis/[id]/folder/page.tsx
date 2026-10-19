@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminPropertyFolderForm } from "@/app/components/admin/AdminPropertyFolderForm";
+import { suggestFolderAiPrefill } from "@/lib/ai/folder";
 import { buildFolderPropertyDefaults } from "@/lib/folder/build-folder-defaults";
 import { getAdminPropertyForEdit } from "@/lib/admin/queries";
 
@@ -17,7 +18,7 @@ export default async function AdminPropertyFolderPage({ params }: PageProps) {
   const property = await getAdminPropertyForEdit(propertyId);
   if (!property) notFound();
 
-  const defaults = buildFolderPropertyDefaults({
+  const base = buildFolderPropertyDefaults({
     id: property.id,
     slug: property.slug,
     title: property.title,
@@ -30,6 +31,18 @@ export default async function AdminPropertyFolderPage({ params }: PageProps) {
     featuredImage: property.featuredImage,
     images: property.images,
   });
+
+  const aiPrefill = await suggestFolderAiPrefill({
+    description: property.description ?? "",
+    neighborhood: base.neighborhood,
+    city: property.city,
+  });
+
+  const defaults = {
+    ...base,
+    locationText: aiPrefill.locationText,
+    nearbyPoints: aiPrefill.nearbyPoints,
+  };
 
   return (
     <div>

@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { generatePropertyFolderVerticalPng } from "@/lib/folder/generate-vertical-image";
+import { generatePropertyFolderVerticalImage } from "@/lib/folder/generate-vertical-image";
+import type { FolderImageFormat } from "@/lib/folder/encode-folder-image";
 import { validatePropertyFolderVerticalPayload } from "@/lib/folder/validate-folder-payload";
 
 export const runtime = "nodejs";
 
 type RouteContext = { params: Promise<{ id: string }> };
+
+function parseFormat(value: string | null): FolderImageFormat {
+  if (value === "jpeg" || value === "jpg") return "jpeg";
+  return "png";
+}
 
 export async function POST(req: NextRequest, context: RouteContext) {
   const { id } = await context.params;
@@ -34,13 +40,20 @@ export async function POST(req: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: validated.error }, { status: 400 });
   }
 
+  const format = parseFormat(req.nextUrl.searchParams.get("format"));
+
   try {
-    const buffer = await generatePropertyFolderVerticalPng(validated.payload);
-    const filename = `${property.slug}-vertical.png`;
+    const buffer = await generatePropertyFolderVerticalImage(
+      validated.payload,
+      format
+    );
+    const ext = format === "jpeg" ? "jpg" : "png";
+    const mime = format === "jpeg" ? "image/jpeg" : "image/png";
+    const filename = `${property.slug}-vertical.${ext}`;
     return new NextResponse(buffer, {
       status: 200,
       headers: {
-        "Content-Type": "image/png",
+        "Content-Type": mime,
         "Content-Disposition": `attachment; filename="${filename}"`,
         "Cache-Control": "private, no-store",
       },

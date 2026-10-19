@@ -17,6 +17,7 @@ import {
   HIGHLIGHT_ICON_LABELS,
   NEARBY_ICON_LABELS,
 } from "@/lib/folder/folder-icons";
+import { sanitizeNeighborhoodLabel } from "@/lib/folder/sanitize-neighborhood";
 
 type AdminPropertyFolderFormProps = {
   defaults: FolderPropertyDefaults;
@@ -31,6 +32,7 @@ const SEAL_LABELS: Record<FolderSealPreset, string> = {
   pronto: "Pronto para Morar!",
   lancamento: "Lançamento!",
   oportunidade: "Oportunidade!",
+  destaque: "Imóvel em Destaque!",
   planta: "Na Planta!",
 };
 
@@ -51,7 +53,9 @@ export function AdminPropertyFolderForm({
   const [neighborhood, setNeighborhood] = useState(defaults.neighborhood);
   const [locationText, setLocationText] = useState(defaults.locationText);
   const [bedrooms, setBedrooms] = useState(defaults.bedrooms);
-  const [nearbyPoints, setNearbyPoints] = useState<FolderNearbyPoint[]>([]);
+  const [nearbyPoints, setNearbyPoints] = useState<FolderNearbyPoint[]>(
+    defaults.nearbyPoints ?? []
+  );
   const [highlights, setHighlights] = useState<FolderHighlight[]>(defaultHighlights);
   const [seal, setSeal] = useState<FolderSealPreset>(defaults.seal);
   const [footerPhrase, setFooterPhrase] = useState(defaults.footerPhrase);
@@ -64,7 +68,7 @@ export function AdminPropertyFolderForm({
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [loadingAi, setLoadingAi] = useState(false);
   const [swapSlot, setSwapSlot] = useState<PhotoSlot | null>(null);
-  const [downloading, setDownloading] = useState(false);
+  const [downloading, setDownloading] = useState<"png" | "jpeg" | null>(null);
 
   const payload = useMemo(
     () => ({
@@ -147,7 +151,7 @@ export function AdminPropertyFolderForm({
       if (!res.ok || !data.success || !data.text) {
         throw new Error(data.error ?? "Falha ao sugerir texto.");
       }
-      setLocationText(data.text.slice(0, 160));
+      setLocationText(data.text.slice(0, 320));
     } catch (e) {
       window.alert(e instanceof Error ? e.message : "Erro ao sugerir com IA.");
     } finally {
@@ -155,29 +159,36 @@ export function AdminPropertyFolderForm({
     }
   }
 
-  async function handleDownload() {
-    setDownloading(true);
+  async function handleDownload(format: "png" | "jpeg") {
+    setDownloading(format);
     try {
-      const res = await fetch(`/api/admin/folder/${defaults.propertyId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const qs = format === "jpeg" ? "?format=jpeg" : "";
+      const res = await fetch(
+        `/api/admin/folder/${defaults.propertyId}${qs}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
       if (!res.ok) {
         const data = (await res.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(data?.error ?? "Erro ao baixar PNG.");
+        throw new Error(data?.error ?? "Erro ao baixar arquivo.");
       }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${defaults.slug}-vertical.png`;
+      a.download =
+        format === "jpeg"
+          ? `${defaults.slug}-vertical.jpg`
+          : `${defaults.slug}-vertical.png`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
       window.alert(e instanceof Error ? e.message : "Erro no download.");
     } finally {
-      setDownloading(false);
+      setDownloading(null);
     }
   }
 
@@ -255,6 +266,9 @@ export function AdminPropertyFolderForm({
                 className={fieldClass}
                 value={neighborhood}
                 onChange={(e) => setNeighborhood(e.target.value)}
+                onBlur={() =>
+                  setNeighborhood((v) => sanitizeNeighborhoodLabel(v))
+                }
                 maxLength={32}
               />
             </div>
@@ -325,16 +339,16 @@ export function AdminPropertyFolderForm({
             </button>
           </div>
           <label className={`${labelClass} mt-3`} htmlFor="locationText">
-            Texto de localização (máx. 160)
+            Texto de localização (máx. 320)
           </label>
           <textarea
             id="locationText"
             className={`${fieldClass} min-h-[88px]`}
             value={locationText}
-            onChange={(e) => setLocationText(e.target.value.slice(0, 160))}
-            maxLength={160}
+            onChange={(e) => setLocationText(e.target.value.slice(0, 320))}
+            maxLength={320}
           />
-          <p className="mt-1 text-xs text-zinc-400">{locationText.length}/160 · {city}</p>
+          <p className="mt-1 text-xs text-zinc-400">{locationText.length}/320 · {city}</p>
         </section>
 
         <section>
@@ -502,14 +516,26 @@ export function AdminPropertyFolderForm({
           {previewError ? (
             <p className="mt-2 text-xs text-amber-400">{previewError}</p>
           ) : null}
-          <button
-            type="button"
-            disabled={downloading || loadingPreview}
-            onClick={() => void handleDownload()}
-            className="mt-4 w-full rounded-lg bg-green-700 py-2.5 text-sm font-semibold text-white hover:bg-green-800 disabled:opacity-60"
-          >
-            {downloading ? "Baixando…" : "Baixar Vertical (Status/Story)"}
-          </button>
+          <div className="mt-4 flex flex-col gap-2">
+            <button
+              type="button"
+              disabled={downloading !== null || loadingPreview}
+              onClick={() => void handleDownload("jpeg")}
+              className="w-full rounded-lg bg-green-700 py-2.5 text-sm font-semibold text-white hover:bg-green-800 disabled:opacity-60"
+            >
+              {downloading === "jpeg"
+                ? "Baixando JPG…"
+                : "Baixar JPG (WhatsApp — recomendado)"}
+            </button>
+            <button
+              type="button"
+              disabled={downloading !== null || loadingPreview}
+              onClick={() => void handleDownload("png")}
+              className="w-full rounded-lg border border-zinc-500 bg-zinc-800 py-2.5 text-sm font-semibold text-zinc-100 hover:bg-zinc-700 disabled:opacity-60"
+            >
+              {downloading === "png" ? "Baixando PNG…" : "Baixar PNG"}
+            </button>
+          </div>
         </div>
       </div>
 
