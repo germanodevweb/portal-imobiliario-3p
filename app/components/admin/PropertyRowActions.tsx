@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   Archive,
   ArchiveRestore,
+  ImageIcon,
   Pencil,
   Share2,
   Trash2,
@@ -39,6 +40,8 @@ const btnDelete =
   `${btnIcon} border-red-300 bg-white text-red-700 hover:bg-red-50 focus-visible:ring-red-500`;
 const btnShare =
   `${btnIcon} border-sky-500 bg-sky-50 text-sky-900 hover:bg-sky-100 focus-visible:ring-sky-500`;
+const btnFolder =
+  `${btnIcon} border-[#C9A36A] bg-[#F5EFE3] text-[#1F4D2E] hover:bg-[#ebe3d4] focus-visible:ring-[#C9A36A]`;
 
 const iconClass = "h-5 w-5 shrink-0";
 
@@ -87,7 +90,7 @@ export function PropertyRowActions({
 
   return (
     <div
-      className="grid w-full min-w-0 max-w-full grid-cols-2 gap-2"
+      className="grid w-full min-w-0 max-w-full grid-cols-3 gap-2"
       role="group"
       aria-label="Ações do imóvel"
     >
@@ -98,6 +101,15 @@ export function PropertyRowActions({
         aria-label="Editar imóvel"
       >
         <Pencil className={iconClass} strokeWidth={2} aria-hidden />
+      </Link>
+
+      <Link
+        href={`/admin/imoveis/${propertyId}/folder`}
+        className={btnFolder}
+        title="Folder"
+        aria-label="Gerar folder de divulgação"
+      >
+        <ImageIcon className={iconClass} strokeWidth={2} aria-hidden />
       </Link>
 
       {published ? (
