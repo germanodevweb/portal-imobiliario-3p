@@ -8,6 +8,7 @@ import type { PropertyType } from "@/lib/generated/prisma/client";
 import {
   hasPropertyAreaRangeColumns,
   hasPropertyBuilderColumns,
+  hasPropertyDevelopmentNameColumn,
   isPendingSchemaMigrationError,
   resetSchemaMigrationCache,
 } from "@/lib/admin/schema-migration";
@@ -175,6 +176,7 @@ const propertyEditImagesSelect = {
 export type AdminPropertyForEdit = {
   id: string;
   title: string;
+  developmentName: string | null;
   slug: string;
   description: string | null;
   price: unknown;
@@ -216,7 +218,8 @@ export type AdminPropertyForEdit = {
 async function fetchAdminPropertyForEdit(
   id: string,
   includeBuilder: boolean,
-  includeAreaRange: boolean
+  includeAreaRange: boolean,
+  includeDevelopmentName: boolean
 ): Promise<AdminPropertyForEdit | null> {
   const select =
     includeBuilder && includeAreaRange
@@ -231,6 +234,7 @@ async function fetchAdminPropertyForEdit(
     where: { id },
     select: {
       ...select,
+      ...(includeDevelopmentName ? { developmentName: true } : {}),
       images: propertyEditImagesSelect,
     },
   });
@@ -248,11 +252,17 @@ async function fetchAdminPropertyForEdit(
     ? ("areaMax" in row ? (row.areaMax as number | null) : null)
     : null;
 
+  const developmentName =
+    includeDevelopmentName && "developmentName" in row
+      ? (row.developmentName as string | null)
+      : null;
+
   return {
     ...row,
     builderName,
     areaMin,
     areaMax,
+    developmentName,
   };
 }
 
@@ -266,15 +276,27 @@ export async function getAdminPropertyForEdit(id: string): Promise<AdminProperty
 
   let includeBuilder = await hasPropertyBuilderColumns();
   let includeAreaRange = await hasPropertyAreaRangeColumns();
+  let includeDevelopmentName = await hasPropertyDevelopmentNameColumn();
 
   try {
-    return await fetchAdminPropertyForEdit(trimmedId, includeBuilder, includeAreaRange);
+    return await fetchAdminPropertyForEdit(
+      trimmedId,
+      includeBuilder,
+      includeAreaRange,
+      includeDevelopmentName
+    );
   } catch (err) {
     if (isPendingSchemaMigrationError(err)) {
       resetSchemaMigrationCache();
       includeBuilder = await hasPropertyBuilderColumns();
       includeAreaRange = await hasPropertyAreaRangeColumns();
-      return fetchAdminPropertyForEdit(trimmedId, includeBuilder, includeAreaRange);
+      includeDevelopmentName = await hasPropertyDevelopmentNameColumn();
+      return fetchAdminPropertyForEdit(
+        trimmedId,
+        includeBuilder,
+        includeAreaRange,
+        includeDevelopmentName
+      );
     }
     throw err;
   }

@@ -27,6 +27,7 @@ let builderContactColumnsCache: boolean | null = null;
 let neighborhoodTableCache: boolean | null = null;
 let cityTableCache: boolean | null = null;
 let propertyYouTubeMetadataColumnsCache: boolean | null = null;
+let propertyDevelopmentNameColumnCache: boolean | null = null;
 
 async function relationExists(
   relation: "columns" | "tables",
@@ -150,6 +151,25 @@ export async function hasNeighborhoodTable(): Promise<boolean> {
   return neighborhoodTableCache;
 }
 
+/** Coluna developmentName em Property (nome do empreendimento no folder). */
+export async function hasPropertyDevelopmentNameColumn(): Promise<boolean> {
+  if (propertyDevelopmentNameColumnCache !== null) {
+    return propertyDevelopmentNameColumnCache;
+  }
+
+  try {
+    propertyDevelopmentNameColumnCache = await relationExists(
+      "columns",
+      "Property",
+      "developmentName"
+    );
+  } catch {
+    propertyDevelopmentNameColumnCache = false;
+  }
+
+  return propertyDevelopmentNameColumnCache;
+}
+
 /** Colunas de metadados YouTube em Property (Data API). */
 export async function hasPropertyYouTubeMetadataColumns(): Promise<boolean> {
   if (propertyYouTubeMetadataColumnsCache !== null) {
@@ -190,4 +210,5 @@ export function resetSchemaMigrationCache(): void {
   neighborhoodTableCache = null;
   cityTableCache = null;
   propertyYouTubeMetadataColumnsCache = null;
+  propertyDevelopmentNameColumnCache = null;
 }

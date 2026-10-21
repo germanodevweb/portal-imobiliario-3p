@@ -47,6 +47,7 @@ import {
 
 export type EditFormInitialData = {
   title: string;
+  developmentName?: string;
   slug: string;
   description: string;
   price: string;
@@ -306,6 +307,27 @@ export function AdminImovelForm({
           />
           <TitleSeoCounter charCount={titleInput.length} />
           <FieldError message={errors.title} />
+        </div>
+
+        <div>
+          <label
+            htmlFor="developmentName"
+            className="block text-sm font-medium text-zinc-700"
+          >
+            Nome do empreendimento
+          </label>
+          <input
+            id="developmentName"
+            name="developmentName"
+            type="text"
+            maxLength={80}
+            defaultValue={d?.developmentName ?? ""}
+            className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+            placeholder="Ex.: Viver Club"
+          />
+          <p className="mt-1 text-xs text-zinc-500">
+            Usado no folder. Ex.: Viver Club
+          </p>
         </div>
 
         <div>

@@ -21,6 +21,7 @@ import { resolvePropertyYouTubePersistFields } from "@/lib/admin/youtube-sync";
 import {
   hasPropertyAreaRangeColumns,
   hasPropertyBuilderColumns,
+  hasPropertyDevelopmentNameColumn,
   hasPropertyYouTubeMetadataColumns,
   isPendingSchemaMigrationError,
   resetSchemaMigrationCache,
@@ -91,9 +92,24 @@ function omitYouTubeMetadataFields<
   return rest;
 }
 
+function omitDevelopmentNameField<T extends { developmentName?: string | null }>(
+  data: T
+): Omit<T, "developmentName"> {
+  const { developmentName: _d, ...rest } = data;
+  return rest;
+}
+
+function parseOptionalDevelopmentName(raw: FormDataEntryValue | null): string | null {
+  if (typeof raw !== "string") return null;
+  const t = raw.trim();
+  if (!t) return null;
+  return t.slice(0, 80);
+}
+
 type PropertyOptionalSchemaFields = {
   builderName?: string | null;
   builderSlug?: string | null;
+  developmentName?: string | null;
   areaMin?: number | null;
   areaMax?: number | null;
   youtubeTitle?: string | null;
@@ -103,17 +119,22 @@ type PropertyOptionalSchemaFields = {
 };
 
 async function preparePropertyPersistData<T>(data: T): Promise<T> {
-  const [includeBuilder, includeAreaRange, includeYoutubeMeta] = await Promise.all([
-    hasPropertyBuilderColumns(),
-    hasPropertyAreaRangeColumns(),
-    hasPropertyYouTubeMetadataColumns(),
-  ]);
+  const [includeBuilder, includeAreaRange, includeYoutubeMeta, includeDevelopmentName] =
+    await Promise.all([
+      hasPropertyBuilderColumns(),
+      hasPropertyAreaRangeColumns(),
+      hasPropertyYouTubeMetadataColumns(),
+      hasPropertyDevelopmentNameColumn(),
+    ]);
 
   let result: T = data;
   if (!includeBuilder) result = omitBuilderFields(result as PropertyOptionalSchemaFields) as T;
   if (!includeAreaRange) result = omitAreaRangeFields(result as PropertyOptionalSchemaFields) as T;
   if (!includeYoutubeMeta) {
     result = omitYouTubeMetadataFields(result as PropertyOptionalSchemaFields) as T;
+  }
+  if (!includeDevelopmentName) {
+    result = omitDevelopmentNameField(result as PropertyOptionalSchemaFields) as T;
   }
   return result;
 }
@@ -383,6 +404,7 @@ export async function createPropertyAction(
   const errors: Record<string, string> = {};
 
   const title = (formData.get("title") as string)?.trim();
+  const developmentName = parseOptionalDevelopmentName(formData.get("developmentName"));
   const slugInput = (formData.get("slug") as string)?.trim();
   const description = (formData.get("description") as string)?.trim() || null;
   const priceStr = (formData.get("price") as string)?.trim();
@@ -511,6 +533,7 @@ export async function createPropertyAction(
   const property = await createPropertyWithOptionalSchema({
     slug,
     title,
+    developmentName,
     description,
     transactionType: "SALE",
     price,
@@ -682,6 +705,7 @@ export async function updatePropertyAction(
   }
 
   const title = (formData.get("title") as string)?.trim();
+  const developmentName = parseOptionalDevelopmentName(formData.get("developmentName"));
   const slugInput = (formData.get("slug") as string)?.trim();
   const description = (formData.get("description") as string)?.trim() || null;
   const priceStr = (formData.get("price") as string)?.trim();
@@ -834,6 +858,7 @@ export async function updatePropertyAction(
   const updateData = {
     slug,
     title,
+    developmentName,
     description,
     price,
     city: resolvedCity.city,
