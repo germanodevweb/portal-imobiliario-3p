@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
-import { fitBebasBarTitle } from "@/lib/folder/fit-bebas-bar-title";
+import { fitFolderHeaderBlock } from "@/lib/folder/fit-bebas-bar-title";
 import type { FolderPhoneDisplay } from "@/lib/folder/folder-phone";
 import { FolderHighlightIcon, IconBed } from "@/lib/folder/folder-icons";
 import type { FolderVariant } from "@/lib/folder/types";
@@ -19,14 +19,8 @@ type VariantMetrics = {
   logoH: number;
   logoLeft: number;
   logoTop: number;
-  sealTop: number;
-  sealFontSize: number;
-  sealLetterSpacing: number;
-  barTop: number;
-  barFontSizeDefault: number;
-  localTop: number;
-  localFontSize: number;
-  localLetterSpacing: number;
+  headerZoneTop: number;
+  headerZoneHeight: number;
   photoTop: number;
   photoHeight: number;
   factsTop: number;
@@ -58,14 +52,8 @@ const METRICS: Record<FolderVariant, VariantMetrics> = {
     logoH: 211,
     logoLeft: 429,
     logoTop: 118,
-    sealTop: 345,
-    sealFontSize: 26,
-    sealLetterSpacing: 9,
-    barTop: 388,
-    barFontSizeDefault: 96,
-    localTop: 520,
-    localFontSize: 28,
-    localLetterSpacing: 7,
+    headerZoneTop: 330,
+    headerZoneHeight: 260,
     photoTop: 600,
     photoHeight: 700,
     factsTop: 1335,
@@ -95,14 +83,8 @@ const METRICS: Record<FolderVariant, VariantMetrics> = {
     logoH: 143,
     logoLeft: 465,
     logoTop: 26,
-    sealTop: 182,
-    sealFontSize: 22,
-    sealLetterSpacing: 9,
-    barTop: 218,
-    barFontSizeDefault: 80,
-    localTop: 340,
-    localFontSize: 24,
-    localLetterSpacing: 7,
+    headerZoneTop: 170,
+    headerZoneHeight: 222,
     photoTop: 400,
     photoHeight: 500,
     factsTop: 920,
@@ -268,9 +250,15 @@ export type ApprovedFolderLayoutProps = {
 
 export function ApprovedFolderLayout(props: ApprovedFolderLayoutProps) {
   const m = METRICS[props.variant];
-  const titleLayout = fitBebasBarTitle(props.developmentName, props.variant);
   const seal = props.sealBannerText.trim().toUpperCase();
   const local = props.locationLine.trim();
+  const header = fitFolderHeaderBlock({
+    developmentName: props.developmentName,
+    sealBannerText: seal,
+    locationLine: local,
+    variant: props.variant,
+  });
+  const titleLayout = header.title;
   const facts = buildHighlightFacts(
     props.highlightBedrooms,
     props.showLeisure,
@@ -337,41 +325,34 @@ export function ApprovedFolderLayout(props: ApprovedFolderLayoutProps) {
         alt=""
       />
 
-      {seal ? (
-        <div
-          style={{
-            display: "flex",
-            position: "absolute",
-            left: 0,
-            top: m.sealTop,
-            width: m.width,
-            justifyContent: "center",
-          }}
-        >
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          position: "absolute",
+          left: 0,
+          top: m.headerZoneTop,
+          width: m.width,
+          height: m.headerZoneHeight,
+          gap: header.stackGap,
+        }}
+      >
+        {seal ? (
           <div
             style={{
               display: "flex",
-              fontSize: m.sealFontSize,
+              fontSize: header.sealFontSize,
               fontWeight: 700,
               color: GREEN_DEEP,
-              letterSpacing: m.sealLetterSpacing,
+              letterSpacing: header.sealLetterSpacing,
+              lineHeight: 1.1,
             }}
           >
             {seal}
           </div>
-        </div>
-      ) : null}
-
-      <div
-        style={{
-          display: "flex",
-          position: "absolute",
-          left: 0,
-          top: m.barTop,
-          width: m.width,
-          justifyContent: "center",
-        }}
-      >
+        ) : null}
         <div style={barStyle}>
           {titleLayout.lines.map((line, i) => (
             <div
@@ -390,32 +371,21 @@ export function ApprovedFolderLayout(props: ApprovedFolderLayoutProps) {
             </div>
           ))}
         </div>
-      </div>
-
-      {local ? (
-        <div
-          style={{
-            display: "flex",
-            position: "absolute",
-            left: 0,
-            top: m.localTop,
-            width: m.width,
-            justifyContent: "center",
-          }}
-        >
+        {local ? (
           <div
             style={{
               display: "flex",
-              fontSize: m.localFontSize,
+              fontSize: header.localFontSize,
               fontWeight: 700,
               color: GREEN_DEEP,
-              letterSpacing: m.localLetterSpacing,
+              letterSpacing: header.localLetterSpacing,
+              lineHeight: 1.1,
             }}
           >
             {local}
           </div>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
 
       <img
         src={props.mainPhotoUrl}

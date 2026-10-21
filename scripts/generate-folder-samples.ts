@@ -46,6 +46,17 @@ async function resolveTerrenoSlug(): Promise<string | null> {
   return row?.slug ?? null;
 }
 
+async function resolveFlecheirasSlug(): Promise<string | null> {
+  const row = await prisma.property.findFirst({
+    where: {
+      title: { contains: "Caminho das Flecheiras", mode: "insensitive" },
+    },
+    select: { slug: true },
+    orderBy: { updatedAt: "desc" },
+  });
+  return row?.slug ?? null;
+}
+
 async function resolveLazerNoOneVagaSlug(): Promise<string | null> {
   const row = await prisma.property.findFirst({
     where: { garage: 1, bedrooms: { gte: 0 } },
@@ -58,6 +69,7 @@ async function resolveLazerNoOneVagaSlug(): Promise<string | null> {
 const CASES: SampleCase[] = [
   { label: "viver-club", slug: "viver-club-mais-que-morar-e-pertencer" },
   { label: "beach-class-meireles", find: resolveBeachClassSlug },
+  { label: "caminho-flecheiras", find: resolveFlecheirasSlug },
   { label: "terreno-lote", find: resolveTerrenoSlug },
   {
     label: "lazer-nao-1-vaga",
