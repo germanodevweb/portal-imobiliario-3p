@@ -67,7 +67,11 @@ async function resolveLazerNoOneVagaSlug(): Promise<string | null> {
 }
 
 const CASES: SampleCase[] = [
-  { label: "viver-club", slug: "viver-club-mais-que-morar-e-pertencer" },
+  {
+    label: "viver-club",
+    slug: "viver-club-mais-que-morar-e-pertencer",
+    overrides: { developmentName: "VIVER CLUB" },
+  },
   { label: "beach-class-meireles", find: resolveBeachClassSlug },
   { label: "caminho-flecheiras", find: resolveFlecheirasSlug },
   { label: "terreno-lote", find: resolveTerrenoSlug },
@@ -146,6 +150,8 @@ async function generateForCase(
   });
 
   const editable: FolderVerticalEditablePayload = {
+    developmentName:
+      overrides?.developmentName ?? base.developmentNameDisplay,
     sealBannerText: overrides?.sealBannerText ?? base.sealBannerText,
     showFullPhoto: overrides?.showFullPhoto ?? base.showFullPhoto,
     highlightBedrooms: overrides?.highlightBedrooms ?? base.highlightBedrooms,

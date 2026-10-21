@@ -15,6 +15,7 @@ export type FolderHighlightIconId = (typeof FOLDER_HIGHLIGHT_ICON_IDS)[number];
 export type FolderVariant = "vertical" | "feed";
 
 export type FolderVerticalEditablePayload = {
+  developmentName: string;
   sealBannerText: string;
   showFullPhoto: boolean;
   highlightBedrooms: number;
@@ -40,6 +41,8 @@ export type FolderPropertyDefaults = {
   slug: string;
   propertyEditHref: string;
   developmentNameDisplay: string;
+  /** Valor em Property.developmentName (vazio se null no banco). */
+  savedDevelopmentName: string;
   locationLine: string;
   neighborhoodDisplay: string;
   cityDisplay: string;

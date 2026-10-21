@@ -22,6 +22,16 @@ export type FolderCadastroSnapshot = {
   }[];
 };
 
+/** Tela (validado) → cadastro → derivado do título. */
+function resolveMergedDevelopmentName(
+  editable: FolderVerticalEditablePayload,
+  cadastro: FolderCadastroSnapshot
+): string {
+  const fromScreen = editable.developmentName.trim();
+  if (fromScreen) return fromScreen;
+  return resolveFolderDevelopmentName(cadastro.developmentName, cadastro.title);
+}
+
 export function mergeFolderPayloadWithCadastro(
   cadastro: FolderCadastroSnapshot,
   editable: FolderVerticalEditablePayload
@@ -34,16 +44,15 @@ export function mergeFolderPayloadWithCadastro(
     return { error: "Imóvel sem foto principal para gerar o folder." };
   }
 
+  const { developmentName: _editableDevName, ...editableRest } = editable;
+
   return {
-    developmentName: resolveFolderDevelopmentName(
-      cadastro.developmentName,
-      cadastro.title
-    ),
+    ...editableRest,
+    developmentName: resolveMergedDevelopmentName(editable, cadastro),
     locationLine: resolveFolderLocationLine(
       cadastro.neighborhood,
       cadastro.city
     ),
     primaryPhotoUrl,
-    ...editable,
   };
 }

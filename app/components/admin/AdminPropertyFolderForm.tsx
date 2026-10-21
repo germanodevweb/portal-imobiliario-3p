@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { savePropertyDevelopmentNameFromFolderAction } from "@/lib/admin/actions";
+import { FOLDER_DEVELOPMENT_NAME_MAX } from "@/lib/folder/development-name-input";
 import type { FolderPropertyDefaults } from "@/lib/folder/types";
 
 type AdminPropertyFolderFormProps = {
@@ -15,6 +17,13 @@ const fieldClass =
 const labelClass = "block text-sm font-medium text-zinc-200";
 
 export function AdminPropertyFolderForm({ defaults }: AdminPropertyFolderFormProps) {
+  const [developmentName, setDevelopmentName] = useState(
+    defaults.developmentNameDisplay
+  );
+  const [savedDevelopmentName, setSavedDevelopmentName] = useState(
+    defaults.savedDevelopmentName
+  );
+  const [saveNotice, setSaveNotice] = useState(false);
   const [sealBannerText, setSealBannerText] = useState(defaults.sealBannerText);
   const [showFullPhoto, setShowFullPhoto] = useState(defaults.showFullPhoto);
   const [highlightBedrooms, setHighlightBedrooms] = useState(defaults.highlightBedrooms);
@@ -29,6 +38,7 @@ export function AdminPropertyFolderForm({ defaults }: AdminPropertyFolderFormPro
 
   const payload = useMemo(
     () => ({
+      developmentName: developmentName.trim().slice(0, FOLDER_DEVELOPMENT_NAME_MAX),
       sealBannerText,
       showFullPhoto,
       highlightBedrooms,
@@ -37,6 +47,7 @@ export function AdminPropertyFolderForm({ defaults }: AdminPropertyFolderFormPro
       phone,
     }),
     [
+      developmentName,
       sealBannerText,
       showFullPhoto,
       highlightBedrooms,
@@ -121,10 +132,36 @@ export function AdminPropertyFolderForm({ defaults }: AdminPropertyFolderFormPro
     };
   }, [previewVertical, previewFeed]);
 
+  async function persistDevelopmentNameIfNeeded(): Promise<boolean> {
+    const trimmed = developmentName.trim().slice(0, FOLDER_DEVELOPMENT_NAME_MAX);
+    if (!trimmed) {
+      setPreviewError("Informe o nome do empreendimento.");
+      return false;
+    }
+    if (trimmed === savedDevelopmentName.trim()) {
+      return true;
+    }
+    const result = await savePropertyDevelopmentNameFromFolderAction(
+      defaults.propertyId,
+      trimmed
+    );
+    if (!result.ok) {
+      setPreviewError(result.error);
+      return false;
+    }
+    setSavedDevelopmentName(trimmed);
+    setSaveNotice(true);
+    window.setTimeout(() => setSaveNotice(false), 4000);
+    return true;
+  }
+
   async function handleDownload(variant: FolderVariant, format: "png" | "jpeg") {
     const key = `${variant}-${format}`;
     setDownloading(key);
     try {
+      if (!(await persistDevelopmentNameIfNeeded())) {
+        return;
+      }
       const qs = new URLSearchParams({ variant });
       if (format === "jpeg") qs.set("format", "jpeg");
       const res = await fetch(
@@ -161,29 +198,40 @@ export function AdminPropertyFolderForm({ defaults }: AdminPropertyFolderFormPro
     <div className="grid gap-8 xl:grid-cols-[1fr_420px]">
       <div className="space-y-8 rounded-xl border border-zinc-700 bg-zinc-900/60 p-6">
         <section>
-          <h2 className="text-lg font-semibold text-white">Identidade (cadastro)</h2>
-          <p className="mt-1 text-xs text-zinc-400">
-            Nome, bairro e cidade vêm do cadastro do imóvel.
-          </p>
+          <h2 className="text-lg font-semibold text-white">Identidade</h2>
           <div className="mt-4 grid gap-4">
             <div>
-              <span className={labelClass}>Nome do empreendimento</span>
-              <p className="mt-1 rounded-lg border border-zinc-600 bg-zinc-800/80 px-3 py-2 text-sm text-zinc-100">
-                {defaults.developmentNameDisplay || "—"}
+              <label className={labelClass} htmlFor="developmentName">
+                Nome do empreendimento
+              </label>
+              <input
+                id="developmentName"
+                className={fieldClass}
+                value={developmentName}
+                onChange={(e) =>
+                  setDevelopmentName(e.target.value.slice(0, FOLDER_DEVELOPMENT_NAME_MAX))
+                }
+                maxLength={FOLDER_DEVELOPMENT_NAME_MAX}
+              />
+              <p className="mt-1 text-xs text-zinc-500">
+                Usado no folder. Ao baixar, salva no cadastro se mudou.
               </p>
+              {saveNotice ? (
+                <p className="mt-1 text-xs text-green-400">Nome salvo no cadastro</p>
+              ) : null}
             </div>
             <div>
-              <span className={labelClass}>Local no topo</span>
+              <span className={labelClass}>Local no topo (cadastro)</span>
               <p className="mt-1 rounded-lg border border-zinc-600 bg-zinc-800/80 px-3 py-2 text-sm text-zinc-100">
                 {defaults.locationLine || "—"}
               </p>
+              <Link
+                href={defaults.propertyEditHref}
+                className="mt-2 inline-block text-sm font-medium text-green-400 hover:text-green-300"
+              >
+                Editar bairro e cidade no cadastro →
+              </Link>
             </div>
-            <Link
-              href={defaults.propertyEditHref}
-              className="text-sm font-medium text-green-400 hover:text-green-300"
-            >
-              Editar no cadastro do imóvel →
-            </Link>
           </div>
         </section>
 

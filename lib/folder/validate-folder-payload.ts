@@ -1,3 +1,4 @@
+import { parseFolderDevelopmentNameInput } from "@/lib/folder/development-name-input";
 import { validateFolderPhoneInput } from "@/lib/folder/folder-phone";
 import type { FolderVerticalEditablePayload } from "@/lib/folder/types";
 
@@ -19,6 +20,11 @@ export function validateFolderVerticalEditablePayload(
 ): ValidateFolderEditableResult {
   if (!isRecord(body)) {
     return { ok: false, error: "Corpo JSON inválido." };
+  }
+
+  const developmentNameParsed = parseFolderDevelopmentNameInput(body.developmentName);
+  if (!developmentNameParsed.ok) {
+    return { ok: false, error: developmentNameParsed.error };
   }
 
   const sealBannerText = readOptionalString(body.sealBannerText, 30);
@@ -60,6 +66,7 @@ export function validateFolderVerticalEditablePayload(
   return {
     ok: true,
     payload: {
+      developmentName: developmentNameParsed.value,
       sealBannerText,
       showFullPhoto,
       highlightBedrooms,

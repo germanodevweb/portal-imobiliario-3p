@@ -26,6 +26,7 @@ import {
   isPendingSchemaMigrationError,
   resetSchemaMigrationCache,
 } from "@/lib/admin/schema-migration";
+import { parseFolderDevelopmentNameInput } from "@/lib/folder/development-name-input";
 import { slugifyNeighborhood } from "@/lib/utils/neighborhood-normalize";
 
 /** Next.js 16 exige o 2º argumento em `revalidateTag`; `"max"` alinha à invalidação imediata do cache do detalhe. */
@@ -948,4 +949,73 @@ export async function updatePropertyAction(
     redirect(`/admin/imoveis/${propertyId}/editar?youtubeWarning=1`);
   }
   redirect("/admin/imoveis");
+}
+
+// ---------------------------------------------------------------------------
+// Folder admin — persiste developmentName sem alterar slug/título/SEO público
+// ---------------------------------------------------------------------------
+
+export type SaveFolderDevelopmentNameResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+export async function savePropertyDevelopmentNameFromFolderAction(
+  propertyId: string,
+  developmentNameInput: string
+): Promise<SaveFolderDevelopmentNameResult> {
+  const trimmedId = propertyId?.trim();
+  if (!trimmedId) {
+    return { ok: false, error: "Imóvel não informado." };
+  }
+
+  const parsed = parseFolderDevelopmentNameInput(developmentNameInput);
+  if (!parsed.ok) {
+    return { ok: false, error: parsed.error };
+  }
+
+  const includeDevelopmentName = await hasPropertyDevelopmentNameColumn();
+  if (!includeDevelopmentName) {
+    return {
+      ok: false,
+      error: "Campo nome do empreendimento ainda não disponível no banco.",
+    };
+  }
+
+  const existing = await prisma.property.findUnique({
+    where: { id: trimmedId },
+    select: { id: true, developmentName: true },
+  });
+  if (!existing) {
+    return { ok: false, error: "Imóvel não encontrado." };
+  }
+
+  const currentSaved = existing.developmentName?.trim() ?? "";
+  if (currentSaved === parsed.value) {
+    return { ok: true };
+  }
+
+  const data = await preparePropertyPersistData({
+    developmentName: parsed.value,
+  });
+
+  try {
+    await prisma.property.update({
+      where: { id: trimmedId },
+      data,
+    });
+  } catch (err) {
+    if (isPendingSchemaMigrationError(err)) {
+      resetSchemaMigrationCache();
+      return {
+        ok: false,
+        error: "Campo nome do empreendimento ainda não disponível no banco.",
+      };
+    }
+    throw err;
+  }
+
+  revalidatePath(`/admin/imoveis/${trimmedId}/folder`);
+  revalidatePath(`/admin/imoveis/${trimmedId}/editar`);
+
+  return { ok: true };
 }

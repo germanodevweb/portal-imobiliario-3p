@@ -1,6 +1,7 @@
 import { getSiteWhatsAppPhoneDisplay } from "@/lib/constants/contato";
 import type { FolderPropertyDefaults } from "@/lib/folder/types";
 import { pickPrimaryPhotoUrl } from "@/lib/folder/pick-primary-photo-url";
+import { normalizeSavedDevelopmentName } from "@/lib/folder/development-name-input";
 import {
   resolveFolderDevelopmentName,
   resolveFolderLocationLine,
@@ -44,6 +45,7 @@ export function buildFolderPropertyDefaults(
       property.developmentName,
       property.title
     ),
+    savedDevelopmentName: normalizeSavedDevelopmentName(property.developmentName),
     locationLine: resolveFolderLocationLine(
       property.neighborhood,
       property.city
