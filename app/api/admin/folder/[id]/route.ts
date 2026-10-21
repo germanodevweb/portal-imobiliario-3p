@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { generatePropertyFolderVerticalImage } from "@/lib/folder/generate-vertical-image";
+import { hasPropertyDevelopmentNameColumn } from "@/lib/admin/schema-migration";
+import type { FolderVariant } from "@/lib/folder/types";
+import { generatePropertyFolderImage } from "@/lib/folder/generate-folder-image";
 import type { FolderImageFormat } from "@/lib/folder/encode-folder-image";
-import { validatePropertyFolderVerticalPayload } from "@/lib/folder/validate-folder-payload";
+import { mergeFolderPayloadWithCadastro } from "@/lib/folder/merge-folder-payload";
+import { validateFolderVerticalEditablePayload } from "@/lib/folder/validate-folder-payload";
 
 export const runtime = "nodejs";
 
@@ -13,6 +16,11 @@ function parseFormat(value: string | null): FolderImageFormat {
   return "png";
 }
 
+function parseVariant(value: string | null): FolderVariant {
+  if (value === "feed") return "feed";
+  return "vertical";
+}
+
 export async function POST(req: NextRequest, context: RouteContext) {
   const { id } = await context.params;
   const propertyId = id?.trim();
@@ -20,9 +28,29 @@ export async function POST(req: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: "ID inválido." }, { status: 400 });
   }
 
+  const includeDevelopmentName = await hasPropertyDevelopmentNameColumn();
+
   const property = await prisma.property.findUnique({
     where: { id: propertyId },
-    select: { id: true, slug: true },
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      neighborhood: true,
+      city: true,
+      featuredImage: true,
+      ...(includeDevelopmentName ? { developmentName: true } : {}),
+      images: {
+        where: { isHidden: false },
+        select: {
+          url: true,
+          isPrimary: true,
+          isHidden: true,
+          sortOrder: true,
+        },
+        orderBy: { sortOrder: "asc" },
+      },
+    },
   });
   if (!property) {
     return NextResponse.json({ error: "Imóvel não encontrado." }, { status: 404 });
@@ -35,21 +63,41 @@ export async function POST(req: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: "JSON inválido." }, { status: 400 });
   }
 
-  const validated = validatePropertyFolderVerticalPayload(body);
+  const validated = validateFolderVerticalEditablePayload(body);
   if (!validated.ok) {
     return NextResponse.json({ error: validated.error }, { status: 400 });
   }
 
+  const developmentName =
+    includeDevelopmentName && "developmentName" in property
+      ? (property.developmentName as string | null)
+      : null;
+
+  const merged = mergeFolderPayloadWithCadastro(
+    {
+      title: property.title,
+      developmentName,
+      neighborhood: property.neighborhood,
+      city: property.city,
+      featuredImage: property.featuredImage,
+      images: property.images,
+    },
+    validated.payload
+  );
+
+  if ("error" in merged) {
+    return NextResponse.json({ error: merged.error }, { status: 400 });
+  }
+
+  const variant = parseVariant(req.nextUrl.searchParams.get("variant"));
   const format = parseFormat(req.nextUrl.searchParams.get("format"));
 
   try {
-    const buffer = await generatePropertyFolderVerticalImage(
-      validated.payload,
-      format
-    );
+    const buffer = await generatePropertyFolderImage(merged, variant, format);
     const ext = format === "jpeg" ? "jpg" : "png";
     const mime = format === "jpeg" ? "image/jpeg" : "image/png";
-    const filename = `${property.slug}-vertical.${ext}`;
+    const suffix = variant === "feed" ? "feed" : "vertical";
+    const filename = `${property.slug}-${suffix}.${ext}`;
     return new NextResponse(buffer, {
       status: 200,
       headers: {

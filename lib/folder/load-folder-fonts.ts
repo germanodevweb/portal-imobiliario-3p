@@ -19,16 +19,13 @@ async function readFontArrayBuffer(relativePath: string): Promise<ArrayBuffer> {
 export async function loadFolderOgFonts(): Promise<OgFont[]> {
   if (cached) return cached;
 
-  const [playfairBold, montserratRegular, montserratBold, kaushan] =
-    await Promise.all([
-      readFontArrayBuffer("assets/fonts/PlayfairDisplay-Bold.ttf"),
-      readFontArrayBuffer("assets/fonts/Montserrat-Regular.ttf"),
-      readFontArrayBuffer("assets/fonts/Montserrat-Bold.ttf"),
-      readFontArrayBuffer("assets/fonts/KaushanScript-Regular.ttf"),
-    ]);
+  const [montserratRegular, montserratBold, bebas] = await Promise.all([
+    readFontArrayBuffer("assets/fonts/Montserrat-Regular.ttf"),
+    readFontArrayBuffer("assets/fonts/Montserrat-Bold.ttf"),
+    readFontArrayBuffer("assets/fonts/BebasNeue-Regular.ttf"),
+  ]);
 
   cached = [
-    { name: "Playfair", data: playfairBold, weight: 700, style: "normal" },
     {
       name: "Montserrat",
       data: montserratRegular,
@@ -36,7 +33,7 @@ export async function loadFolderOgFonts(): Promise<OgFont[]> {
       style: "normal",
     },
     { name: "Montserrat", data: montserratBold, weight: 700, style: "normal" },
-    { name: "Kaushan", data: kaushan, weight: 400, style: "normal" },
+    { name: "Bebas", data: bebas, weight: 400, style: "normal" },
   ];
   return cached;
 }
@@ -44,6 +41,11 @@ export async function loadFolderOgFonts(): Promise<OgFont[]> {
 export async function loadFolderLogoDataUrl(): Promise<string> {
   const filePath = path.join(process.cwd(), "public", "logo.png");
   const buf = await readFile(filePath);
-  const b64 = buf.toString("base64");
-  return `data:image/png;base64,${b64}`;
+  return `data:image/png;base64,${buf.toString("base64")}`;
+}
+
+export async function loadFolderLogoWhiteDataUrl(): Promise<string> {
+  const filePath = path.join(process.cwd(), "public", "logo-branca.png");
+  const buf = await readFile(filePath);
+  return `data:image/png;base64,${buf.toString("base64")}`;
 }

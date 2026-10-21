@@ -1,4 +1,4 @@
-const NAME_SPLIT = /[:–—]/u;
+const NAME_SPLIT = /[:–—|]/u;
 
 /** Primeira parte do title antes de ":" ou travessão — nome do empreendimento. */
 export function parseListingDevelopmentName(title: string): string {

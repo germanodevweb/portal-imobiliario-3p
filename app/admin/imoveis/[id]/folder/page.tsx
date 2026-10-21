@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminPropertyFolderForm } from "@/app/components/admin/AdminPropertyFolderForm";
-import { suggestFolderAiPrefill } from "@/lib/ai/folder";
 import { buildFolderPropertyDefaults } from "@/lib/folder/build-folder-defaults";
 import { getAdminPropertyForEdit } from "@/lib/admin/queries";
 
@@ -18,31 +17,21 @@ export default async function AdminPropertyFolderPage({ params }: PageProps) {
   const property = await getAdminPropertyForEdit(propertyId);
   if (!property) notFound();
 
-  const base = buildFolderPropertyDefaults({
+  const defaults = buildFolderPropertyDefaults({
     id: property.id,
     slug: property.slug,
     title: property.title,
-    description: property.description,
+    developmentName: property.developmentName,
     neighborhood: property.neighborhood,
+    city: property.city,
     bedrooms: property.bedrooms,
+    garage: property.garage,
     isLaunch: property.isLaunch,
     isOpportunity: property.isOpportunity,
     isFeatured: property.isFeatured,
     featuredImage: property.featuredImage,
     images: property.images,
   });
-
-  const aiPrefill = await suggestFolderAiPrefill({
-    description: property.description ?? "",
-    neighborhood: base.neighborhood,
-    city: property.city,
-  });
-
-  const defaults = {
-    ...base,
-    locationText: aiPrefill.locationText,
-    nearbyPoints: aiPrefill.nearbyPoints,
-  };
 
   return (
     <div>
@@ -66,11 +55,16 @@ export default async function AdminPropertyFolderPage({ params }: PageProps) {
         {property.title} — <span className="font-mono">{property.slug}</span>
       </p>
       <p className="mt-1 text-xs text-zinc-500">
-        Formato vertical 1080×1920 (Status WhatsApp / Story). Conteúdo fora das zonas
-        seguras do Instagram (250px topo · 300px base).
+        Vertical 1080×1920 (Story) · Feed 1080×1350 (Instagram).
       </p>
+      {!defaults.primaryPhotoUrl ? (
+        <p className="mt-4 rounded-lg border border-amber-600/50 bg-amber-950/40 px-4 py-3 text-sm text-amber-200">
+          Este imóvel não tem foto principal. Adicione uma imagem no cadastro antes de gerar o
+          folder.
+        </p>
+      ) : null}
       <div className="mt-8">
-        <AdminPropertyFolderForm defaults={defaults} city={property.city} />
+        <AdminPropertyFolderForm defaults={defaults} />
       </div>
     </div>
   );

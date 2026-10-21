@@ -1,3 +1,5 @@
+import { formatBrazilianPhoneDisplay } from "@/lib/utils/phone";
+
 /** URL do WhatsApp Business (atalho por código). O WhatsApp costuma ignorar `?text=` neste formato. */
 export const WHATSAPP_CONTACT_URL =
   "https://wa.me/message/L3QZKLL6LEAJO1" as const;
@@ -17,6 +19,13 @@ function whatsAppPhoneDigitsFromEnv(): string | undefined {
   const raw = process.env.NEXT_PUBLIC_WHATSAPP_PHONE?.trim();
   const digits = raw?.replace(/\D/g, "") ?? "";
   return digits.length >= MIN_WHATSAPP_PHONE_DIGITS ? digits : undefined;
+}
+
+/** Telefone do site (env) formatado para exibição; usado no folder admin. */
+export function getSiteWhatsAppPhoneDisplay(): string | null {
+  const digits = whatsAppPhoneDigitsFromEnv();
+  if (!digits) return null;
+  return formatBrazilianPhoneDisplay(digits);
 }
 
 /**

@@ -15,8 +15,8 @@ function stripCloudinaryTransformations(pathAfterUpload: string): string {
     if (/^v\d+$/.test(seg)) break;
     const looksLikeTransform =
       seg.includes(",") ||
-      /^(f_|q_|w_|c_|l_|g_|o_|b_|h_|dpr_|ar_|fl_)/i.test(seg);
-    if (looksLikeTransform && /^[\w.,_-]+$/i.test(seg)) {
+      /^(f_|q_|w_|c_|l_|g_|o_|b_|h_|dpr_|ar_|fl_|e_)/i.test(seg);
+    if (looksLikeTransform && /^[\w.,_:+-]+$/i.test(seg)) {
       parts.shift();
       continue;
     }
@@ -29,18 +29,12 @@ function ensureHttps(url: string): string {
   return url.replace(/^http:\/\//i, "https://");
 }
 
-/** Recorte exato para molduras do folder, sem marca d'água. */
-export function buildFolderCloudinaryImageUrl(
-  url: string,
-  width: number,
-  height: number
-): string {
+function buildCloudinaryUrl(transform: string, url: string): string {
   const normalized = normalizePublicImageUrl(url.trim());
   if (!normalized) return url;
 
   const pathOnly = stripUrlQueryAndHash(normalized);
   const match = pathOnly.match(CLOUDINARY_UPLOAD_REGEX);
-  const transform = `c_fill,g_auto,w_${width},h_${height},f_jpg,q_auto`;
 
   if (!match) {
     return ensureHttps(pathOnly);
@@ -49,4 +43,28 @@ export function buildFolderCloudinaryImageUrl(
   const bareAssetPath = stripCloudinaryTransformations(match[1]);
   const uploadPrefix = pathOnly.replace(/\/upload\/.+$/, "/upload");
   return ensureHttps(`${uploadPrefix}/${transform}/${bareAssetPath}`);
+}
+
+/** Fundo desfocado (mesma foto principal). */
+export function buildFolderBlurredBackgroundUrl(
+  url: string,
+  width: number,
+  height: number
+): string {
+  const transform = `c_fill,w_${width},h_${height},e_blur:1200,f_jpg,q_auto`;
+  return buildCloudinaryUrl(transform, url);
+}
+
+export type FolderPhotoCropMode = "fill" | "fit";
+
+/** Foto principal no slot do layout. */
+export function buildFolderMainPhotoUrl(
+  url: string,
+  width: number,
+  height: number,
+  mode: FolderPhotoCropMode
+): string {
+  const crop = mode === "fit" ? "c_fit" : "c_fill,g_auto";
+  const transform = `${crop},w_${width},h_${height},f_jpg,q_auto`;
+  return buildCloudinaryUrl(transform, url);
 }

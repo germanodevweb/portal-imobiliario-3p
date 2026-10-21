@@ -1,113 +1,66 @@
-import { IMAGE_ENVIRONMENTS } from "@/lib/constants/image-environments";
-import type { FolderPropertyDefaults, FolderGalleryImage } from "@/lib/folder/types";
-import { parseListingDevelopmentName } from "@/lib/folder/parse-listing-name";
-import { pickDefaultFolderPhotos } from "@/lib/folder/pick-default-photos";
+import { getSiteWhatsAppPhoneDisplay } from "@/lib/constants/contato";
+import type { FolderPropertyDefaults } from "@/lib/folder/types";
+import { pickPrimaryPhotoUrl } from "@/lib/folder/pick-primary-photo-url";
+import {
+  resolveFolderDevelopmentName,
+  resolveFolderLocationLine,
+} from "@/lib/folder/resolve-folder-display";
 import { sanitizeNeighborhoodLabel } from "@/lib/folder/sanitize-neighborhood";
-import { suggestFolderSeal } from "@/lib/folder/suggest-seal";
+import { suggestFolderSealBannerText } from "@/lib/folder/suggest-seal";
 
 type PropertyRow = {
   id: string;
   slug: string;
   title: string;
-  description: string | null;
+  developmentName?: string | null;
   neighborhood: string | null;
+  city: string;
   bedrooms: number;
+  garage: number;
   isLaunch: boolean;
   isOpportunity: boolean;
   isFeatured: boolean;
   featuredImage: string | null;
   images: {
     url: string;
-    environment: string | null;
     isPrimary: boolean;
     isHidden: boolean;
     sortOrder: number;
   }[];
 };
 
-function environmentDisplayLabel(environment: string | null): string {
-  const env = environment?.trim() ?? "";
-  if (!env) return "Sem ambiente";
-  const matched = IMAGE_ENVIRONMENTS.find(
-    (e) => e.value === env || e.label.toLowerCase() === env.toLowerCase()
-  );
-  return matched ? matched.label : env;
-}
-
-function mapGallery(property: PropertyRow): FolderGalleryImage[] {
-  const rows =
-    property.images.length > 0
-      ? property.images
-      : property.featuredImage
-        ? [
-            {
-              url: property.featuredImage,
-              environment: null,
-              isPrimary: true,
-              isHidden: false,
-              sortOrder: 0,
-            },
-          ]
-        : [];
-
-  return rows
-    .filter((r) => r.url.trim() && !r.isHidden)
-    .sort((a, b) => a.sortOrder - b.sortOrder)
-    .map((r) => ({
-      url: r.url,
-      environmentLabel: environmentDisplayLabel(r.environment),
-      isHidden: r.isHidden,
-      sortOrder: r.sortOrder,
-      isPrimary: r.isPrimary,
-    }));
-}
-
 export function buildFolderPropertyDefaults(
   property: PropertyRow
 ): FolderPropertyDefaults {
-  const gallery = mapGallery(property);
-  const pickRows =
-    property.images.length > 0
-      ? property.images
-      : gallery.map((g, i) => ({
-          url: g.url,
-          environment: null as string | null,
-          isPrimary: g.isPrimary,
-          isHidden: g.isHidden,
-          sortOrder: i,
-        }));
-
-  const photoUrls = pickDefaultFolderPhotos(
-    pickRows.map((r) => ({
-      url: r.url,
-      environment: r.environment,
-      isPrimary: r.isPrimary,
-      isHidden: r.isHidden,
-      sortOrder: r.sortOrder,
-    })),
-    property.featuredImage
-  );
-
-  const neighborhood = sanitizeNeighborhoodLabel(property.neighborhood ?? "");
+  const neighborhoodDisplay = sanitizeNeighborhoodLabel(property.neighborhood ?? "");
+  const cityDisplay = sanitizeNeighborhoodLabel(property.city);
+  const sitePhone = getSiteWhatsAppPhoneDisplay();
 
   return {
     propertyId: property.id,
     slug: property.slug,
-    description: property.description?.trim() ?? "",
-    developmentName: parseListingDevelopmentName(property.title),
-    subtitle: "",
-    neighborhood,
-    bedrooms: property.bedrooms,
-    locationText: "",
-    nearbyPoints: [],
-    seal: suggestFolderSeal({
+    propertyEditHref: `/admin/imoveis/${property.id}/editar`,
+    developmentNameDisplay: resolveFolderDevelopmentName(
+      property.developmentName,
+      property.title
+    ),
+    locationLine: resolveFolderLocationLine(
+      property.neighborhood,
+      property.city
+    ),
+    neighborhoodDisplay,
+    cityDisplay,
+    primaryPhotoUrl: pickPrimaryPhotoUrl(property.images, property.featuredImage),
+    highlightBedrooms: property.bedrooms,
+    highlightGarage: property.garage,
+    showLeisure: true,
+    sealBannerText: suggestFolderSealBannerText({
       isLaunch: property.isLaunch,
       isOpportunity: property.isOpportunity,
       isFeatured: property.isFeatured,
     }),
-    footerPhrase: "Seu novo capítulo começa aqui!",
-    showWhatsApp: true,
-    photoUrls,
-    gallery,
+    showFullPhoto: false,
+    phone: sitePhone ?? "",
+    phoneRequired: !sitePhone,
   };
 }
