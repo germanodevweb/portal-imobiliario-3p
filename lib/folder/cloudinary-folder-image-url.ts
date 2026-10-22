@@ -57,6 +57,16 @@ export function buildFolderBlurredBackgroundUrl(
 
 export type FolderPhotoCropMode = "fill" | "fit";
 
+/** Fundo desfocado dentro do slot (modo foto inteira). */
+export function buildFolderSlotBlurredPhotoUrl(
+  url: string,
+  width: number,
+  height: number
+): string {
+  const transform = `c_fill,w_${width},h_${height},e_blur:800,f_jpg,q_auto`;
+  return buildCloudinaryUrl(transform, url);
+}
+
 /** Foto principal no slot do layout. */
 export function buildFolderMainPhotoUrl(
   url: string,

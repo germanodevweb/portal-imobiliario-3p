@@ -258,15 +258,29 @@ export function AdminPropertyFolderForm({ defaults }: AdminPropertyFolderFormPro
               placeholder="Vazio oculta o selo"
             />
           </div>
-          <label className="flex items-center gap-2 text-sm text-zinc-200 sm:col-span-2">
-            <input
-              type="checkbox"
-              checked={showFullPhoto}
-              onChange={(e) => setShowFullPhoto(e.target.checked)}
-              className="h-4 w-4 rounded border-zinc-500"
-            />
-            Mostrar foto inteira (sem recorte)
-          </label>
+          <fieldset className="sm:col-span-2">
+            <legend className={labelClass}>Enquadramento da foto no folder</legend>
+            <div className="mt-2 flex flex-wrap gap-4 text-sm text-zinc-200">
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="folderPhotoFraming"
+                  checked={showFullPhoto}
+                  onChange={() => setShowFullPhoto(true)}
+                />
+                Foto inteira (recomendado)
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="folderPhotoFraming"
+                  checked={!showFullPhoto}
+                  onChange={() => setShowFullPhoto(false)}
+                />
+                Preencher o espaço (corta as laterais)
+              </label>
+            </div>
+          </fieldset>
           <div>
             <label className={labelClass} htmlFor="highlightBedrooms">
               Quartos

@@ -151,6 +151,8 @@ export type ApprovedFolderLayoutProps = {
   logoWhiteSrc: string;
   blurredBgUrl: string;
   mainPhotoUrl: string;
+  /** Desfoque da mesma foto preenchendo o slot (modo foto inteira). */
+  mainPhotoSlotBlurUrl?: string | null;
   /** Moldura para vídeo: slot vazio e blur só fora do retângulo da foto. */
   photoSlot?: FolderPhotoSlotMode;
   developmentName: string;
@@ -354,13 +356,43 @@ export function ApprovedFolderLayout(props: ApprovedFolderLayoutProps) {
       </div>
 
       {photoSlot === "image" ? (
-        <img
-          src={props.mainPhotoUrl}
-          width={m.width}
-          height={m.photoHeight}
-          style={{ position: "absolute", left: 0, top: m.photoTop }}
-          alt=""
-        />
+        props.mainPhotoSlotBlurUrl ? (
+          <div
+            style={{
+              display: "flex",
+              position: "absolute",
+              left: 0,
+              top: m.photoTop,
+              width: m.width,
+              height: m.photoHeight,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <img
+              src={props.mainPhotoSlotBlurUrl}
+              width={m.width}
+              height={m.photoHeight}
+              style={{ position: "absolute", left: 0, top: 0 }}
+              alt=""
+            />
+            <img
+              src={props.mainPhotoUrl}
+              width={m.width}
+              height={m.photoHeight}
+              style={{ objectFit: "contain" }}
+              alt=""
+            />
+          </div>
+        ) : (
+          <img
+            src={props.mainPhotoUrl}
+            width={m.width}
+            height={m.photoHeight}
+            style={{ position: "absolute", left: 0, top: m.photoTop }}
+            alt=""
+          />
+        )
       ) : null}
 
       {facts.length > 0 ? (

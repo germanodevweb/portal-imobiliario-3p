@@ -3,6 +3,39 @@ import type { FolderVariant } from "@/lib/folder/types";
 
 export type FolderVideoCropMode = "fill" | "fit";
 
+/** Raio do desfoque no slot (modo inteiro); reduzido para ffmpeg.wasm. */
+const SLOT_BOXBLUR = "16:1";
+
+function buildFillVideoChain(
+  slotW: number,
+  slotH: number,
+  canvasH: number,
+  y: number
+): string {
+  const slotChain = `scale=${slotW}:${slotH}:force_original_aspect_ratio=increase,crop=${slotW}:${slotH},setsar=1`;
+  return [
+    `[0:v]${slotChain},pad=${slotW}:${canvasH}:0:${y}:color=black@0.0[vid]`,
+    `[1:v]scale=${slotW}:${canvasH},format=rgba[ov]`,
+    `[vid][ov]overlay=0:0:shortest=1,setsar=1[vout]`,
+  ].join(";");
+}
+
+function buildWholeVideoChain(
+  slotW: number,
+  slotH: number,
+  canvasH: number,
+  y: number
+): string {
+  return [
+    `[0:v]split[a][b]`,
+    `[a]scale=${slotW}:${slotH}:force_original_aspect_ratio=increase,crop=${slotW}:${slotH},boxblur=${SLOT_BOXBLUR},setsar=1[bg]`,
+    `[b]scale=${slotW}:${slotH}:force_original_aspect_ratio=decrease,setsar=1[fg]`,
+    `[bg][fg]overlay=(W-w)/2:(H-h)/2,pad=${slotW}:${canvasH}:0:${y}[vid]`,
+    `[1:v]scale=${slotW}:${canvasH},format=rgba[ov]`,
+    `[vid][ov]overlay=0:0:shortest=1,setsar=1[vout]`,
+  ].join(";");
+}
+
 export function buildFolderVideoFilterComplex(options: {
   variant: FolderVariant;
   cropMode: FolderVideoCropMode;
@@ -13,16 +46,10 @@ export function buildFolderVideoFilterComplex(options: {
   const canvasH = m.height;
   const y = m.photoTop;
 
-  const slotChain =
-    options.cropMode === "fill"
-      ? `scale=${slotW}:${slotH}:force_original_aspect_ratio=increase,crop=${slotW}:${slotH},setsar=1`
-      : `scale=${slotW}:${slotH}:force_original_aspect_ratio=decrease,pad=${slotW}:${slotH}:(ow-iw)/2:(oh-ih)/2:color=black@0.0,setsar=1`;
-
-  return [
-    `[0:v]${slotChain},pad=${slotW}:${canvasH}:0:${y}:color=black@0.0[vid]`,
-    `[1:v]scale=${slotW}:${canvasH},format=rgba[ov]`,
-    `[vid][ov]overlay=0:0:shortest=1,setsar=1[vout]`,
-  ].join(";");
+  if (options.cropMode === "fill") {
+    return buildFillVideoChain(slotW, slotH, canvasH, y);
+  }
+  return buildWholeVideoChain(slotW, slotH, canvasH, y);
 }
 
 export function buildFolderVideoFfmpegArgs(options: {

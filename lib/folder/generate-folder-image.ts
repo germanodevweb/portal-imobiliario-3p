@@ -3,6 +3,7 @@ import { ApprovedFolderLayout } from "@/lib/folder/approved-layout";
 import {
   buildFolderBlurredBackgroundUrl,
   buildFolderMainPhotoUrl,
+  buildFolderSlotBlurredPhotoUrl,
 } from "@/lib/folder/cloudinary-folder-image-url";
 import {
   encodeFolderImageBuffer,
@@ -40,6 +41,14 @@ async function renderFolderBuffer(
     dim.photoHeight,
     cropMode
   );
+  const mainPhotoSlotBlurUrl =
+    cropMode === "fit"
+      ? buildFolderSlotBlurredPhotoUrl(
+          payload.primaryPhotoUrl,
+          dim.width,
+          dim.photoHeight
+        )
+      : null;
 
   const [fonts, logoSrc, logoWhiteSrc] = await Promise.all([
     loadFolderOgFonts(),
@@ -53,6 +62,7 @@ async function renderFolderBuffer(
     logoWhiteSrc,
     blurredBgUrl,
     mainPhotoUrl,
+    mainPhotoSlotBlurUrl,
     developmentName: payload.developmentName,
     locationLine: payload.locationLine,
     sealBannerText: payload.sealBannerText,

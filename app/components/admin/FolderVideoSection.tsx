@@ -43,7 +43,7 @@ export function FolderVideoSection({
 }: FolderVideoSectionProps) {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [meta, setMeta] = useState<VideoMeta | null>(null);
-  const [cropMode, setCropMode] = useState<FolderVideoCropMode>("fill");
+  const [cropMode, setCropMode] = useState<FolderVideoCropMode>("fit");
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<{ ratio: number; message: string } | null>(
     null
@@ -240,21 +240,21 @@ export function FolderVideoSection({
             <input
               type="radio"
               name="folderVideoCrop"
-              checked={cropMode === "fill"}
+              checked={cropMode === "fit"}
               disabled={!!busyVariant}
-              onChange={() => setCropMode("fill")}
+              onChange={() => setCropMode("fit")}
             />
-            Preencher (recortar)
+            Vídeo inteiro (recomendado)
           </label>
           <label className="flex items-center gap-2">
             <input
               type="radio"
               name="folderVideoCrop"
-              checked={cropMode === "fit"}
+              checked={cropMode === "fill"}
               disabled={!!busyVariant}
-              onChange={() => setCropMode("fit")}
+              onChange={() => setCropMode("fill")}
             />
-            Mostrar inteiro
+            Preencher o espaço (corta as laterais)
           </label>
         </div>
       </fieldset>

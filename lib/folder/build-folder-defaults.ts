@@ -63,7 +63,7 @@ export function buildFolderPropertyDefaults(
       isOpportunity: property.isOpportunity,
       isFeatured: property.isFeatured,
     }),
-    showFullPhoto: false,
+    showFullPhoto: true,
     phone: sitePhone ?? "",
     phoneRequired: !sitePhone,
   };

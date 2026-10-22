@@ -1,5 +1,5 @@
 /**
- * Valida o pipeline de vídeo do folder (mesmos args do navegador via ffmpeg CLI).
+ * Viver Club: gera pôster e vídeo (vertical/feed × inteiro/preencher) e valida saídas.
  * Uso: pnpm exec tsx scripts/generate-folder-video-sample.ts
  * Requer ffmpeg e ffprobe no PATH.
  */
@@ -18,6 +18,7 @@ import {
   type FolderVideoCropMode,
 } from "@/lib/folder/folder-video-filter-graph";
 import { generatePropertyFolderVideoFrame } from "@/lib/folder/generate-folder-frame";
+import { generatePropertyFolderImage } from "@/lib/folder/generate-folder-image";
 import { mergeFolderPayloadWithCadastro } from "@/lib/folder/merge-folder-payload";
 import type { FolderVariant } from "@/lib/folder/types";
 
@@ -223,30 +224,36 @@ async function main() {
     images: property.images,
   });
 
-  const merged = mergeFolderPayloadWithCadastro(
-    {
-      title: property.title,
-      developmentName:
-        includeDevelopmentName && "developmentName" in property
-          ? (property.developmentName as string | null)
-          : null,
-      neighborhood: property.neighborhood,
-      city: property.city,
-      featuredImage: property.featuredImage,
-      images: property.images,
-    },
-    {
-      developmentName: defaults.developmentNameDisplay,
-      sealBannerText: defaults.sealBannerText,
-      showFullPhoto: defaults.showFullPhoto,
-      highlightBedrooms: defaults.highlightBedrooms,
-      showLeisure: defaults.showLeisure,
-      highlightGarage: defaults.highlightGarage,
-      phone: defaults.phone || phone,
+  const cadastro = {
+    title: property.title,
+    developmentName:
+      includeDevelopmentName && "developmentName" in property
+        ? (property.developmentName as string | null)
+        : null,
+    neighborhood: property.neighborhood,
+    city: property.city,
+    featuredImage: property.featuredImage,
+    images: property.images,
+  };
+
+  const editableBase = {
+    developmentName: defaults.developmentNameDisplay,
+    sealBannerText: defaults.sealBannerText,
+    highlightBedrooms: defaults.highlightBedrooms,
+    showLeisure: defaults.showLeisure,
+    highlightGarage: defaults.highlightGarage,
+    phone: defaults.phone || phone,
+  };
+
+  function mergeWithFraming(showFullPhoto: boolean) {
+    const merged = mergeFolderPayloadWithCadastro(cadastro, {
+      ...editableBase,
+      showFullPhoto,
+    });
+    if ("error" in merged) {
+      throw new Error(merged.error);
     }
-  );
-  if ("error" in merged) {
-    throw new Error(merged.error);
+    return merged;
   }
 
   const outDir = path.join(process.cwd(), "scripts", "output");
@@ -256,27 +263,50 @@ async function main() {
   const inputDuration = await ensureTestInputVideo(inputPath);
   console.log(`Entrada: ${inputDuration.toFixed(3)} s (${inputPath})`);
 
-  const cases: {
-    variant: FolderVariant;
+  const framingModes: {
     cropMode: FolderVideoCropMode;
+    showFullPhoto: boolean;
+    suffix: string;
   }[] = [
-    { variant: "vertical", cropMode: "fill" },
-    { variant: "vertical", cropMode: "fit" },
-    { variant: "feed", cropMode: "fill" },
-    { variant: "feed", cropMode: "fit" },
+    { cropMode: "fit", showFullPhoto: true, suffix: "inteiro" },
+    { cropMode: "fill", showFullPhoto: false, suffix: "preencher" },
   ];
 
-  let previewWritten = false;
+  for (const { cropMode, showFullPhoto, suffix } of framingModes) {
+    for (const variant of ["vertical", "feed"] as FolderVariant[]) {
+      const merged = mergeWithFraming(showFullPhoto);
+      const posterPath = path.join(
+        outDir,
+        `${property.slug}-poster-${variant}-${suffix}.png`
+      );
+      const posterBuf = await generatePropertyFolderImage(merged, variant, "png");
+      await writeFile(posterPath, Buffer.from(posterBuf));
+      console.log(`OK pôster ${variant}-${suffix}:`, posterPath);
+    }
+  }
 
-  for (const { variant, cropMode } of cases) {
-    const label = `${variant}-${cropMode}`;
-    const frameBuf = await generatePropertyFolderVideoFrame(merged, variant);
+  const mergedFrame = mergeWithFraming(true);
+
+  const videoCases: {
+    variant: FolderVariant;
+    cropMode: FolderVideoCropMode;
+    suffix: string;
+  }[] = [
+    { variant: "vertical", cropMode: "fit", suffix: "inteiro" },
+    { variant: "vertical", cropMode: "fill", suffix: "preencher" },
+    { variant: "feed", cropMode: "fit", suffix: "inteiro" },
+    { variant: "feed", cropMode: "fill", suffix: "preencher" },
+  ];
+
+  for (const { variant, cropMode, suffix } of videoCases) {
+    const label = `${variant}-${suffix}`;
+    const frameBuf = await generatePropertyFolderVideoFrame(mergedFrame, variant);
     const framePath = path.join(outDir, `folder-video-test-frame-${variant}.png`);
     await writeFile(framePath, Buffer.from(frameBuf));
 
     const outputPath = path.join(
       outDir,
-      `folder-video-test-${variant}-${cropMode}.mp4`
+      `${property.slug}-video-${variant}-${suffix}.mp4`
     );
 
     await encodeCase({
@@ -300,15 +330,12 @@ async function main() {
       `OK ${label}: ${outDuration.toFixed(3)} s, ${m.width}×${m.height}, SAR 1:1, áudio`
     );
 
-    if (variant === "vertical" && cropMode === "fill" && !previewWritten) {
-      const previewPath = path.join(
-        outDir,
-        `${property.slug}-video-vertical-frame-mid.png`
-      );
-      await extractMiddleFrame(outputPath, outDuration, previewPath);
-      console.log("OK quadro (meio):", previewPath);
-      previewWritten = true;
-    }
+    const previewPath = path.join(
+      outDir,
+      `${property.slug}-video-${variant}-${suffix}-frame-mid.png`
+    );
+    await extractMiddleFrame(outputPath, outDuration, previewPath);
+    console.log("OK quadro (meio):", previewPath);
   }
 
   await prisma.$disconnect();
