@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hasPropertyDevelopmentNameColumn } from "@/lib/admin/schema-migration";
 import type { FolderVariant } from "@/lib/folder/types";
+import { generatePropertyFolderVideoFrame } from "@/lib/folder/generate-folder-frame";
 import { generatePropertyFolderImage } from "@/lib/folder/generate-folder-image";
 import type { FolderImageFormat } from "@/lib/folder/encode-folder-image";
 import { mergeFolderPayloadWithCadastro } from "@/lib/folder/merge-folder-payload";
@@ -91,12 +92,23 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
   const variant = parseVariant(req.nextUrl.searchParams.get("variant"));
   const format = parseFormat(req.nextUrl.searchParams.get("format"));
+  const frameMode = req.nextUrl.searchParams.get("frame");
 
   try {
-    const buffer = await generatePropertyFolderImage(merged, variant, format);
-    const ext = format === "jpeg" ? "jpg" : "png";
-    const mime = format === "jpeg" ? "image/jpeg" : "image/png";
-    const suffix = variant === "feed" ? "feed" : "vertical";
+    const buffer =
+      frameMode === "video"
+        ? await generatePropertyFolderVideoFrame(merged, variant)
+        : await generatePropertyFolderImage(merged, variant, format);
+    const ext = frameMode === "video" ? "png" : format === "jpeg" ? "jpg" : "png";
+    const mime = frameMode === "video" || format === "png" ? "image/png" : "image/jpeg";
+    const suffix =
+      frameMode === "video"
+        ? variant === "feed"
+          ? "frame-feed"
+          : "frame-vertical"
+        : variant === "feed"
+          ? "feed"
+          : "vertical";
     const filename = `${property.slug}-${suffix}.${ext}`;
     return new NextResponse(buffer, {
       status: 200,

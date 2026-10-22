@@ -2,6 +2,10 @@ import type { CSSProperties, ReactNode } from "react";
 import { fitFolderHeaderBlock } from "@/lib/folder/fit-bebas-bar-title";
 import type { FolderPhoneDisplay } from "@/lib/folder/folder-phone";
 import { FolderHighlightIcon, IconBed } from "@/lib/folder/folder-icons";
+import {
+  FOLDER_LAYOUT_METRICS,
+  getFolderVideoBlurStripHeights,
+} from "@/lib/folder/folder-frame-metrics";
 import type { FolderVariant } from "@/lib/folder/types";
 
 const GREEN = "#1E6B38";
@@ -9,102 +13,7 @@ const GREEN_DEEP = "#14502A";
 const GOLD = "#E2C48E";
 const WHITE = "#FFFFFF";
 
-type VariantMetrics = {
-  width: number;
-  height: number;
-  whiteVeilHeight: number;
-  greenVeilTop: number;
-  greenVeilHeight: number;
-  logoW: number;
-  logoH: number;
-  logoLeft: number;
-  logoTop: number;
-  headerZoneTop: number;
-  headerZoneHeight: number;
-  photoTop: number;
-  photoHeight: number;
-  factsTop: number;
-  factIconSize: number;
-  factIconBox: number;
-  factBigFont: number;
-  factSmallFont: number;
-  factDividerH: number;
-  factColWidth: number;
-  contactTop: number;
-  contactLabelSize: number;
-  whatsIconSize: number;
-  whatsDddSize: number;
-  whatsNumberSize: number;
-  logoWhiteW: number;
-  logoWhiteH: number;
-  logoWhiteLeft: number;
-  logoWhiteTop: number;
-};
-
-const METRICS: Record<FolderVariant, VariantMetrics> = {
-  vertical: {
-    width: 1080,
-    height: 1920,
-    whiteVeilHeight: 600,
-    greenVeilTop: 1300,
-    greenVeilHeight: 620,
-    logoW: 222,
-    logoH: 211,
-    logoLeft: 429,
-    logoTop: 118,
-    headerZoneTop: 330,
-    headerZoneHeight: 260,
-    photoTop: 600,
-    photoHeight: 700,
-    factsTop: 1335,
-    factIconSize: 62,
-    factIconBox: 66,
-    factBigFont: 64,
-    factSmallFont: 22,
-    factDividerH: 130,
-    factColWidth: 320,
-    contactTop: 1540,
-    contactLabelSize: 40,
-    whatsIconSize: 78,
-    whatsDddSize: 40,
-    whatsNumberSize: 104,
-    logoWhiteW: 110,
-    logoWhiteH: 104,
-    logoWhiteLeft: 485,
-    logoWhiteTop: 1745,
-  },
-  feed: {
-    width: 1080,
-    height: 1350,
-    whiteVeilHeight: 400,
-    greenVeilTop: 900,
-    greenVeilHeight: 450,
-    logoW: 150,
-    logoH: 143,
-    logoLeft: 465,
-    logoTop: 26,
-    headerZoneTop: 170,
-    headerZoneHeight: 222,
-    photoTop: 400,
-    photoHeight: 500,
-    factsTop: 920,
-    factIconSize: 50,
-    factIconBox: 54,
-    factBigFont: 54,
-    factSmallFont: 22,
-    factDividerH: 110,
-    factColWidth: 320,
-    contactTop: 1100,
-    contactLabelSize: 32,
-    whatsIconSize: 66,
-    whatsDddSize: 40,
-    whatsNumberSize: 90,
-    logoWhiteW: 80,
-    logoWhiteH: 76,
-    logoWhiteLeft: 500,
-    logoWhiteTop: 1262,
-  },
-};
+const METRICS = FOLDER_LAYOUT_METRICS;
 
 function WhatsIcon({ size }: { size: number }) {
   return (
@@ -233,12 +142,16 @@ function buildHighlightFacts(
   return out;
 }
 
+export type FolderPhotoSlotMode = "image" | "transparent";
+
 export type ApprovedFolderLayoutProps = {
   variant: FolderVariant;
   logoSrc: string;
   logoWhiteSrc: string;
   blurredBgUrl: string;
   mainPhotoUrl: string;
+  /** Moldura para vídeo: slot vazio e blur só fora do retângulo da foto. */
+  photoSlot?: FolderPhotoSlotMode;
   developmentName: string;
   locationLine: string;
   sealBannerText: string;
@@ -250,6 +163,11 @@ export type ApprovedFolderLayoutProps = {
 
 export function ApprovedFolderLayout(props: ApprovedFolderLayoutProps) {
   const m = METRICS[props.variant];
+  const photoSlot = props.photoSlot ?? "image";
+  const blurStrips =
+    photoSlot === "transparent"
+      ? getFolderVideoBlurStripHeights(props.variant)
+      : null;
   const seal = props.sealBannerText.trim().toUpperCase();
   const local = props.locationLine.trim();
   const header = fitFolderHeaderBlock({
@@ -284,16 +202,63 @@ export function ApprovedFolderLayout(props: ApprovedFolderLayoutProps) {
         height: m.height,
         position: "relative",
         fontFamily: "Montserrat",
-        backgroundColor: WHITE,
+        backgroundColor: photoSlot === "transparent" ? "transparent" : WHITE,
       }}
     >
-      <img
-        src={props.blurredBgUrl}
-        width={m.width}
-        height={m.height}
-        style={{ position: "absolute", left: 0, top: 0 }}
-        alt=""
-      />
+      {blurStrips ? (
+        <>
+          <div
+            style={{
+              display: "flex",
+              position: "absolute",
+              left: 0,
+              top: 0,
+              width: m.width,
+              height: blurStrips.topHeight,
+              overflow: "hidden",
+            }}
+          >
+            <img
+              src={props.blurredBgUrl}
+              width={m.width}
+              height={m.height}
+              style={{ position: "absolute", left: 0, top: 0 }}
+              alt=""
+            />
+          </div>
+          <div
+            style={{
+              display: "flex",
+              position: "absolute",
+              left: 0,
+              top: blurStrips.bottomTop,
+              width: m.width,
+              height: blurStrips.bottomHeight,
+              overflow: "hidden",
+            }}
+          >
+            <img
+              src={props.blurredBgUrl}
+              width={m.width}
+              height={m.height}
+              style={{
+                position: "absolute",
+                left: 0,
+                top: -blurStrips.bottomTop,
+              }}
+              alt=""
+            />
+          </div>
+        </>
+      ) : (
+        <img
+          src={props.blurredBgUrl}
+          width={m.width}
+          height={m.height}
+          style={{ position: "absolute", left: 0, top: 0 }}
+          alt=""
+        />
+      )}
       <div
         style={{
           display: "flex",
@@ -387,13 +352,15 @@ export function ApprovedFolderLayout(props: ApprovedFolderLayoutProps) {
         ) : null}
       </div>
 
-      <img
-        src={props.mainPhotoUrl}
-        width={m.width}
-        height={m.photoHeight}
-        style={{ position: "absolute", left: 0, top: m.photoTop }}
-        alt=""
-      />
+      {photoSlot === "image" ? (
+        <img
+          src={props.mainPhotoUrl}
+          width={m.width}
+          height={m.photoHeight}
+          style={{ position: "absolute", left: 0, top: m.photoTop }}
+          alt=""
+        />
+      ) : null}
 
       {facts.length > 0 ? (
         <div

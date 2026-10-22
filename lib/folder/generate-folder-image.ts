@@ -14,13 +14,8 @@ import {
   loadFolderLogoWhiteDataUrl,
   loadFolderOgFonts,
 } from "@/lib/folder/load-folder-fonts";
+import { FOLDER_LAYOUT_METRICS } from "@/lib/folder/folder-frame-metrics";
 import type { FolderVariant, PropertyFolderRenderPayload } from "@/lib/folder/types";
-
-const DIMENSIONS: Record<FolderVariant, { w: number; h: number; photoH: number }> =
-  {
-    vertical: { w: 1080, h: 1920, photoH: 700 },
-    feed: { w: 1080, h: 1350, photoH: 500 },
-  };
 
 async function renderFolderBuffer(
   payload: PropertyFolderRenderPayload,
@@ -31,18 +26,18 @@ async function renderFolderBuffer(
     throw new Error(phoneParsed.error);
   }
 
-  const dim = DIMENSIONS[variant];
+  const dim = FOLDER_LAYOUT_METRICS[variant];
   const cropMode = payload.showFullPhoto ? "fit" : "fill";
 
   const blurredBgUrl = buildFolderBlurredBackgroundUrl(
     payload.primaryPhotoUrl,
-    dim.w,
-    dim.h
+    dim.width,
+    dim.height
   );
   const mainPhotoUrl = buildFolderMainPhotoUrl(
     payload.primaryPhotoUrl,
-    dim.w,
-    dim.photoH,
+    dim.width,
+    dim.photoHeight,
     cropMode
   );
 
@@ -68,8 +63,8 @@ async function renderFolderBuffer(
   });
 
   const response = new ImageResponse(element, {
-    width: dim.w,
-    height: dim.h,
+    width: dim.width,
+    height: dim.height,
     fonts,
   });
 
