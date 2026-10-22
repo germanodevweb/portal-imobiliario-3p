@@ -5,6 +5,7 @@ import { FolderHighlightIcon, IconBed } from "@/lib/folder/folder-icons";
 import {
   FOLDER_LAYOUT_METRICS,
   getFolderVideoBlurStripHeights,
+  type FolderLayoutMetrics,
 } from "@/lib/folder/folder-frame-metrics";
 import type { FolderVariant } from "@/lib/folder/types";
 
@@ -27,7 +28,7 @@ type FactProps = {
   icon: ReactNode;
   big: string;
   small: string;
-  m: VariantMetrics;
+  m: FolderLayoutMetrics;
 };
 
 function Fact({ icon, big, small, m }: FactProps) {
@@ -76,7 +77,7 @@ function Fact({ icon, big, small, m }: FactProps) {
   );
 }
 
-function variantMarginTop(m: VariantMetrics): number {
+function variantMarginTop(m: FolderLayoutMetrics): number {
   return m.factBigFont >= 64 ? 8 : 6;
 }
 
@@ -91,7 +92,7 @@ function buildHighlightFacts(
   bedrooms: number,
   showLeisure: boolean,
   garage: number,
-  m: VariantMetrics
+  m: FolderLayoutMetrics
 ): HighlightFact[] {
   const out: HighlightFact[] = [];
   const sw = 1.7;

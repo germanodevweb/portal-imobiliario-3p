@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { savePropertyDevelopmentNameFromFolderAction } from "@/lib/admin/actions";
@@ -15,6 +16,14 @@ type FolderVariant = "vertical" | "feed";
 const fieldClass =
   "mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600";
 const labelClass = "block text-sm font-medium text-zinc-200";
+
+const FolderVideoSection = dynamic(
+  () =>
+    import("@/app/components/admin/FolderVideoSection").then(
+      (m) => m.FolderVideoSection
+    ),
+  { ssr: false }
+);
 
 export function AdminPropertyFolderForm({ defaults }: AdminPropertyFolderFormProps) {
   const [developmentName, setDevelopmentName] = useState(
@@ -330,6 +339,15 @@ export function AdminPropertyFolderForm({ defaults }: AdminPropertyFolderFormPro
             ) : null}
           </div>
         </section>
+
+        <FolderVideoSection
+          propertyId={defaults.propertyId}
+          slug={defaults.slug}
+          youtubeVideoId={defaults.youtubeVideoId}
+          primaryPhotoUrl={defaults.primaryPhotoUrl}
+          payload={payload}
+          onBeforeGenerate={persistDevelopmentNameIfNeeded}
+        />
       </div>
 
       <div className="xl:sticky xl:top-6 xl:self-start">

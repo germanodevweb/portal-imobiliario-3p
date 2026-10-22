@@ -12,6 +12,7 @@ import { suggestFolderSealBannerText } from "@/lib/folder/suggest-seal";
 type PropertyRow = {
   id: string;
   slug: string;
+  youtubeVideoId?: string | null;
   title: string;
   developmentName?: string | null;
   neighborhood: string | null;
@@ -40,6 +41,7 @@ export function buildFolderPropertyDefaults(
   return {
     propertyId: property.id,
     slug: property.slug,
+    youtubeVideoId: property.youtubeVideoId?.trim() || null,
     propertyEditHref: `/admin/imoveis/${property.id}/editar`,
     developmentNameDisplay: resolveFolderDevelopmentName(
       property.developmentName,

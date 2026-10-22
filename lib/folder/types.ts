@@ -39,6 +39,7 @@ export type PropertyFolderRenderPayload = {
 export type FolderPropertyDefaults = {
   propertyId: string;
   slug: string;
+  youtubeVideoId: string | null;
   propertyEditHref: string;
   developmentNameDisplay: string;
   /** Valor em Property.developmentName (vazio se null no banco). */

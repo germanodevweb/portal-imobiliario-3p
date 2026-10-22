@@ -20,6 +20,7 @@ export default async function AdminPropertyFolderPage({ params }: PageProps) {
   const defaults = buildFolderPropertyDefaults({
     id: property.id,
     slug: property.slug,
+    youtubeVideoId: property.youtubeVideoId,
     title: property.title,
     developmentName: property.developmentName,
     neighborhood: property.neighborhood,

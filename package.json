@@ -24,6 +24,8 @@
     "seed:all": "prisma generate && tsx scripts/seed-properties.ts && tsx scripts/seed-blog.ts"
   },
   "dependencies": {
+    "@ffmpeg/ffmpeg": "0.12.10",
+    "@ffmpeg/util": "0.12.1",
     "@google/genai": "^1.48.0",
     "@prisma/adapter-pg": "^7.4.2",
     "@prisma/client": "^7.4.2",
