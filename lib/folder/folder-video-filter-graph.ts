@@ -3,8 +3,14 @@ import type { FolderVariant } from "@/lib/folder/types";
 
 export type FolderVideoCropMode = "fill" | "fit";
 
-/** Raio do desfoque no slot (modo inteiro); reduzido para ffmpeg.wasm. */
-const SLOT_BOXBLUR = "16:1";
+/** Desfoque em resolução reduzida (modo inteiro) — ~5× mais rápido que blur em 1080p. */
+const WHOLE_VIDEO_BLUR_BG: Record<
+  FolderVariant,
+  { smallW: number; smallH: number; slotW: number; slotH: number }
+> = {
+  vertical: { smallW: 216, smallH: 140, slotW: 1080, slotH: 700 },
+  feed: { smallW: 216, smallH: 100, slotW: 1080, slotH: 500 },
+};
 
 function buildFillVideoChain(
   slotW: number,
@@ -21,14 +27,16 @@ function buildFillVideoChain(
 }
 
 function buildWholeVideoChain(
-  slotW: number,
-  slotH: number,
+  variant: FolderVariant,
   canvasH: number,
   y: number
 ): string {
+  const { smallW, smallH, slotW, slotH } = WHOLE_VIDEO_BLUR_BG[variant];
+  const bgChain = `scale=${smallW}:${smallH}:force_original_aspect_ratio=increase,crop=${smallW}:${smallH},boxblur=4:1,scale=${slotW}:${slotH},setsar=1`;
+
   return [
     `[0:v]split[a][b]`,
-    `[a]scale=${slotW}:${slotH}:force_original_aspect_ratio=increase,crop=${slotW}:${slotH},boxblur=${SLOT_BOXBLUR},setsar=1[bg]`,
+    `[a]${bgChain}[bg]`,
     `[b]scale=${slotW}:${slotH}:force_original_aspect_ratio=decrease,setsar=1[fg]`,
     `[bg][fg]overlay=(W-w)/2:(H-h)/2,pad=${slotW}:${canvasH}:0:${y}[vid]`,
     `[1:v]scale=${slotW}:${canvasH},format=rgba[ov]`,
@@ -49,7 +57,7 @@ export function buildFolderVideoFilterComplex(options: {
   if (options.cropMode === "fill") {
     return buildFillVideoChain(slotW, slotH, canvasH, y);
   }
-  return buildWholeVideoChain(slotW, slotH, canvasH, y);
+  return buildWholeVideoChain(options.variant, canvasH, y);
 }
 
 export function buildFolderVideoFfmpegArgs(options: {

@@ -259,6 +259,13 @@ export function FolderVideoSection({
         </div>
       </fieldset>
 
+      {busyVariant ? (
+        <p className="mt-4 text-sm text-zinc-300">
+          Pode levar alguns minutos (cerca de 3 a 5 min para 1 minuto de vídeo). Não
+          feche esta aba.
+        </p>
+      ) : null}
+
       {progress ? (
         <div className="mt-4">
           <p className="text-xs text-zinc-300">{progress.message}</p>
