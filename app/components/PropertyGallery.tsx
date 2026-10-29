@@ -4,10 +4,7 @@ import dynamic from "next/dynamic";
 import { ChevronLeft, ChevronRight, ZoomIn } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PropertyPhoto } from "@/app/components/PropertyPhoto";
-import {
-  getWatermarkedImageUrl,
-  shouldUseUnoptimizedNextImage,
-} from "@/lib/cloudinary/watermark";
+import { getPropertyImageDeliveryUrl } from "@/lib/cloudinary/property-image-delivery";
 import { publicPropertyImageSrc } from "@/lib/utils/public-property-image-src";
 import type { PropertyGalleryBadge, PropertyGalleryItem } from "@/lib/utils/property-gallery";
 
@@ -24,8 +21,16 @@ type PropertyGalleryProps = {
   badges?: PropertyGalleryBadge[];
 };
 
-function resolveInlineImageSrc(url: string): string {
-  return publicPropertyImageSrc(getWatermarkedImageUrl(url));
+function resolveHeroImageSrc(url: string): string {
+  return publicPropertyImageSrc(
+    getPropertyImageDeliveryUrl(url, "galleryHero")
+  );
+}
+
+function resolveThumbImageSrc(url: string): string {
+  return publicPropertyImageSrc(
+    getPropertyImageDeliveryUrl(url, "galleryThumb")
+  );
 }
 
 export function PropertyGallery({ images, badges = [] }: PropertyGalleryProps) {
@@ -59,7 +64,7 @@ export function PropertyGallery({ images, badges = [] }: PropertyGalleryProps) {
 
   if (!current) return null;
 
-  const heroSrc = resolveInlineImageSrc(current.url);
+  const heroSrc = resolveHeroImageSrc(current.url);
 
   return (
     <div className="w-full">
@@ -76,8 +81,6 @@ export function PropertyGallery({ images, badges = [] }: PropertyGalleryProps) {
             alt={current.alt}
             fill
             priority={safeIndex === 0}
-            unoptimized={shouldUseUnoptimizedNextImage(current.url)}
-            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 90vw, 1152px"
             className="object-cover transition-transform duration-200 group-active:scale-[1.01]"
           />
           <span className="pointer-events-none absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-black/45 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 sm:group-focus-visible:opacity-100">
@@ -143,9 +146,7 @@ export function PropertyGallery({ images, badges = [] }: PropertyGalleryProps) {
         >
           {images.map((img, i) => {
             const active = i === safeIndex;
-            const thumbSrc = publicPropertyImageSrc(
-              getWatermarkedImageUrl(img.url, "compact")
-            );
+            const thumbSrc = resolveThumbImageSrc(img.url);
             return (
               <button
                 key={img.url}
@@ -166,11 +167,9 @@ export function PropertyGallery({ images, badges = [] }: PropertyGalleryProps) {
                 <PropertyPhoto
                   src={thumbSrc}
                   alt=""
-                  width={128}
-                  height={72}
-                  sizes="(max-width: 640px) 112px, 128px"
+                  width={256}
+                  height={144}
                   loading={i === safeIndex ? "eager" : "lazy"}
-                  unoptimized={shouldUseUnoptimizedNextImage(img.url)}
                   className="h-full w-full object-cover"
                 />
               </button>

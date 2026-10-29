@@ -30,7 +30,7 @@ import {
   buildPropertyVideoWatchPagePath,
   getPropertyTypeLabel,
 } from "@/lib/seo";
-import { getWatermarkedImageUrl } from "@/lib/cloudinary/watermark";
+import { getPropertyImageDeliveryUrl } from "@/lib/cloudinary/property-image-delivery";
 import {
   buildPropertyGalleryItems,
   type PropertyGalleryBadge,
@@ -117,7 +117,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       price: property.price,
     });
   const canonical = buildCanonicalUrl(`/imoveis/${slug}`);
-  const image = property.ogImage ?? (property.featuredImage ? getWatermarkedImageUrl(property.featuredImage) : undefined);
+  const image =
+    property.ogImage ??
+    (property.featuredImage
+      ? getPropertyImageDeliveryUrl(property.featuredImage, "openGraph")
+      : undefined);
 
   return {
     title,
@@ -263,7 +267,7 @@ export default async function ImovelPage({ params }: PageProps) {
   const breadcrumbJsonLd = buildBreadcrumbListJsonLd(breadcrumbItems);
 
   const listingImageUrls = buildRealEstateListingImageUrls(property).map((u) =>
-    getWatermarkedImageUrl(u)
+    getPropertyImageDeliveryUrl(u, "openGraph")
   );
 
   const realEstateJsonLd = buildPropertyJsonLd(

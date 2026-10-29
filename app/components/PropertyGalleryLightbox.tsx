@@ -11,10 +11,7 @@ import {
   type TouchEvent as ReactTouchEvent,
 } from "react";
 import { createPortal } from "react-dom";
-import {
-  getWatermarkedImageUrl,
-  shouldUseUnoptimizedNextImage,
-} from "@/lib/cloudinary/watermark";
+import { getPropertyImageDeliveryUrl } from "@/lib/cloudinary/property-image-delivery";
 import { publicPropertyImageSrc } from "@/lib/utils/public-property-image-src";
 import type { PropertyGalleryItem } from "@/lib/utils/property-gallery";
 
@@ -42,7 +39,9 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 function resolveImageSrc(url: string): string {
-  return publicPropertyImageSrc(getWatermarkedImageUrl(url));
+  return publicPropertyImageSrc(
+    getPropertyImageDeliveryUrl(url, "lightbox")
+  );
 }
 
 export function PropertyGalleryLightbox({
@@ -246,8 +245,6 @@ export function PropertyGalleryLightbox({
               src={lightboxSrc}
               alt={current.alt}
               fill
-              unoptimized={shouldUseUnoptimizedNextImage(current.url)}
-              sizes="100vw"
               priority
               className="object-contain"
             />

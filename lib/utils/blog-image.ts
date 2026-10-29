@@ -1,7 +1,11 @@
+import {
+  buildCloudinaryDeliveryUrl,
+  isCloudinaryResUploadUrl,
+} from "@/lib/cloudinary/delivery-url";
 import { normalizePublicImageUrl } from "@/lib/utils/normalize-image-url";
 
 /**
- * Hostnames permitidos para o otimizador do `next/image`.
+ * Hostnames permitidos para o otimizador do `next/image` (imagens locais / allowlist).
  * Manter alinhado a `next.config.js` → `images.remotePatterns`.
  */
 const ALLOWED_REMOTE_IMAGE_HOSTNAMES = new Set([
@@ -12,11 +16,20 @@ const ALLOWED_REMOTE_IMAGE_HOSTNAMES = new Set([
   "3pinheirosconsultoria.com.br",
 ]);
 
+const BLOG_CLOUDINARY_WIDTH = {
+  card: 640,
+  hero: 1200,
+} as const;
+
+export type BlogCoverContext = keyof typeof BLOG_CLOUDINARY_WIDTH;
+
 /**
- * Capa do blog: normaliza URL e define `unoptimized` quando o host não está
- * em `remotePatterns`, evitando exceção em runtime (lista `/blog`, sidebar, etc.).
+ * Capa do blog: URL fixa no Cloudinary (sem srcset); demais hosts seguem regras do next/image.
  */
-export function getBlogCoverImageProps(rawSrc: string): {
+export function getBlogCoverImageProps(
+  rawSrc: string,
+  context: BlogCoverContext = "card"
+): {
   src: string;
   unoptimized: boolean;
 } {
@@ -28,6 +41,16 @@ export function getBlogCoverImageProps(rawSrc: string): {
   }
   try {
     const host = new URL(src).hostname.toLowerCase();
+    if (isCloudinaryResUploadUrl(src)) {
+      const w = BLOG_CLOUDINARY_WIDTH[context];
+      return {
+        src: buildCloudinaryDeliveryUrl(
+          src,
+          `w_${w},c_limit,f_auto,q_auto`
+        ),
+        unoptimized: true,
+      };
+    }
     if (ALLOWED_REMOTE_IMAGE_HOSTNAMES.has(host)) {
       return { src, unoptimized: false };
     }

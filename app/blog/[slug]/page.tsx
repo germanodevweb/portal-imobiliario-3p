@@ -159,7 +159,7 @@ export default async function BlogPostPage({ params }: PageProps) {
   const dateLabel = formatDate(post.publishedAt);
   const dateIso = post.publishedAt?.toISOString() ?? post.updatedAt.toISOString();
   const heroImage = post.featuredImage
-    ? getBlogCoverImageProps(post.featuredImage)
+    ? getBlogCoverImageProps(post.featuredImage, "hero")
     : null;
 
   // Links contextuais derivados das tags do post

@@ -1,10 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import {
-  cloudinaryImageLoader,
-  isCloudinaryImageUrl,
-} from "@/lib/cloudinary/next-image-loader";
+import { isCloudinaryImageUrl } from "@/lib/cloudinary/next-image-loader";
 
 type PropertyPhotoProps = {
   src: string;
@@ -19,19 +16,22 @@ type PropertyPhotoProps = {
   loading?: "lazy" | "eager";
 };
 
+/**
+ * Fotos de imóvel: URL final fixa (Cloudinary ou proxy legado), sem srcset do next/image.
+ */
 export function PropertyPhoto({
   src,
   alt,
   fill,
   width,
   height,
-  sizes,
   priority,
   className,
-  unoptimized,
   loading,
 }: PropertyPhotoProps) {
-  const loader = isCloudinaryImageUrl(src) ? cloudinaryImageLoader : undefined;
+  const cloudinaryDirect = isCloudinaryImageUrl(src);
+  const legacyProxy = src.startsWith("/api/public/property-image");
+  const skipOptimizer = cloudinaryDirect || legacyProxy;
 
   if (fill) {
     return (
@@ -39,11 +39,9 @@ export function PropertyPhoto({
         src={src}
         alt={alt}
         fill
-        loader={loader}
-        sizes={sizes}
         priority={priority}
         className={className}
-        unoptimized={unoptimized}
+        unoptimized={skipOptimizer}
       />
     );
   }
@@ -54,12 +52,10 @@ export function PropertyPhoto({
       alt={alt}
       width={width ?? 1}
       height={height ?? 1}
-      loader={loader}
-      sizes={sizes}
       priority={priority}
       loading={loading}
       className={className}
-      unoptimized={unoptimized}
+      unoptimized={skipOptimizer}
     />
   );
 }

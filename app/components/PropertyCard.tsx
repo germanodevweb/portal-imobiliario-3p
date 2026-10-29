@@ -1,9 +1,6 @@
 import Link from "next/link";
 import { PropertyPhoto } from "@/app/components/PropertyPhoto";
-import {
-  getWatermarkedImageUrl,
-  shouldUseUnoptimizedNextImage,
-} from "@/lib/cloudinary/watermark";
+import { getPropertyImageDeliveryUrl } from "@/lib/cloudinary/property-image-delivery";
 import { publicPropertyImageSrc } from "@/lib/utils/public-property-image-src";
 import { formatPropertyPriceBrl } from "@/lib/utils/property-price";
 import {
@@ -71,7 +68,7 @@ export function PropertyCard({ property, priority = false }: PropertyCardProps) 
 
   const cardImageSrc = property.featuredImage
     ? publicPropertyImageSrc(
-        getWatermarkedImageUrl(property.featuredImage, "compact")
+        getPropertyImageDeliveryUrl(property.featuredImage, "card")
       )
     : null;
 
@@ -88,9 +85,7 @@ export function PropertyCard({ property, priority = false }: PropertyCardProps) 
               alt={property.title}
               fill
               priority={priority}
-              unoptimized={shouldUseUnoptimizedNextImage(property.featuredImage!)}
               className="object-cover transition-transform duration-300 group-hover:scale-105"
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1536px) 33vw, 400px"
             />
           ) : (
             <div className="flex h-full items-center justify-center text-sm text-zinc-400">
