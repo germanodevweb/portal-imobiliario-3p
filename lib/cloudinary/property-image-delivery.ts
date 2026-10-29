@@ -7,7 +7,6 @@ export const PROPERTY_IMAGE_DELIVERY_WIDTH = {
   galleryHero: 1280,
   galleryThumb: 256,
   lightbox: 1600,
-  openGraph: 1200,
 } as const;
 
 export type PropertyImageDeliveryContext = keyof typeof PROPERTY_IMAGE_DELIVERY_WIDTH;

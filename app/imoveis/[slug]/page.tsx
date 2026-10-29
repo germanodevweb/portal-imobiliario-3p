@@ -120,7 +120,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const image =
     property.ogImage ??
     (property.featuredImage
-      ? getPropertyImageDeliveryUrl(property.featuredImage, "openGraph")
+      ? getPropertyImageDeliveryUrl(property.featuredImage, "galleryHero")
       : undefined);
 
   return {
@@ -267,7 +267,7 @@ export default async function ImovelPage({ params }: PageProps) {
   const breadcrumbJsonLd = buildBreadcrumbListJsonLd(breadcrumbItems);
 
   const listingImageUrls = buildRealEstateListingImageUrls(property).map((u) =>
-    getPropertyImageDeliveryUrl(u, "openGraph")
+    getPropertyImageDeliveryUrl(u, "galleryHero")
   );
 
   const realEstateJsonLd = buildPropertyJsonLd(

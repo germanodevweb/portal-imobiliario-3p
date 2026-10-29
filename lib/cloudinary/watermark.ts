@@ -14,7 +14,7 @@ export function getWatermarkedImageUrl(
   url: string,
   _display?: unknown
 ): string {
-  return getPropertyImageDeliveryUrl(url, "openGraph");
+  return getPropertyImageDeliveryUrl(url, "galleryHero");
 }
 
 export function getWatermarkedImageUrlForContext(

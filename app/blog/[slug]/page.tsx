@@ -22,7 +22,10 @@ import {
   SITE_NAME,
   BASE_URL,
 } from "@/lib/seo";
-import { getBlogCoverImageProps } from "@/lib/utils/blog-image";
+import {
+  getBlogCoverImageProps,
+  getBlogHeroDeliveryUrl,
+} from "@/lib/utils/blog-image";
 import {
   serializeJsonLd,
   buildBreadcrumbListJsonLd,
@@ -117,7 +120,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const title = post.metaTitle ?? buildBlogPostTitle(post.title);
   const description = buildBlogPostDescription(post.title, post.metaDescription ?? post.excerpt);
   const canonical = buildCanonicalUrl(`/blog/${slug}`);
-  const image = post.ogImage ?? post.featuredImage ?? undefined;
+  const image =
+    post.ogImage ??
+    (post.featuredImage ? getBlogHeroDeliveryUrl(post.featuredImage) : undefined);
 
   return {
     title,
@@ -183,7 +188,7 @@ export default async function BlogPostPage({ params }: PageProps) {
     url: canonical,
     datePublished: dateIso,
     dateModified: post.updatedAt.toISOString(),
-    ...(post.featuredImage ? { image: post.featuredImage } : {}),
+    ...(heroImage?.src ? { image: heroImage.src } : {}),
     author: jsonLdOrganizationRef(),
     publisher: jsonLdOrganizationRef(),
     mainEntityOfPage: {

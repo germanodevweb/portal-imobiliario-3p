@@ -23,6 +23,11 @@ const BLOG_CLOUDINARY_WIDTH = {
 
 export type BlogCoverContext = keyof typeof BLOG_CLOUDINARY_WIDTH;
 
+/** URL única de capa/OG do blog (Cloudinary w_1200 ou URL original). */
+export function getBlogHeroDeliveryUrl(rawSrc: string): string {
+  return getBlogCoverImageProps(rawSrc, "hero").src;
+}
+
 /**
  * Capa do blog: URL fixa no Cloudinary (sem srcset); demais hosts seguem regras do next/image.
  */
